@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 
@@ -17,7 +18,10 @@ public enum LogLevel
 /// <remarks>
 /// Deliberately not a framework. One file per run, the previous four kept, one line per entry
 /// with the wall time and the time since start, and exceptions with their whole inner chain,
-/// so the log alone is enough to act on a report. Logging never throws into its caller.
+/// so the log alone is enough to act on a report. Logging never throws into its caller, and never
+/// makes it wait: a line is formatted and queued, and a thread of the log's own writes the file
+/// and the terminal, so logging from the UI thread costs no disk or terminal I/O there. A crash
+/// report is waited for, briefly, because the process may be about to end.
 /// </remarks>
 public static class Log
 {
@@ -27,9 +31,15 @@ public static class Log
     private static readonly object Gate = new();
     private static readonly Stopwatch Uptime = Stopwatch.StartNew();
     private static readonly Queue<string> Recent = new();
+    private static readonly BlockingCollection<(LogLevel Level, string Line)> Pending = [];
+    private static readonly object Progress = new();
+    private static readonly Thread Writer = new(WriteLoop) { IsBackground = true, Name = "Tuxflix log" };
 
     private static StreamWriter? _file;
-    private static bool _echo = true;
+    private static volatile bool _echo = true;
+    private static long _queued;
+    private static long _written;
+    private static int _started;
 
     public static string? FilePath { get; private set; }
 
@@ -44,7 +54,7 @@ public static class Log
 
     /// <summary>
     /// Opens <c>tuxflix.log</c> in <paramref name="directory"/>, rolling the previous runs along.
-    /// Safe to skip: without it the log goes to the terminal only.
+    /// Safe to skip: without it the log goes to the terminal only. Called at start, before any window.
     /// </summary>
     public static void Initialize(string stamp, string directory)
     {
@@ -57,10 +67,7 @@ public static class Log
                     Directory.CreateDirectory(directory);
                     Roll(directory);
                     FilePath = Path.Combine(directory, "tuxflix.log");
-                    _file = new StreamWriter(new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.Read))
-                    {
-                        AutoFlush = true,
-                    };
+                    Volatile.Write(ref _file, new StreamWriter(new FileStream(FilePath, FileMode.Create, FileAccess.Write, FileShare.Read)));
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
@@ -68,6 +75,8 @@ public static class Log
                 }
             }
         }
+
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => Flush(TimeSpan.FromSeconds(1));
 
         Info($"Tuxflix {stamp}");
         Info($"Runtime {Environment.Version} on {Environment.OSVersion}");
@@ -84,7 +93,7 @@ public static class Log
 
     public static void Error(string message, Exception? error = null) => Write(LogLevel.Error, message, error);
 
-    /// <summary>Records a crash with its whole chain and returns the report for display.</summary>
+    /// <summary>Records a crash with its whole chain, waits for it to reach the file, and returns the report for display.</summary>
     public static string Crash(string source, Exception error)
     {
         ArgumentNullException.ThrowIfNull(error);
@@ -92,7 +101,26 @@ public static class Log
         report.AppendLine($"Unhandled exception in {source}.");
         Describe(report, error, 0);
         Write(LogLevel.Error, report.ToString().TrimEnd(), null);
+        Flush(TimeSpan.FromSeconds(2));
         return report.ToString();
+    }
+
+    /// <summary>Waits until every line queued so far is written, or <paramref name="limit"/> passes.</summary>
+    public static bool Flush(TimeSpan limit)
+    {
+        var target = Interlocked.Read(ref _queued);
+        var clock = Stopwatch.StartNew();
+        lock (Progress)
+        {
+            while (Interlocked.Read(ref _written) < target)
+            {
+                var left = limit - clock.Elapsed;
+                if (left <= TimeSpan.Zero) return false;
+                Monitor.Wait(Progress, left);
+            }
+        }
+
+        return true;
     }
 
     /// <summary>The most recent entries, newest last.</summary>
@@ -156,19 +184,40 @@ public static class Log
         {
             Recent.Enqueue(line);
             while (Recent.Count > RecentLimit) Recent.Dequeue();
+        }
 
+        if (Interlocked.Exchange(ref _started, 1) == 0) Writer.Start();
+        Interlocked.Increment(ref _queued);
+        Pending.Add((level, line));
+    }
+
+    /// <summary>The log's own thread: writes queued lines to the file and the terminal.</summary>
+    private static void WriteLoop()
+    {
+        foreach (var (level, line) in Pending.GetConsumingEnumerable())
+        {
+            var file = Volatile.Read(ref _file);
             try
             {
-                _file?.WriteLine(line);
+                file?.WriteLine(line);
+                if (Pending.Count == 0) file?.Flush();
             }
             catch (Exception ex) when (ex is IOException or ObjectDisposedException)
             {
-                // A full disk must not take the caller with it.
+                // A full disk must not end the log.
             }
 
-            if (!_echo) return;
-            if (level >= LogLevel.Warning) Console.Error.WriteLine(line);
-            else Console.WriteLine(line);
+            if (_echo)
+            {
+                if (level >= LogLevel.Warning) Console.Error.WriteLine(line);
+                else Console.WriteLine(line);
+            }
+
+            lock (Progress)
+            {
+                Interlocked.Increment(ref _written);
+                Monitor.PulseAll(Progress);
+            }
         }
     }
 

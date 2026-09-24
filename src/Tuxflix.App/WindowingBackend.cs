@@ -79,14 +79,20 @@ internal static class WindowingBackend
         Log.Info($"Windowing: {Describe(window)}");
         if (!_attempting) return;
         _attempting = false;
-        try
+
+        // Called on the UI thread: the file goes on a worker.
+        var breadcrumb = Breadcrumb;
+        _ = Task.Run(() =>
         {
-            File.Delete(Breadcrumb);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Log.Warn($"Windowing: the Wayland attempt note could not be cleared ({ex.Message}).");
-        }
+            try
+            {
+                File.Delete(breadcrumb);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Log.Warn($"Windowing: the Wayland attempt note could not be cleared ({ex.Message}).");
+            }
+        });
     }
 
     // The window draws its own title bar, so the compositor is never asked for one: asking and then

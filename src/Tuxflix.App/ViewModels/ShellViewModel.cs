@@ -61,8 +61,8 @@ public sealed partial class ShellViewModel : ObservableObject
     public bool ReportsPlayback { get; init; } = true;
 
     /// <summary>
-    /// Whether players start at volume zero. Probe runs do: the sound device still opens and is fed,
-    /// so the whole audio path is exercised, but nothing is heard.
+    /// Whether players start muted. Probe runs do: the sound device still opens and is fed, so the
+    /// whole audio path is exercised, but nothing is heard, even when the probe changes the volume.
     /// </summary>
     public bool Silent { get; init; }
 
@@ -240,7 +240,8 @@ public sealed partial class ShellViewModel : ObservableObject
         Open(ServerSession.CreateRemote(Identity, server, connection, Paths, _network));
     }
 
-    private static void OpenInBrowser(string url)
+    /// <summary>Starting a process forks and execs: a worker does it, never the UI thread.</summary>
+    private static void OpenInBrowser(string url) => _ = Task.Run(() =>
     {
         try
         {
@@ -252,7 +253,7 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             Log.Warn("The browser could not be opened.", ex);
         }
-    }
+    });
 
     private void Open(ServerSession session)
     {

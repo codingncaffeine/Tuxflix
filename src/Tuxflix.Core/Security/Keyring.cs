@@ -43,7 +43,11 @@ public sealed class Keyring : ISecretStore
         if (!ok && error.Length > 0) Log.Warn($"The keyring would not forget the sign-in: {error}");
     }
 
-    private async Task<(bool Ok, string Output, string Error)> RunAsync(IReadOnlyList<string> arguments, string? input)
+    /// <summary>Starting secret-tool forks and execs: every call runs on a worker, never on the caller's (often the UI) thread.</summary>
+    private Task<(bool Ok, string Output, string Error)> RunAsync(IReadOnlyList<string> arguments, string? input) =>
+        Task.Run(() => RunHereAsync(arguments, input));
+
+    private async Task<(bool Ok, string Output, string Error)> RunHereAsync(IReadOnlyList<string> arguments, string? input)
     {
         var start = new ProcessStartInfo(Tool)
         {

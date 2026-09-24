@@ -180,6 +180,10 @@ internal static unsafe partial class LibMpv
     [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
     public static partial IntPtr mpv_get_property_string(IntPtr handle, string name);
 
+    /// <summary>Queues a property change and returns at once; mpv copies the value.</summary>
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mpv_set_property_async(IntPtr handle, ulong replyUserdata, string name, MpvFormat format, void* data);
+
     [LibraryImport(Library)]
     public static partial void mpv_free(IntPtr data);
 

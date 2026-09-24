@@ -123,14 +123,19 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         _start = !session.IsDemo && resume && _item.ViewOffset is > 0 ? _item.ViewOffset.Value / 1000.0 : 0;
         Duration = (_item.Duration ?? 0) / 1000.0;
 
-        var shared = new SharedPlayer(new MpvPlayer(Options()));
+        // Starting mpv waits for its core: a worker does it, never the UI thread.
+        var options = Options();
+        var created = await Task.Run(() => new MpvPlayer(options), CancellationToken.None);
+        if (cancellation.IsCancellationRequested)
+        {
+            _ = Task.Run(created.Dispose);
+            return;
+        }
+
+        var shared = new SharedPlayer(created);
         shared.Player.Changed += change => Dispatcher.UIThread.Post(() => Apply(change));
         shared.Player.Ended += (reason, error) => Dispatcher.UIThread.Post(() => OnEnded(reason, error));
-        shared.Player.FileLoaded += () => Dispatcher.UIThread.Post(() =>
-        {
-            ApplyServerChoice();
-            RefreshTracks();
-        });
+        shared.Player.FileLoaded += () => _ = Task.Run(() => ChooseTracks(shared));
         Player = shared;
         Log.Info($"Playing {(session.IsDemo ? "the demo pattern" : "directly from the server")}{(_start > 0 ? $", resuming at {Clock(_start)}" : string.Empty)}.");
     }
@@ -156,24 +161,25 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         if (Player is { } shared)
         {
             if (_loaded && !_finished) Report("stopped", force: true);
-            shared.Player.Command("stop");
-            shared.Release();
+            shared.Player.PostCommand("stop");
+
+            // The video view lets go of its own hold when it stops drawing; destroying the player
+            // waits for mpv, so this hold is let go on a worker.
             Player = null;
+            _ = Task.Run(shared.Release);
         }
     }
 
     /// <summary>The screen stays awake while the picture moves, and may sleep when it is paused or gone.</summary>
     private static void KeepAwake(bool awake) =>
-        _ = awake
+        _ = Task.Run(() => awake
             ? Platform.ScreenSaverInhibitor.Shared.InhibitAsync("Playing video")
-            : Platform.ScreenSaverInhibitor.Shared.ReleaseAsync();
+            : Platform.ScreenSaverInhibitor.Shared.ReleaseAsync());
 
+    // Every control below queues its request with mpv and returns at once; mpv's answer comes back
+    // as a property change.
     [RelayCommand]
-    private void TogglePause()
-    {
-        if (Player is null) return;
-        Player.Player.SetFlag("pause", !IsPaused);
-    }
+    private void TogglePause() => Player?.Player.PostFlag("pause", !IsPaused);
 
     [RelayCommand]
     private void SkipBack() => SeekBy(-10);
@@ -181,19 +187,19 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
     [RelayCommand]
     private void SkipForward() => SeekBy(30);
 
-    public void SeekBy(double seconds) => Player?.Player.Command("seek", seconds.ToString(CultureInfo.InvariantCulture), "relative");
+    public void SeekBy(double seconds) => Player?.Player.PostCommand("seek", seconds.ToString(CultureInfo.InvariantCulture), "relative");
 
-    public void SeekTo(double seconds) => Player?.Player.Command("seek", seconds.ToString("0.###", CultureInfo.InvariantCulture), "absolute");
+    public void SeekTo(double seconds) => Player?.Player.PostCommand("seek", seconds.ToString("0.###", CultureInfo.InvariantCulture), "absolute");
 
     [RelayCommand]
-    private void ToggleMute() => Player?.Player.SetFlag("mute", !IsMuted);
+    private void ToggleMute() => Player?.Player.PostFlag("mute", !IsMuted);
 
     public void ChangeVolume(double delta) => Volume = Math.Clamp(Volume + delta, 0, 150);
 
     [RelayCommand]
     private void Leave() => shell.GoBackCommand.Execute(null);
 
-    partial void OnVolumeChanged(double value) => Player?.Player.SetNumber("volume", value);
+    partial void OnVolumeChanged(double value) => Player?.Player.PostNumber("volume", value);
 
     private Dictionary<string, string> Options()
     {
@@ -224,8 +230,9 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
             ["http-header-fields"] = headers,
         };
 
-        // mpv's own volume, applied to the samples: the desktop's volume for the stream is left alone.
-        if (shell.Silent) options["volume"] = "0";
+        // mpv's own mute, applied to the samples: the desktop's volume for the stream is left alone,
+        // and the volume can still be changed without a sound.
+        if (shell.Silent) options["mute"] = "yes";
 
         // The server's subtitle selection is applied once the file is open; until then none shows,
         // so a subtitle the file marks as its default cannot flash up first.
@@ -263,10 +270,21 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
             case "hwdec-current" when change.Text is { } hwdec:
                 Log.Info($"Hardware decoding: {hwdec}.");
                 break;
-            case "track-list/count":
-                RefreshTracks();
+            case "track-list/count" when Player is { } shared:
+                _ = Task.Run(() => ListTracksFor(shared));
+                break;
+            case "aid" when change.Text is { } aid:
+                MarkSelected(AudioTracks, aid);
+                break;
+            case "sid" when change.Text is { } sid:
+                MarkSelected(SubtitleTracks, sid);
                 break;
         }
+    }
+
+    private static void MarkSelected(IEnumerable<TrackOption> options, string id)
+    {
+        foreach (var option in options) option.IsSelected = option.Id == id;
     }
 
     private void OnEnded(EndReason reason, string? error)
@@ -325,39 +343,70 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         });
     }
 
-    /// <summary>Starts with the audio and subtitles the server selected, not the file's own defaults.</summary>
-    private void ApplyServerChoice()
+    /// <summary>
+    /// On a worker, once the file is open: starts with the audio and subtitles the server selected,
+    /// not the file's own defaults, then lists the tracks for the menus.
+    /// </summary>
+    private void ChooseTracks(SharedPlayer shared)
     {
-        if (Player is not { } shared || _part is not { } part || !StreamChoice.IsKnown(part)) return;
-        var tracks = ListTracks(shared.Player).ConvertAll(t => t.Track);
-
-        if (StreamChoice.Selected(part, StreamChoice.Audio) is { } audio && StreamChoice.TrackFor(audio, part, tracks) is { } audioTrack)
+        // Reading mpv waits for its core; the hold keeps the player alive while this reads.
+        if (!shared.Acquire()) return;
+        try
         {
-            shared.Player.SetProperty("aid", audioTrack.Id);
-        }
+            if (_part is { } part && StreamChoice.IsKnown(part))
+            {
+                var tracks = ListTracks(shared.Player).ConvertAll(t => t.Track);
+                if (StreamChoice.Selected(part, StreamChoice.Audio) is { } audio && StreamChoice.TrackFor(audio, part, tracks) is { } audioTrack)
+                {
+                    shared.Player.PostProperty("aid", audioTrack.Id);
+                }
 
-        var subtitle = StreamChoice.Selected(part, StreamChoice.Subtitle);
-        if (subtitle is { IsExternal: true })
-        {
-            LoadSubtitle(subtitle);
-        }
-        else if (subtitle is not null && StreamChoice.TrackFor(subtitle, part, tracks) is { } subtitleTrack)
-        {
-            shared.Player.SetProperty("sid", subtitleTrack.Id);
-        }
+                var subtitle = StreamChoice.Selected(part, StreamChoice.Subtitle);
+                if (subtitle is { IsExternal: true })
+                {
+                    LoadSubtitle(shared.Player, subtitle);
+                }
+                else if (subtitle is not null && StreamChoice.TrackFor(subtitle, part, tracks) is { } subtitleTrack)
+                {
+                    shared.Player.PostProperty("sid", subtitleTrack.Id);
+                }
 
-        Log.Info($"Tracks as the server selected them; subtitles {(subtitle is null ? "off" : subtitle.IsExternal ? "from a file beside the media" : "on")}.");
+                Log.Info($"Tracks as the server selected them; subtitles {(subtitle is null ? "off" : subtitle.IsExternal ? "from a file beside the media" : "on")}.");
+            }
+
+            ListTracksFor(shared);
+        }
+        finally
+        {
+            shared.Release();
+        }
     }
 
-    private void RefreshTracks()
+    /// <summary>On a worker: reads the track list, then shows it on the UI thread.</summary>
+    private void ListTracksFor(SharedPlayer shared)
     {
-        if (Player is not { } shared) return;
-        var player = shared.Player;
-        var listed = ListTracks(player);
+        if (!shared.Acquire()) return;
+        try
+        {
+            var listed = ListTracks(shared.Player);
+            var subtitles = shared.Player.GetString("sid");
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (ReferenceEquals(shared, Player)) ShowTracks(listed, subtitles);
+            });
+        }
+        finally
+        {
+            shared.Release();
+        }
+    }
+
+    private void ShowTracks(List<(PlayerTrack Track, string Label, bool Selected)> listed, string? subtitles)
+    {
         var tracks = listed.ConvertAll(t => t.Track);
         AudioTracks.Clear();
         SubtitleTracks.Clear();
-        SubtitleTracks.Add(new TrackOption(this, "sid", "no", "Off", player.GetString("sid") is null or "no", stream: null));
+        SubtitleTracks.Add(new TrackOption(this, "sid", "no", "Off", subtitles is null or "no", stream: null));
         foreach (var (track, label, selected) in listed)
         {
             // The server's names for its streams are the ones every other Plex player shows.
@@ -376,7 +425,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         }
     }
 
-    /// <summary>The audio and subtitle tracks the player lists now, with a label from the file's own tags.</summary>
+    /// <summary>The audio and subtitle tracks the player lists now, with a label from the file's own tags. A worker's job.</summary>
     private static List<(PlayerTrack Track, string Label, bool Selected)> ListTracks(MpvPlayer player)
     {
         var listed = new List<(PlayerTrack, string, bool)>();
@@ -411,11 +460,11 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         if (option.Id.Length == 0 && option.Stream is { IsExternal: true } external)
         {
             // A file beside the media: it arrives in the next track list, already chosen.
-            LoadSubtitle(external);
+            LoadSubtitle(shared.Player, external);
         }
         else
         {
-            shared.Player.SetProperty(option.Property, option.Id);
+            shared.Player.PostProperty(option.Property, option.Id);
         }
 
         foreach (var other in option.Property == "aid" ? AudioTracks : SubtitleTracks) other.IsSelected = ReferenceEquals(other, option);
@@ -444,8 +493,8 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         });
     }
 
-    private void LoadSubtitle(MediaStream external) =>
-        Player?.Player.Command("sub-add", SourceOf(external), "select", external.ExtendedDisplayTitle ?? external.DisplayTitle ?? "Subtitles");
+    private void LoadSubtitle(MpvPlayer player, MediaStream external) =>
+        player.PostCommand("sub-add", SourceOf(external), "select", external.ExtendedDisplayTitle ?? external.DisplayTitle ?? "Subtitles");
 
     /// <summary>Where the player fetches a subtitle file kept beside the media; the token goes in a header.</summary>
     private string SourceOf(MediaStream stream) => session.Client.MediaUri(stream.Key!).ToString();

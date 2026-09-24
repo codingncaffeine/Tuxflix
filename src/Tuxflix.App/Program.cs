@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using Tuxflix.Core;
 using Tuxflix.Core.Diagnostics;
+using Tuxflix.Core.Settings;
 
 namespace Tuxflix.App;
 
@@ -44,7 +45,9 @@ internal static class Program
             return 0;
         }
 
-        App.Launch = new AppLaunch(paths, options, instance);
+        // Read before the UI thread starts: nothing that touches the disk runs on it.
+        var settings = SettingsStore.Load(paths.SettingsFile);
+        App.Launch = new AppLaunch(paths, options, instance, settings);
 
         try
         {
@@ -55,6 +58,12 @@ internal static class Program
         {
             Console.Error.WriteLine(Log.Crash("startup", ex));
             return 1;
+        }
+        finally
+        {
+            // The last saves (the window's place, the server used) reach the disk before the process ends.
+            if (!settings.Flush(TimeSpan.FromSeconds(3))) Console.Error.WriteLine("Settings were still being written at exit.");
+            Log.Flush(TimeSpan.FromSeconds(2));
         }
     }
 
@@ -93,4 +102,4 @@ internal sealed record LaunchOptions(bool Demo, string? PortableRoot, bool Probe
 }
 
 /// <summary>Everything the application needs from the process that started it.</summary>
-internal sealed record AppLaunch(AppPaths Paths, LaunchOptions Options, SingleInstance? Instance);
+internal sealed record AppLaunch(AppPaths Paths, LaunchOptions Options, SingleInstance? Instance, SettingsStore Settings);

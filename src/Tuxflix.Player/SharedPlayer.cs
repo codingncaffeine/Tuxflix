@@ -5,10 +5,10 @@ namespace Tuxflix.Player;
 /// </summary>
 /// <remarks>
 /// libmpv requires every render context to be freed before its core is destroyed, and
-/// <c>mpv_terminate_destroy</c> blocks until that happens. The page that plays and the view that
-/// draws let go at different moments: leaving a page happens before its view is taken off the
-/// screen. Counting owners makes the order right whichever lets go first, instead of a UI thread
-/// waiting on a render context only that same thread would free.
+/// <c>mpv_terminate_destroy</c> blocks until that happens. The page that plays, the video thread
+/// that draws and any worker reading the player let go at different moments. Counting owners makes
+/// the order right whichever lets go first. The last <see cref="Release"/> destroys the player and
+/// waits for mpv, so owners let go on a worker, never on the UI thread.
 /// </remarks>
 public sealed class SharedPlayer
 {

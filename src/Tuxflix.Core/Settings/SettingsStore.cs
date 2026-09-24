@@ -7,14 +7,20 @@ namespace Tuxflix.Core.Settings;
 /// Loads and saves <see cref="AppSettings"/> as JSON.
 /// </summary>
 /// <remarks>
-/// A save writes a sibling file and renames it over the old one, so a crash mid-write leaves the
-/// previous settings intact rather than half a file. A file that cannot be read is set aside as
-/// <c>settings.json.unreadable</c> and the defaults are used; the log says so.
+/// A save captures the settings at once and a worker writes them: the caller, usually the UI
+/// thread, never waits for the disk. Saves in quick succession collapse into the latest. The file
+/// is written as a sibling and renamed over the old one, so a crash mid-write leaves the previous
+/// settings intact rather than half a file. <see cref="Flush"/> waits for the last write, at exit.
+/// A file that cannot be read is set aside as <c>settings.json.unreadable</c> and the defaults are
+/// used; the log says so. Loading reads the disk and happens at start, before any window.
 /// </remarks>
 public sealed class SettingsStore
 {
     private readonly string _path;
     private readonly object _gate = new();
+    private string? _pending;
+    private bool _writing;
+    private Task _writer = Task.CompletedTask;
 
     private SettingsStore(string path, AppSettings current)
     {
@@ -23,6 +29,9 @@ public sealed class SettingsStore
     }
 
     public AppSettings Current { get; }
+
+    /// <summary>For tests: runs on the writer after it has taken a snapshot and before it writes it.</summary>
+    internal Action? BeforeWrite { get; set; }
 
     public static SettingsStore Load(string path)
     {
@@ -39,15 +48,51 @@ public sealed class SettingsStore
         return store;
     }
 
+    /// <summary>Captures the settings now and has a worker write them; returns at once.</summary>
     public void Save()
     {
+        // Captured here, in microseconds, so later changes on the caller's thread never race the writer.
+        var json = JsonSerializer.Serialize(Current, SettingsJsonContext.Default.AppSettings);
         lock (_gate)
         {
+            _pending = json;
+            if (_writing) return;
+            _writing = true;
+            _writer = Task.Run(WritePending);
+        }
+    }
+
+    /// <summary>Waits until every save so far is on disk, or <paramref name="limit"/> passes.</summary>
+    public bool Flush(TimeSpan limit)
+    {
+        Task writer;
+        lock (_gate) writer = _writer;
+        return writer.Wait(limit);
+    }
+
+    private void WritePending()
+    {
+        while (true)
+        {
+            string json;
+            lock (_gate)
+            {
+                if (_pending is null)
+                {
+                    _writing = false;
+                    return;
+                }
+
+                json = _pending;
+                _pending = null;
+            }
+
+            BeforeWrite?.Invoke();
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
                 var temporary = _path + ".new";
-                File.WriteAllText(temporary, JsonSerializer.Serialize(Current, SettingsJsonContext.Default.AppSettings));
+                File.WriteAllText(temporary, json);
                 File.Move(temporary, _path, overwrite: true);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

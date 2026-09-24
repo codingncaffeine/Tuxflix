@@ -1,37 +1,38 @@
-using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.OpenGL;
-using Avalonia.OpenGL.Controls;
-using Avalonia.Threading;
+using Avalonia.Rendering.Composition;
 using Tuxflix.Core.Diagnostics;
 using Tuxflix.Player;
-using Tuxflix.Player.Native;
 
 namespace Tuxflix.App.Player;
 
 /// <summary>
-/// Draws a player's video into the window through libmpv's OpenGL render API, so the controls,
-/// tooltips and menus of the interface can sit on top of the picture.
+/// Shows a player's video inside the window, so the controls, tooltips and menus of the interface
+/// can sit on top of the picture.
 /// </summary>
 /// <remarks>
-/// libmpv renders into the framebuffer Avalonia hands this control each frame, flipped because
-/// that framebuffer's rows run bottom-up. mpv announces a new frame from its own thread; the
-/// announcement is posted to the UI thread, which asks for a render. The render context is made
-/// and freed inside the OpenGL callbacks, where the context is current, and the view holds the
-/// player until its render context is gone.
+/// libmpv draws every frame on a thread of its own (<see cref="VideoRenderer"/>) into a texture
+/// the compositor shows through this control's visual; the UI thread only hands finished frames
+/// over. Drawing on the UI thread (Avalonia's OpenGlControlBase does) made every key wait behind
+/// libmpv, whose render call holds until each frame's display time: pause and volume answered
+/// seconds late. The view follows its player: a new player, or leaving the window, ends the
+/// renderer, which lets go of the player once its render context is gone.
 /// </remarks>
-public sealed unsafe class MpvVideoView : OpenGlControlBase
+public sealed class MpvVideoView : Control
 {
     public static readonly StyledProperty<SharedPlayer?> PlayerProperty =
         AvaloniaProperty.Register<MpvVideoView, SharedPlayer?>(nameof(Player));
 
-    private GlInterface? _gl;
-    private IntPtr _context;
-    private SharedPlayer? _held;
-    private GCHandle _self;
-    private delegate* unmanaged<int, int, int, int, int, int, void*, void> _readPixels;
-    private delegate* unmanaged<int, int, void> _bindFramebuffer;
+    private const int MaxRestarts = 3;
+
+    private readonly VideoStats _stats = new();
+    private Compositor? _compositor;
+    private CompositionSurfaceVisual? _visual;
+    private VideoRenderer? _renderer;
+    private int _starts;
+    private int _restarts;
+    private Action<uint, uint, uint>? _sampled;
 
     public SharedPlayer? Player
     {
@@ -40,189 +41,141 @@ public sealed unsafe class MpvVideoView : OpenGlControlBase
     }
 
     /// <summary>
-    /// Raised on the UI thread once libmpv has a render context here. A file loaded before this has
-    /// no video output to open: mpv drops the video track and the file plays as nothing.
+    /// Raised on the UI thread once libmpv can draw here. A file loaded before this has no video
+    /// output to open: mpv drops the video track and the file plays as nothing.
     /// </summary>
     public event Action? Ready;
 
-    /// <summary>Whether the render context exists.</summary>
-    public bool IsReady => _context != IntPtr.Zero;
+    /// <summary>Whether libmpv can draw here now.</summary>
+    public bool IsReady { get; private set; }
 
     /// <summary>Frames drawn so far.</summary>
-    public long FramesDrawn { get; private set; }
+    public long FramesDrawn => _stats.FramesDrawn;
 
-    /// <summary>When set, every drawn frame reports three sampled pixels (for the probe): top, middle, bottom.</summary>
-    public Action<uint, uint, uint>? Sampled { get; set; }
+    /// <summary>Frame counts and timings, for the probes.</summary>
+    public VideoStats Stats => _stats;
 
-    private Action<int, int, byte[]>? _capture;
+    /// <summary>For the video probe: three pixels of every drawn frame (top, middle, bottom), reported on the video thread.</summary>
+    public Action<uint, uint, uint>? Sampled
+    {
+        get => _sampled;
+        set
+        {
+            _sampled = value;
+            if (_renderer is not null) _renderer.Sampled = value;
+        }
+    }
 
     /// <summary>
     /// For the probe: hands the next drawn frame to <paramref name="done"/> as width, height and
-    /// RGBA bytes, in OpenGL's row order (the bottom row first).
+    /// RGBA bytes, in OpenGL's row order (the bottom row first), on the video thread.
     /// </summary>
-    public void CaptureNextFrame(Action<int, int, byte[]> done)
+    public void CaptureNextFrame(Action<int, int, byte[]> done) => _renderer?.CaptureNextFrame(done);
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        _capture = done;
-        RequestNextFrameRendering();
+        base.OnAttachedToVisualTree(e);
+        _compositor = ElementComposition.GetElementVisual(this)?.Compositor;
+        Start();
     }
 
-    protected override void OnOpenGlInit(GlInterface gl)
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        _gl = gl;
-        if (!_self.IsAllocated) _self = GCHandle.Alloc(this);
-        _readPixels = (delegate* unmanaged<int, int, int, int, int, int, void*, void>)gl.GetProcAddress("glReadPixels");
-        _bindFramebuffer = (delegate* unmanaged<int, int, void>)gl.GetProcAddress("glBindFramebuffer");
-        Log.Info($"Video surface: OpenGL context {GlVersion.Type} {GlVersion.Major}.{GlVersion.Minor}.");
-    }
-
-    protected override void OnOpenGlDeinit(GlInterface gl)
-    {
-        FreeContext();
-        if (_self.IsAllocated) _self.Free();
-    }
-
-    protected override void OnOpenGlLost()
-    {
-        // The GL context is gone and the render context with it; start over on the next init.
-        Log.Warn("The video surface lost its OpenGL context.");
-        FreeContext();
+        Stop();
+        _compositor = null;
+        base.OnDetachedFromVisualTree(e);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == PlayerProperty) RequestNextFrameRendering();
-    }
-
-    protected override void OnOpenGlRender(GlInterface gl, int fb)
-    {
-        if (!ReferenceEquals(_held, Player)) FreeContext();
-        if (_context == IntPtr.Zero && Player is { } shared && !CreateContext(shared)) return;
-        if (_context == IntPtr.Zero) return;
-
-        var scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
-        var width = Math.Max(1, (int)Math.Round(Bounds.Width * scale));
-        var height = Math.Max(1, (int)Math.Round(Bounds.Height * scale));
-
-        var diagnose = Sampled is not null && FramesDrawn < 3;
-        if (diagnose) Diagnose(gl, fb, width, height, "before");
-
-        var fbo = new MpvOpenGlFbo { Fbo = fb, Width = width, Height = height };
-        var flip = 1;
-        var parameters = stackalloc MpvRenderParamEntry[3];
-        parameters[0] = new MpvRenderParamEntry { Type = MpvRenderParam.OpenGlFbo, Data = (IntPtr)(&fbo) };
-        parameters[1] = new MpvRenderParamEntry { Type = MpvRenderParam.FlipY, Data = (IntPtr)(&flip) };
-        parameters[2] = default;
-        var result = LibMpv.mpv_render_context_render(_context, parameters);
-        FramesDrawn++;
-
-        if (diagnose) Diagnose(gl, fb, width, height, $"after (render {result})");
-
-        // mpv leaves framebuffer 0 bound when it is done; hand back the one Avalonia gave us, so
-        // whatever it does next with this frame meets the state it set up.
-        _bindFramebuffer(0x8D40 /* GL_FRAMEBUFFER */, fb);
-
-        if (Sampled is { } sampled && _readPixels is not null)
+        if (change.Property == PlayerProperty)
         {
-            // GL rows run bottom-up: the last row is the top of the picture as it is shown.
-            sampled(Pixel(width / 2, height - 3), Pixel(width / 2, height / 2), Pixel(width / 2, 2));
+            Stop();
+            _restarts = 0;
+            Start();
         }
-
-        if (Interlocked.Exchange(ref _capture, null) is { } capture && _readPixels is not null)
+        else if (change.Property == BoundsProperty)
         {
-            var pixels = new byte[width * height * 4];
-            fixed (byte* data = pixels) _readPixels(0, 0, width, height, 0x1908 /* GL_RGBA */, 0x1401 /* GL_UNSIGNED_BYTE */, data);
-            capture(width, height, pixels);
+            if (_visual is not null) _visual.Size = new Vector(Bounds.Width, Bounds.Height);
+            _renderer?.Resize(PixelSizeNow());
         }
     }
 
-    private uint Pixel(int x, int y)
+    private async void Start()
     {
-        uint rgba;
-        _readPixels(x, y, 1, 1, 0x1908 /* GL_RGBA */, 0x1401 /* GL_UNSIGNED_BYTE */, &rgba);
-        return rgba;
-    }
-
-    /// <summary>For the probe: the GL state the render call meets and leaves.</summary>
-    private static void Diagnose(GlInterface gl, int fb, int width, int height, string when)
-    {
-        var getInteger = (delegate* unmanaged<int, int*, void>)gl.GetProcAddress("glGetIntegerv");
-        var getError = (delegate* unmanaged<int>)gl.GetProcAddress("glGetError");
-        var status = (delegate* unmanaged<int, int>)gl.GetProcAddress("glCheckFramebufferStatus");
-        int bound;
-        getInteger(0x8CA6 /* GL_FRAMEBUFFER_BINDING */, &bound);
-        var viewport = stackalloc int[4];
-        getInteger(0x0BA2 /* GL_VIEWPORT */, viewport);
-        var complete = status(0x8D40 /* GL_FRAMEBUFFER */);
-        var error = getError();
-        Log.Info($"Video surface {when}: fb {fb}, bound {bound}, viewport {viewport[0]},{viewport[1]} {viewport[2]}x{viewport[3]}, "
-                 + $"asked {width}x{height}, status 0x{complete:x}, error 0x{error:x}.");
-    }
-
-    private bool CreateContext(SharedPlayer shared)
-    {
-        if (_gl is null || !shared.Acquire()) return false;
-
-        var apiType = Marshal.StringToCoTaskMemUTF8("opengl");
+        if (_renderer is not null || _compositor is not { } compositor || Player is not { IsDisposed: false } player) return;
+        var start = ++_starts;
         try
         {
-            var init = new MpvOpenGlInitParams { GetProcAddress = &GetProcAddress, GetProcAddressContext = GCHandle.ToIntPtr(_self) };
-            var parameters = stackalloc MpvRenderParamEntry[3];
-            parameters[0] = new MpvRenderParamEntry { Type = MpvRenderParam.ApiType, Data = apiType };
-            parameters[1] = new MpvRenderParamEntry { Type = MpvRenderParam.OpenGlInitParams, Data = (IntPtr)(&init) };
-            parameters[2] = default;
+            var interop = await compositor.TryGetCompositionGpuInterop();
+            var sharing = await compositor.TryGetRenderInterfaceFeature(typeof(IOpenGlTextureSharingRenderInterfaceContextFeature))
+                as IOpenGlTextureSharingRenderInterfaceContextFeature;
 
-            IntPtr context;
-            var result = LibMpv.mpv_render_context_create(&context, shared.Player.Handle, parameters);
-            if (result < 0)
+            // Superseded while waiting: another player, or the view left the window.
+            if (start != _starts || _renderer is not null || !ReferenceEquals(player, Player) || !ReferenceEquals(compositor, _compositor)) return;
+            if (interop is null || sharing is not { CanCreateSharedContext: true })
             {
-                Log.Warn($"The video surface could not start: {LibMpv.Describe(result)}");
-                shared.Release();
-                return false;
+                Log.Warn("Video cannot be shown: the window's renderer cannot share an OpenGL context with a video thread.");
+                return;
             }
 
-            _context = context;
-            _held = shared;
-            LibMpv.mpv_render_context_set_update_callback(_context, &OnUpdate, GCHandle.ToIntPtr(_self));
-            Log.Info("Video surface: libmpv renders into the window.");
-            Ready?.Invoke();
-            return true;
+            var surface = compositor.CreateDrawingSurface();
+            _visual = compositor.CreateSurfaceVisual();
+            _visual.Size = new Vector(Bounds.Width, Bounds.Height);
+            _visual.Surface = surface;
+            ElementComposition.SetElementChildVisual(this, _visual);
+
+            _renderer = new VideoRenderer(player, sharing, interop, surface, _stats, OnReady, OnFailed) { Sampled = _sampled };
+            _renderer.Resize(PixelSizeNow());
+            _renderer.Start();
         }
-        finally
+        catch (Exception ex)
         {
-            Marshal.FreeCoTaskMem(apiType);
+            Log.Warn("The video surface could not start.", ex);
         }
     }
 
-    private void FreeContext()
+    private void Stop()
     {
-        if (_context != IntPtr.Zero)
+        _starts++;
+        IsReady = false;
+        if (_visual is not null)
         {
-            LibMpv.mpv_render_context_set_update_callback(_context, null, IntPtr.Zero);
-            LibMpv.mpv_render_context_free(_context);
-            _context = IntPtr.Zero;
+            ElementComposition.SetElementChildVisual(this, null);
+            _visual = null;
         }
 
-        // Only now may the player go: its render context is gone.
-        _held?.Release();
-        _held = null;
-    }
-
-    [UnmanagedCallersOnly]
-    private static IntPtr GetProcAddress(IntPtr context, IntPtr name)
-    {
-        var view = (MpvVideoView?)GCHandle.FromIntPtr(context).Target;
-        var symbol = Marshal.PtrToStringUTF8(name);
-        return view?._gl is { } gl && symbol is not null ? gl.GetProcAddress(symbol) : IntPtr.Zero;
-    }
-
-    [UnmanagedCallersOnly]
-    private static void OnUpdate(IntPtr context)
-    {
-        // Called on mpv's own thread: nothing here may call back into mpv.
-        if (GCHandle.FromIntPtr(context).Target is MpvVideoView view)
+        if (_renderer is { } renderer)
         {
-            Dispatcher.UIThread.Post(view.RequestNextFrameRendering, DispatcherPriority.Render);
+            _renderer = null;
+            renderer.Stop();
         }
+    }
+
+    private void OnReady(VideoRenderer renderer)
+    {
+        if (!ReferenceEquals(renderer, _renderer)) return;
+        IsReady = true;
+        Ready?.Invoke();
+    }
+
+    private void OnFailed(VideoRenderer renderer)
+    {
+        if (!ReferenceEquals(renderer, _renderer)) return;
+        Stop();
+
+        // A lost context (a GPU reset) comes back with a new one; a player that is gone does not.
+        if (++_restarts <= MaxRestarts && Player is { IsDisposed: false })
+        {
+            Log.Info("Restarting the video surface.");
+            Start();
+        }
+    }
+
+    private PixelSize PixelSizeNow()
+    {
+        var scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
+        return new PixelSize(Math.Max(1, (int)Math.Round(Bounds.Width * scale)), Math.Max(1, (int)Math.Round(Bounds.Height * scale)));
     }
 }

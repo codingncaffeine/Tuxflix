@@ -31,18 +31,7 @@ internal static class VideoProbe
             return new Window();
         }
 
-        var player = new SharedPlayer(new MpvPlayer(new Dictionary<string, string>
-        {
-            ["vo"] = "libmpv",
-            ["ao"] = "null",
-            ["hwdec"] = "auto-safe",
-            ["keep-open"] = "yes",
-            ["loop-file"] = "inf",
-            ["config"] = "no",
-            ["terminal"] = "no",
-        }));
-
-        var view = new MpvVideoView { Player = player };
+        var view = new MpvVideoView();
         var window = new Window
         {
             Title = "Tuxflix video probe",
@@ -55,12 +44,30 @@ internal static class VideoProbe
         (uint Top, uint Middle, uint Bottom) last = default;
         view.Sampled = (top, middle, bottom) => last = (top, middle, bottom);
 
+        // Starting mpv waits for its core, so a worker does it, as the player page does.
+        SharedPlayer? player = null;
+        window.Opened += async (_, _) =>
+        {
+            player = new SharedPlayer(await Task.Run(() => new MpvPlayer(new Dictionary<string, string>
+            {
+                ["vo"] = "libmpv",
+                ["ao"] = "null",
+                ["hwdec"] = "auto-safe",
+                ["keep-open"] = "yes",
+                ["loop-file"] = "inf",
+                ["config"] = "no",
+                ["terminal"] = "no",
+            })));
+            view.Player = player;
+        };
+
         view.Ready += async () =>
         {
+            if (player is null) return;
             player.Player.Load(Pattern);
             await Task.Delay(TimeSpan.FromSeconds(6));
 
-            var hwdec = player.Player.GetString("hwdec-current");
+            var hwdec = await Task.Run(() => player.Player.GetString("hwdec-current"));
             var frames = view.FramesDrawn;
             var topRed = IsMostly(last.Top, 0);
             var bottomBlue = IsMostly(last.Bottom, 16);
@@ -71,7 +78,8 @@ internal static class VideoProbe
                 ? "Probe: video reaches the window, the right way up."
                 : $"Probe: FAILED (frames {frames > 10}, top red {topRed}, bottom blue {bottomBlue}).");
 
-            player.Release();
+            view.Player = null;
+            _ = Task.Run(player.Release);
             Dispatcher.UIThread.Post(window.Close);
         };
 

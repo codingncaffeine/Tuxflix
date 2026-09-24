@@ -80,10 +80,45 @@ public sealed class SettingsStoreTests
 
         first.Current.RailWidth = 333;
         first.Save();
+        Assert.True(first.Flush(TimeSpan.FromSeconds(5)));
         var second = SettingsStore.Load(file);
 
         Assert.Equal(first.Current.ClientIdentifier, second.Current.ClientIdentifier);
         Assert.Equal(333, second.Current.RailWidth);
+    }
+
+    [Fact]
+    public void QuickSavesCollapseAndTheLastOneIsOnDisk()
+    {
+        using var scratch = new Scratch();
+        var file = Path.Combine(scratch.Root, "settings.json");
+        var store = SettingsStore.Load(file);
+
+        // The writer is held with the first snapshot in hand, so every later save certainly arrives
+        // while a write is in progress: the case where a save could be lost.
+        using var taken = new ManualResetEventSlim();
+        using var hold = new ManualResetEventSlim();
+        var cancellation = TestContext.Current.CancellationToken;
+        store.BeforeWrite = () =>
+        {
+            taken.Set();
+            hold.Wait(TimeSpan.FromSeconds(5), cancellation);
+        };
+        store.Current.RailWidth = 200;
+        store.Save();
+        Assert.True(taken.Wait(TimeSpan.FromSeconds(5), cancellation));
+
+        for (var width = 201; width <= 400; width++)
+        {
+            store.Current.RailWidth = width;
+            store.Save();
+        }
+
+        store.BeforeWrite = null;
+        hold.Set();
+        Assert.True(store.Flush(TimeSpan.FromSeconds(5)));
+        Assert.Equal(400, SettingsStore.Load(file).Current.RailWidth);
+        Assert.False(File.Exists(file + ".new"));
     }
 
     [Fact]

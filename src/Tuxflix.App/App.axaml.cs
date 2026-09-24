@@ -30,7 +30,7 @@ public sealed class App : Application
         }
         else if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Launch is { } launch)
         {
-            var settings = SettingsStore.Load(launch.Paths.SettingsFile);
+            var settings = launch.Settings;
             var probing = launch.Options.ProbePlayer;
             var shell = new ShellViewModel(settings, launch.Paths)
             {

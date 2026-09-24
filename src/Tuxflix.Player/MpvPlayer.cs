@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using Tuxflix.Core.Diagnostics;
@@ -23,13 +24,19 @@ public sealed record PlayerChange(string Name, double? Number, bool? Flag, strin
 /// </summary>
 /// <remarks>
 /// Events arrive on a thread of the player's own, never the UI thread; whoever shows them marshals.
-/// The video is drawn by whoever owns a render context on <see cref="Handle"/>; that context must
-/// be freed before this player is disposed, which is libmpv's rule, not ours.
+/// Commands and property changes are queued with mpv's asynchronous API and return at once, so any
+/// thread may send them, the UI thread included; a refusal comes back as a reply and is logged.
+/// Reads (<see cref="GetString"/>, <see cref="GetNumber"/>), creating the player and disposing it
+/// wait for mpv's core and belong on a worker thread. The video is drawn by whoever owns a render
+/// context on <see cref="Handle"/>; that context must be freed before this player is disposed,
+/// which is libmpv's rule, not ours.
 /// </remarks>
 public sealed unsafe class MpvPlayer : IDisposable
 {
     private readonly Thread _events;
     private readonly Dictionary<ulong, string> _observed = [];
+    private readonly ConcurrentDictionary<ulong, string> _requests = new();
+    private long _nextRequest;
     private IntPtr _handle;
     private volatile bool _disposing;
 
@@ -76,31 +83,33 @@ public sealed unsafe class MpvPlayer : IDisposable
     /// <summary>An observed property changed. Raised on the player's event thread.</summary>
     public event Action<PlayerChange>? Changed;
 
-    /// <summary>A file finished loading and playback is about to begin.</summary>
+    /// <summary>A file finished loading and playback is about to begin. Raised on the player's event thread.</summary>
     public event Action? FileLoaded;
 
-    /// <summary>Playback of the current file ended, and why.</summary>
+    /// <summary>Playback of the current file ended, and why. Raised on the player's event thread.</summary>
     public event Action<EndReason, string?>? Ended;
 
-    /// <summary>Loads <paramref name="url"/>, starting <paramref name="start"/> seconds in.</summary>
+    /// <summary>Loads <paramref name="url"/>, starting <paramref name="start"/> seconds in. Returns at once.</summary>
     public void Load(string url, double start = 0)
     {
-        if (start > 0) SetProperty("start", start.ToString("0.###", CultureInfo.InvariantCulture));
-        else SetProperty("start", "none");
-        Command("loadfile", url, "replace");
+        // mpv runs queued requests in the order they were sent: the start point is set before the load.
+        PostProperty("start", start > 0 ? start.ToString("0.###", CultureInfo.InvariantCulture) : "none");
+        PostCommand("loadfile", url, "replace");
     }
 
-    public void Command(params string[] arguments)
+    /// <summary>Queues a command and returns at once.</summary>
+    public void PostCommand(params string[] arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        if (_disposing) return;
+        var id = Remember($"command {arguments[0]}");
         var handles = new IntPtr[arguments.Length + 1];
         try
         {
             for (var i = 0; i < arguments.Length; i++) handles[i] = Marshal.StringToCoTaskMemUTF8(arguments[i]);
             fixed (IntPtr* args = handles)
             {
-                var result = LibMpv.mpv_command(_handle, args);
-                if (result < 0) Log.Warn($"mpv command {arguments[0]} failed: {LibMpv.Describe(result)}");
+                Sent(id, LibMpv.mpv_command_async(_handle, id, args));
             }
         }
         finally
@@ -112,20 +121,40 @@ public sealed unsafe class MpvPlayer : IDisposable
         }
     }
 
-    public void SetProperty(string name, string value)
+    /// <summary>Queues a property change and returns at once.</summary>
+    public void PostProperty(string name, string value)
     {
-        var result = LibMpv.mpv_set_property_string(_handle, name, value);
-        if (result < 0) Log.Warn($"mpv refused {name}={value}: {LibMpv.Describe(result)}");
+        if (_disposing) return;
+        var id = Remember($"{name}={value}");
+        var text = Marshal.StringToCoTaskMemUTF8(value);
+        try
+        {
+            Sent(id, LibMpv.mpv_set_property_async(_handle, id, name, MpvFormat.String, &text));
+        }
+        finally
+        {
+            Marshal.FreeCoTaskMem(text);
+        }
     }
 
-    public void SetFlag(string name, bool value)
+    /// <summary>Queues a yes/no property change and returns at once.</summary>
+    public void PostFlag(string name, bool value)
     {
+        if (_disposing) return;
         var flag = value ? 1 : 0;
-        LibMpv.mpv_set_property(_handle, name, MpvFormat.Flag, &flag);
+        var id = Remember($"{name}={value}");
+        Sent(id, LibMpv.mpv_set_property_async(_handle, id, name, MpvFormat.Flag, &flag));
     }
 
-    public void SetNumber(string name, double value) => LibMpv.mpv_set_property(_handle, name, MpvFormat.Double, &value);
+    /// <summary>Queues a numeric property change and returns at once.</summary>
+    public void PostNumber(string name, double value)
+    {
+        if (_disposing) return;
+        var id = Remember(string.Create(CultureInfo.InvariantCulture, $"{name}={value}"));
+        Sent(id, LibMpv.mpv_set_property_async(_handle, id, name, MpvFormat.Double, &value));
+    }
 
+    /// <summary>Reads a property as text. Waits for mpv's core: never on the UI thread.</summary>
     public string? GetString(string name)
     {
         var value = LibMpv.mpv_get_property_string(_handle, name);
@@ -140,12 +169,14 @@ public sealed unsafe class MpvPlayer : IDisposable
         }
     }
 
+    /// <summary>Reads a numeric property. Waits for mpv's core: never on the UI thread.</summary>
     public double? GetNumber(string name)
     {
         double value;
         return LibMpv.mpv_get_property(_handle, name, MpvFormat.Double, &value) >= 0 ? value : null;
     }
 
+    /// <summary>Destroys the player. Waits for mpv to wind down: never on the UI thread.</summary>
     public void Dispose()
     {
         if (_disposing) return;
@@ -155,6 +186,20 @@ public sealed unsafe class MpvPlayer : IDisposable
         _events.Join(TimeSpan.FromSeconds(3));
         _handle = IntPtr.Zero;
         LibMpv.mpv_terminate_destroy(handle);
+    }
+
+    private ulong Remember(string what)
+    {
+        var id = (ulong)Interlocked.Increment(ref _nextRequest);
+        _requests[id] = what;
+        return id;
+    }
+
+    private void Sent(ulong id, int result)
+    {
+        if (result >= 0) return;
+        _requests.TryRemove(id, out var what);
+        Log.Warn($"mpv could not queue {what}: {LibMpv.Describe(result)}");
     }
 
     private void Observe(string name, MpvFormat format)
@@ -178,6 +223,13 @@ public sealed unsafe class MpvPlayer : IDisposable
                         return;
                     case MpvEventId.PropertyChange:
                         Report((MpvEventProperty*)e->Data);
+                        break;
+                    case MpvEventId.CommandReply or MpvEventId.SetPropertyReply:
+                        if (_requests.TryRemove(e->ReplyUserdata, out var what) && e->Error < 0)
+                        {
+                            Log.Warn($"mpv refused {what}: {LibMpv.Describe(e->Error)}");
+                        }
+
                         break;
                     case MpvEventId.FileLoaded:
                         FileLoaded?.Invoke();
