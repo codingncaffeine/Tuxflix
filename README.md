@@ -9,13 +9,16 @@ library: a rail of every title, shelves of artwork, and a page for each film and
 
 ## Status
 
-In early development. Signing in with Plex is new and still being proven against real servers,
-and playback is not built yet. A built-in demo
-library of invented titles, with artwork drawn in code, shows the interface in the meantime.
+In early development. Tuxflix signs in with Plex, opens your server, and plays films and episodes
+straight from it, inside the window: hardware decoding, resume where you left off, progress kept
+on the server, and the audio and subtitles the server chose for you. Transcoding, library grids,
+filters and search are still to come. A built-in demo library of invented titles, with artwork
+drawn in code, shows the interface without a server.
 
 ## Building
 
-Requires the .NET 10 SDK.
+Requires the .NET 10 SDK. Playback needs libmpv, which comes with the mpv package on most
+distributions.
 
 ```
 dotnet build Tuxflix.slnx -c Release
