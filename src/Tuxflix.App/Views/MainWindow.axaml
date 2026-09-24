@@ -85,8 +85,11 @@
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                         <MenuItem Header="{Binding AccountName}" IsEnabled="False" />
                                         <Separator />
+                                        <MenuItem Header="Sign in with Plex…" Command="{Binding SignInCommand}" IsVisible="{Binding IsSignedOut}" />
+                                        <MenuItem Header="Switch server…" Command="{Binding ShowServersCommand}" IsVisible="{Binding IsSignedIn}" />
                                         <MenuItem Header="Open the demo library" Command="{Binding OpenDemoCommand}" />
                                         <Separator />
+                                        <MenuItem Header="Sign out" Command="{Binding SignOutCommand}" IsVisible="{Binding IsSignedIn}" />
                                         <MenuItem Header="Quit Tuxflix" Click="OnQuit" InputGesture="Ctrl+Q" />
                                     </MenuFlyout>
                                 </Button.Flyout>

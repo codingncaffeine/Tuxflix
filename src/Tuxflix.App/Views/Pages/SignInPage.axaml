@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.SignInPage"
+             x:DataType="vm:SignInPageViewModel">
+
+    <Panel>
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="540" Padding="40,36"
+                CornerRadius="14" Background="#CC0F162E" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
+                BoxShadow="0 24 60 0 #B3020510, 0 0 90 0 #26A96BEA">
+            <StackPanel Spacing="22">
+                <Panel Width="84" Height="84" HorizontalAlignment="Center">
+                    <Border CornerRadius="20" Background="{DynamicResource Brush.Ribbon}" BoxShadow="0 10 34 0 #66A96BEA" />
+                    <Border CornerRadius="18" Margin="3" ClipToBounds="True">
+                        <Image Source="/Assets/tuxflix-128.png" Stretch="UniformToFill" />
+                    </Border>
+                </Panel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Sign in with Plex" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center" />
+                    <TextBlock Text="Plex's own sign-in page opens in your browser. Sign in there, and Tuxflix connects by itself. Your password never passes through Tuxflix."
+                               FontSize="14" LineHeight="21" TextWrapping="Wrap" TextAlignment="Center"
+                               Foreground="{DynamicResource Brush.Text.Secondary}" />
+                </StackPanel>
+
+                <!-- Waiting for the browser -->
+                <StackPanel Spacing="14" IsVisible="{Binding IsWaiting}">
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                        <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource Brush.Accent}" VerticalAlignment="Center" />
+                        <TextBlock Text="Waiting for you to sign in at plex.tv" FontSize="13.5" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <ProgressBar IsIndeterminate="True" Height="3" MinHeight="3" Width="220" HorizontalAlignment="Center"
+                                 Foreground="{DynamicResource Brush.Accent}" Background="{DynamicResource Brush.Fill.Input}" />
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,6,0,0">
+                        <Button Theme="{StaticResource PlayButton}" Padding="22,11" Command="{Binding OpenBrowserCommand}"
+                                ui:Tip.Text="Open Plex's sign-in page in your browser again">
+                            <StackPanel Orientation="Horizontal" Spacing="9">
+                                <PathIcon Data="{StaticResource Icon.Globe}" Width="15" Height="15" Foreground="White" />
+                                <TextBlock Text="OPEN THE BROWSER" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource GhostButton}" Content="CANCEL" Command="{Binding CancelCommand}"
+                                ui:Tip.Text="Stop waiting and go back" />
+                    </StackPanel>
+                    <StackPanel Spacing="5" Margin="0,4,0,0">
+                        <TextBlock Classes="label" Text="OR COPY THIS LINK INTO ANY BROWSER" HorizontalAlignment="Center" />
+                        <SelectableTextBlock Text="{Binding SignInLink}" FontSize="11.5" TextWrapping="Wrap" TextAlignment="Center"
+                                             Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Starting, and finishing once plex.tv has answered -->
+                <StackPanel Spacing="12" IsVisible="{Binding IsLoading}">
+                    <TextBlock HorizontalAlignment="Center" FontSize="13.5" FontWeight="SemiBold"
+                               Text="Signed in. Finding your servers…" IsVisible="{Binding IsFinishing}" />
+                    <ProgressBar IsIndeterminate="True" Height="3" MinHeight="3" Width="220" HorizontalAlignment="Center"
+                                 IsVisible="{Binding !IsWaiting}"
+                                 Foreground="{DynamicResource Brush.Accent}" Background="{DynamicResource Brush.Fill.Input}" />
+                </StackPanel>
+
+                <!-- Something went wrong -->
+                <StackPanel Spacing="14" IsVisible="{Binding HasError}">
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                        <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="18" Height="18" Foreground="{DynamicResource Brush.Accent}" />
+                        <TextBlock Text="{Binding ErrorMessage}" FontSize="13.5" TextWrapping="Wrap" MaxWidth="400" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                        <Button Theme="{StaticResource PlayButton}" Padding="22,11" Content="TRY AGAIN" Command="{Binding TryAgainCommand}"
+                                ui:Tip.Text="Start a new sign-in" />
+                        <Button Theme="{StaticResource GhostButton}" Content="CANCEL" Command="{Binding CancelCommand}"
+                                ui:Tip.Text="Go back" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             x:Class="Tuxflix.App.Views.Pages.StatusPage"
+             x:DataType="vm:StatusPageViewModel">
+
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+        <Panel Width="72" Height="72" HorizontalAlignment="Center">
+            <Border CornerRadius="18" Background="{DynamicResource Brush.Ribbon}" BoxShadow="0 10 34 0 #66A96BEA" />
+            <Border CornerRadius="16" Margin="3" ClipToBounds="True">
+                <Image Source="/Assets/tuxflix-128.png" Stretch="UniformToFill" />
+            </Border>
+        </Panel>
+        <TextBlock Text="{Binding Heading}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding Message}" FontSize="14" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" />
+        <ProgressBar IsIndeterminate="True" Height="3" MinHeight="3" Width="220" HorizontalAlignment="Center"
+                     Foreground="{DynamicResource Brush.Accent}" Background="{DynamicResource Brush.Fill.Input}" />
+    </StackPanel>
+</UserControl>

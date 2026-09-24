@@ -20,6 +20,9 @@ public sealed class AppSettings
     /// <summary>Use the desktop's own title bar instead of the one Tuxflix draws.</summary>
     public bool UseSystemTitleBar { get; set; }
 
+    /// <summary>The server opened last, by its machine identifier; the next start reconnects to it.</summary>
+    public string? LastServerId { get; set; }
+
     /// <summary>Width of the library rail in device-independent pixels.</summary>
     public double RailWidth { get; set; } = 288;
 }

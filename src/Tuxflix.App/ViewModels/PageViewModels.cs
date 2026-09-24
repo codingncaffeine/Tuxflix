@@ -24,7 +24,9 @@ public sealed class HomePageViewModel(ShellViewModel shell, ServerSession sessio
         Shelves.Clear();
         foreach (var hub in hubs)
         {
-            if (hub.Metadata is not { Count: > 0 } items) continue;
+            // Films and series for now; music, photo and clip shelves arrive with their own phases.
+            var items = hub.Metadata?.Where(i => i.Type is "movie" or "show" or "season" or "episode").ToList() ?? [];
+            if (items.Count == 0) continue;
             var landscape = hub.HubIdentifier is { } id && (id.StartsWith("home.continue", StringComparison.Ordinal) || id.StartsWith("home.ondeck", StringComparison.Ordinal));
             IEnumerable<MediaTileViewModel> tiles = landscape
                 ? items.Select(i => new LandscapeTileViewModel(shell, i))
@@ -257,8 +259,16 @@ public sealed partial class WelcomePageViewModel(ShellViewModel shell) : PageVie
 
     public override bool ShowsRail => false;
 
+    /// <summary>Why the welcome page is showing when it was not asked for: an expired sign-in, say.</summary>
+    public string? Notice { get; init; }
+
+    public bool HasNotice => Notice is not null;
+
     [RelayCommand]
     private void OpenDemo() => shell.OpenDemo();
+
+    [RelayCommand]
+    private void SignIn() => shell.SignInCommand.Execute(null);
 }
 
 /// <summary>A section that arrives in a later phase, said plainly rather than left blank.</summary>

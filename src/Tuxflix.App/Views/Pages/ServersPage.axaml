@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.ServersPage"
+             x:DataType="vm:ServersPageViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Width="680" HorizontalAlignment="Center" Margin="0,64,0,48" Spacing="22">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="label" Text="YOUR PLEX ACCOUNT" Foreground="{DynamicResource Brush.Accent}" />
+                <TextBlock Text="Choose a server" FontSize="30" FontWeight="Bold" />
+                <TextBlock Text="Tuxflix reaches each one the fastest way it can: on your own network first, then over the internet, and through Plex's relay only as a last resort."
+                           FontSize="14" LineHeight="21" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            </StackPanel>
+
+            <Border IsVisible="{Binding HasMessage}" Padding="16,12" CornerRadius="8"
+                    Background="{DynamicResource Brush.Accent.Softer}" BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="16" Height="16" Foreground="{DynamicResource Brush.Accent}" />
+                    <TextBlock Text="{Binding Message}" FontSize="13.5" TextWrapping="Wrap" MaxWidth="600" />
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Servers}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ServerRowViewModel">
+                        <Button Theme="{StaticResource RailHomeButton}" Margin="0,0,0,10" Padding="18,16"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                FontWeight="Normal" LetterSpacing="0"
+                                Command="{Binding ConnectCommand}"
+                                ui:Tip.Text="{Binding Name, StringFormat='Open {0}'}">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Border Width="44" Height="44" CornerRadius="10" Background="{DynamicResource Brush.Fill.Hover}">
+                                    <PathIcon Data="{StaticResource Icon.HardDrives}" Width="22" Height="22" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Spacing="3">
+                                    <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Detail}" FontSize="12.5" Classes="faint" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource Brush.Success}"
+                                            BoxShadow="{StaticResource Shadow.Glow.Success}" IsVisible="{Binding IsOnline}" />
+                                    <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource Brush.Danger}"
+                                            IsVisible="{Binding IsOffline}" />
+                                    <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource Brush.Text.Disabled}"
+                                            IsVisible="{Binding IsChecking}" />
+                                    <TextBlock Text="{Binding Status}" FontSize="12.5" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource Brush.Text.Secondary}" />
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

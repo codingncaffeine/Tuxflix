@@ -37,4 +37,7 @@ public sealed class FlexibleBooleanConverter : JsonConverter<bool>
     Converters = [typeof(FlexibleBooleanConverter)])]
 [JsonSerializable(typeof(PlexEnvelope))]
 [JsonSerializable(typeof(string[]))]
+[JsonSerializable(typeof(PlexPin))]
+[JsonSerializable(typeof(PlexUser))]
+[JsonSerializable(typeof(List<PlexResource>))]
 public sealed partial class PlexJsonContext : JsonSerializerContext;

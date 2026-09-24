@@ -9,7 +9,8 @@ library: a rail of every title, shelves of artwork, and a page for each film and
 
 ## Status
 
-In early development. Signing in to a server and playback are not built yet. A built-in demo
+In early development. Signing in with Plex is new and still being proven against real servers,
+and playback is not built yet. A built-in demo
 library of invented titles, with artwork drawn in code, shows the interface in the meantime.
 
 ## Building

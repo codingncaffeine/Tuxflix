@@ -15,6 +15,14 @@
                 <Border CornerRadius="14" BorderThickness="1" BorderBrush="#26FFFFFF" />
             </Panel>
 
+            <Border IsVisible="{Binding HasNotice}" HorizontalAlignment="Center" Padding="16,11" CornerRadius="8"
+                    Background="{DynamicResource Brush.Accent.Softer}" BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="16" Height="16" Foreground="{DynamicResource Brush.Accent}" />
+                    <TextBlock Text="{Binding Notice}" FontSize="13.5" TextWrapping="Wrap" MaxWidth="640" />
+                </StackPanel>
+            </Border>
+
             <StackPanel Spacing="10" HorizontalAlignment="Center">
                 <TextBlock Text="Welcome to Tuxflix" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" LetterSpacing="-0.4" />
                 <TextBlock Text="Your Plex libraries, laid out the way a game library should feel."
@@ -22,8 +30,8 @@
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
-                <Button Theme="{StaticResource PlayButton}" IsEnabled="False" ToolTip.ShowOnDisabled="True"
-                        ui:Tip.Text="Signing in to Plex arrives in the next build">
+                <Button Theme="{StaticResource PlayButton}" Command="{Binding SignInCommand}"
+                        ui:Tip.Text="Sign in with your Plex account in the browser">
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <PathIcon Data="{StaticResource Icon.UserCircle.Fill}" Width="16" Height="16" Foreground="White" />
                         <TextBlock Text="SIGN IN WITH PLEX" VerticalAlignment="Center" />

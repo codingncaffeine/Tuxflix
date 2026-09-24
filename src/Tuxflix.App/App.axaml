@@ -24,6 +24,9 @@
         <DataTemplate DataType="vm:ItemPageViewModel"><pages:ItemPage /></DataTemplate>
         <DataTemplate DataType="vm:WelcomePageViewModel"><pages:WelcomePage /></DataTemplate>
         <DataTemplate DataType="vm:ComingSoonPageViewModel"><pages:ComingSoonPage /></DataTemplate>
+        <DataTemplate DataType="vm:SignInPageViewModel"><pages:SignInPage /></DataTemplate>
+        <DataTemplate DataType="vm:ServersPageViewModel"><pages:ServersPage /></DataTemplate>
+        <DataTemplate DataType="vm:StatusPageViewModel"><pages:StatusPage /></DataTemplate>
 
         <!-- Artwork tiles -->
         <DataTemplate DataType="vm:PosterTileViewModel"><tiles:PosterTile /></DataTemplate>

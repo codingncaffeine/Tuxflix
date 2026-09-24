@@ -106,6 +106,14 @@ public sealed partial class LibraryRailViewModel(ShellViewModel shell) : Observa
         _selected = null;
     }
 
+    /// <summary>Empties the rail, for a sign-out or a change of server.</summary>
+    public void Clear()
+    {
+        _sections.Clear();
+        _selected = null;
+        Rows.Clear();
+    }
+
     internal void Open(MetadataItem item) => shell.OpenItem(item);
 
     internal void Rebuild()
