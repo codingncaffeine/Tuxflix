@@ -14,11 +14,22 @@ public sealed class ClassicSkinTests : IDisposable
 {
     private static readonly Lazy<bool> Skia = new(() =>
     {
-        // Decoding a sheet needs a renderer; the headless platform with Skia is enough.
-        AppBuilder.Configure<Application>()
-            .UseSkia()
-            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
-            .SetupWithoutStarting();
+        // Decoding a sheet needs a renderer; the headless platform with Skia is enough. Setting it up
+        // installs Avalonia's synchronization context on this thread, and a test awaiting under it
+        // would wait for a dispatcher nobody runs: the test's own context goes back afterwards.
+        var context = SynchronizationContext.Current;
+        try
+        {
+            AppBuilder.Configure<Application>()
+                .UseSkia()
+                .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
+                .SetupWithoutStarting();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(context);
+        }
+
         return true;
     });
 
