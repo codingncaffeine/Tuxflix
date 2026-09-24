@@ -1,0 +1,144 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             xmlns:tiles="using:Tuxflix.App.Views.Tiles"
+             x:Class="Tuxflix.App.Views.Pages.ArtistPage"
+             x:DataType="vm:ArtistPageViewModel">
+
+    <!-- An artist: the backdrop and the page's light from their own artwork, the portrait round,
+         then every album, then their story. -->
+    <Panel>
+        <Panel IsVisible="{Binding HasBlur}" IsHitTestVisible="False">
+            <Border Background="{Binding BlurBottom}" />
+            <Border Background="{Binding BlurTop}">
+                <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="Black" />
+                        <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                </Border.OpacityMask>
+            </Border>
+            <Border Background="#8C070B18" />
+        </Panel>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <Panel Height="400">
+                    <Panel IsHitTestVisible="False">
+                        <Panel.OpacityMask>
+                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                <GradientStop Offset="0" Color="Black" />
+                                <GradientStop Offset="0.5" Color="Black" />
+                                <GradientStop Offset="1" Color="Transparent" />
+                            </LinearGradientBrush>
+                        </Panel.OpacityMask>
+                        <ui:RemoteImage Path="{Binding BackdropPath}" DecodeWidth="1600" DecodeHeight="900" />
+                        <Border>
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                                    <GradientStop Offset="0" Color="#E60B1227" />
+                                    <GradientStop Offset="0.5" Color="#800B1227" />
+                                    <GradientStop Offset="1" Color="#140B1227" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                    </Panel>
+
+                    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Bottom" Margin="44,0,44,34">
+                        <Panel Width="176" Height="176">
+                            <Border CornerRadius="88" Background="{DynamicResource Brush.Panel}" BoxShadow="0 18 44 0 #D9020510" />
+                            <Border CornerRadius="88" ClipToBounds="True">
+                                <Panel>
+                                    <PathIcon Data="{StaticResource Icon.MicrophoneStage}" Width="54" Height="54"
+                                              Foreground="{DynamicResource Brush.Text.Disabled}" />
+                                    <ui:RemoteImage Path="{Binding PhotoPath}" DecodeWidth="176" DecodeHeight="176" />
+                                </Panel>
+                            </Border>
+                            <Border CornerRadius="88" BorderThickness="1" BorderBrush="#26FFFFFF" />
+                        </Panel>
+
+                        <StackPanel Grid.Column="1" Margin="32,0,0,8" VerticalAlignment="Bottom" Spacing="10">
+                            <TextBlock Classes="label" Text="ARTIST" Foreground="{DynamicResource Brush.Accent}" />
+                            <TextBlock Text="{Binding Name}" FontSize="50" FontWeight="Bold" LetterSpacing="-0.8"
+                                       TextWrapping="Wrap" MaxWidth="980" HorizontalAlignment="Left" />
+                            <TextBlock Text="{Binding Meta}" FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,8,0,0">
+                                <Button Theme="{StaticResource PlayButton}" Command="{Binding PlayCommand}"
+                                        ui:Tip.Text="Play every album, in order">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" />
+                                        <TextBlock Text="PLAY" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Theme="{StaticResource GhostButton}" Padding="18,10" Command="{Binding ShuffleCommand}"
+                                        ui:Tip.Text="Play every track in a random order">
+                                    <StackPanel Orientation="Horizontal" Spacing="9">
+                                        <PathIcon Data="{StaticResource Icon.Shuffle}" Width="16" Height="16" />
+                                        <TextBlock Text="SHUFFLE" VerticalAlignment="Center" FontWeight="SemiBold" LetterSpacing="0.6" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Panel>
+
+                <StackPanel Margin="44,18,44,52" Spacing="34">
+                    <StackPanel Spacing="10" IsVisible="{Binding HasSongs}" MaxWidth="900" HorizontalAlignment="Left">
+                        <TextBlock Classes="shelf-title" Text="SONGS" Margin="0,0,0,6" />
+                        <ItemsControl ItemsSource="{Binding Songs}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TrackRowViewModel">
+                                    <Button Theme="{StaticResource RailRow}" Padding="12,9" Margin="0,0,0,2" Classes.playing="{Binding IsPlaying}"
+                                            Command="{Binding PlayCommand}" ui:Tip.Text="{Binding PlayTip}">
+                                        <Button.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuItem Header="Play from here" Command="{Binding PlayCommand}" />
+                                                <MenuItem Header="Play next" Command="{Binding PlayNextCommand}" />
+                                                <MenuItem Header="Add to the queue" Command="{Binding AddToQueueCommand}" />
+                                            </MenuFlyout>
+                                        </Button.ContextFlyout>
+                                        <Grid ColumnDefinitions="44,*,Auto">
+                                            <Panel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Number}" FontSize="13.5" Classes="faint" IsVisible="{Binding !IsPlaying}" />
+                                                <PathIcon Data="{StaticResource Icon.Waveform.Fill}" Width="16" Height="16" HorizontalAlignment="Left"
+                                                          Foreground="{DynamicResource Brush.Accent}" IsVisible="{Binding IsPlaying}" />
+                                            </Panel>
+                                            <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                                <TextBlock Classes="track-title" Text="{Binding Title}" FontSize="14.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Guest}" IsVisible="{Binding HasGuest}" FontSize="12.5" Classes="faint" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{Binding DurationText}" FontSize="13" Classes="faint"
+                                                       VerticalAlignment="Center" Margin="16,0,4,0" />
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="16" IsVisible="{Binding HasAlbums}">
+                        <TextBlock Classes="shelf-title" Text="ALBUMS" />
+                        <ItemsControl ItemsSource="{Binding Albums}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AlbumTileViewModel">
+                                    <tiles:AlbumTile />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="12" IsVisible="{Binding HasSummary}">
+                        <TextBlock Classes="shelf-title" Text="ABOUT" />
+                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" FontSize="14.5" LineHeight="23" MaxLines="12"
+                                   TextTrimming="WordEllipsis" MaxWidth="900" HorizontalAlignment="Left"
+                                   Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Panel>
+</UserControl>

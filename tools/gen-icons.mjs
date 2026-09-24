@@ -29,13 +29,16 @@ const ICONS = {
     "game-controller", "warning", "warning-circle", "play-circle", "film-slate", "users",
     "user", "clock-counter-clockwise", "x-circle", "wifi-high", "lightning", "lock-simple",
     "link-simple", "sparkle", "compass", "list", "sidebar-simple", "arrow-counter-clockwise",
-    "arrow-clockwise",
+    "arrow-clockwise", "repeat-once", "vinyl-record", "waveform", "microphone-stage",
+    "playlist", "speaker-low", "speaker-none", "equalizer", "music-note", "headphones",
+    "radio", "palette", "monitor-play", "arrow-square-out", "text-align-left",
   ],
   fill: [
     "house", "play", "pause", "star", "check-circle", "bookmark-simple", "circle",
     "television-simple", "film-strip", "music-notes", "image", "folder-simple",
     "speaker-high", "skip-forward", "skip-back", "play-circle", "users", "lightning",
-    "warning", "info", "compass", "pulse", "user-circle",
+    "warning", "info", "compass", "pulse", "user-circle", "vinyl-record", "waveform",
+    "shuffle", "repeat", "repeat-once", "pause-circle", "headphones",
   ],
   bold: [
     "arrow-left", "arrow-right", "caret-left", "caret-right", "caret-down", "caret-up", "x",

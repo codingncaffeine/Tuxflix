@@ -2,6 +2,7 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Tuxflix.App.Imaging;
+using Tuxflix.App.Music;
 using Tuxflix.Core;
 using Tuxflix.Core.Diagnostics;
 using Tuxflix.Core.Plex;
@@ -260,6 +261,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Close();
         ImageLoader.Current = session.Images;
         Session = session;
+        Music = new MusicPlayer(this, session);
         Router.Reset(new HomePageViewModel(this, session));
         _ = Rail.LoadAsync(session);
     }
@@ -267,9 +269,39 @@ public sealed partial class ShellViewModel : ObservableObject
     private void Close()
     {
         Rail.Clear();
+        Music?.Dispose();
+        Music = null;
         ImageLoader.Current = null;
         Session?.Dispose();
         Session = null;
+    }
+
+    /// <summary>The music player of the open server: one queue, whatever page is showing.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowNowPlayingBar))]
+    public partial MusicPlayer? Music { get; private set; }
+
+    /// <summary>The now-playing bar stands under every page once music is queued, except over a film.</summary>
+    public bool ShowNowPlayingBar => Music is { HasQueue: true } && !IsImmersive && Router.Current is not NowPlayingPageViewModel;
+
+    partial void OnMusicChanged(MusicPlayer? oldValue, MusicPlayer? newValue)
+    {
+        if (oldValue is not null) oldValue.PropertyChanged -= OnMusicPropertyChanged;
+        if (newValue is not null) newValue.PropertyChanged += OnMusicPropertyChanged;
+    }
+
+    private void OnMusicPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MusicPlayer.HasQueue)) OnPropertyChanged(nameof(ShowNowPlayingBar));
+    }
+
+    [RelayCommand]
+    private void ShowNowPlaying()
+    {
+        if (Session is { } session && Music is { } music && Router.Current is not NowPlayingPageViewModel)
+        {
+            Router.Navigate(new NowPlayingPageViewModel(this, session, music));
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanGoBack))]
@@ -332,7 +364,16 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(item);
         if (Session is not { } session) return;
-        Router.Navigate(new ItemPageViewModel(this, session, item));
+        PageViewModel page = item.Type switch
+        {
+            "artist" => new ArtistPageViewModel(this, session, item),
+            "album" => new AlbumPageViewModel(this, session, item),
+
+            // A track opens as its album, where it can be played in its place.
+            "track" when item.ParentRatingKey is { } album => new AlbumPageViewModel(this, session, new MetadataItem { RatingKey = album, Type = "album", Title = item.ParentTitle ?? string.Empty }),
+            _ => new ItemPageViewModel(this, session, item),
+        };
+        Router.Navigate(page);
         Rail.Highlight(item);
     }
 
@@ -341,6 +382,9 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(item);
         if (Session is not { } session) return;
+
+        // A film takes over the sound: the music waits where it was.
+        Music?.Pause();
         Router.Navigate(new PlayerPageViewModel(this, session, item, resume));
     }
 
@@ -367,6 +411,7 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowRail));
         OnPropertyChanged(nameof(IsHome));
         OnPropertyChanged(nameof(IsImmersive));
+        OnPropertyChanged(nameof(ShowNowPlayingBar));
         GoBackCommand.NotifyCanExecuteChanged();
         GoForwardCommand.NotifyCanExecuteChanged();
     }

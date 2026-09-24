@@ -69,6 +69,8 @@ public sealed unsafe class MpvPlayer : IDisposable
         Observe("aid", MpvFormat.String);
         Observe("sid", MpvFormat.String);
         Observe("track-list/count", MpvFormat.Double);
+        Observe("playlist-pos", MpvFormat.Double);
+        Observe("idle-active", MpvFormat.Flag);
 
         _events = new Thread(EventLoop) { IsBackground = true, Name = "mpv events" };
         _events.Start();

@@ -28,6 +28,9 @@
         <DataTemplate DataType="vm:ServersPageViewModel"><pages:ServersPage /></DataTemplate>
         <DataTemplate DataType="vm:StatusPageViewModel"><pages:StatusPage /></DataTemplate>
         <DataTemplate DataType="vm:PlayerPageViewModel"><pages:PlayerPage /></DataTemplate>
+        <DataTemplate DataType="vm:ArtistPageViewModel"><pages:ArtistPage /></DataTemplate>
+        <DataTemplate DataType="vm:AlbumPageViewModel"><pages:AlbumPage /></DataTemplate>
+        <DataTemplate DataType="vm:NowPlayingPageViewModel"><pages:NowPlayingPage /></DataTemplate>
 
         <!-- Artwork tiles -->
         <DataTemplate DataType="vm:PosterTileViewModel"><tiles:PosterTile /></DataTemplate>

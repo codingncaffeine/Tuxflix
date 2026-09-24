@@ -1,0 +1,131 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.AlbumPage"
+             x:DataType="vm:AlbumPageViewModel">
+
+    <!-- An album in the light of its own cover: the cover large on the left, its tracks on the
+         right, the one playing marked in the accent. -->
+    <Panel>
+        <Panel IsVisible="{Binding HasBlur}" IsHitTestVisible="False">
+            <Border Background="{Binding BlurBottom}" />
+            <Border Background="{Binding BlurTop}">
+                <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="Black" />
+                        <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                </Border.OpacityMask>
+            </Border>
+            <Border Background="#99070B18" />
+        </Panel>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <Grid ColumnDefinitions="Auto,*" Margin="44,40,44,52">
+                <StackPanel Width="320" Spacing="22">
+                    <Panel Width="320" Height="320">
+                        <Border CornerRadius="10" Background="{DynamicResource Brush.Panel}" BoxShadow="0 26 60 0 #E6020510" />
+                        <Border CornerRadius="10" ClipToBounds="True">
+                            <Panel>
+                                <PathIcon Data="{StaticResource Icon.VinylRecord}" Width="72" Height="72"
+                                          Foreground="{DynamicResource Brush.Text.Disabled}" />
+                                <ui:RemoteImage Path="{Binding CoverPath}" DecodeWidth="640" DecodeHeight="640" />
+                            </Panel>
+                        </Border>
+                        <Border CornerRadius="10" BorderThickness="1" BorderBrush="#26FFFFFF" />
+                    </Panel>
+
+                    <ItemsControl ItemsSource="{Binding Styles}" IsVisible="{Binding HasStyles}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Border Classes="chip" Margin="0,0,6,6"><TextBlock Text="{Binding}" /></Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Spacing="4" IsVisible="{Binding HasStudio}">
+                        <TextBlock Classes="label" Text="LABEL" />
+                        <TextBlock Text="{Binding Studio}" FontSize="13.5" TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="40,6,0,0" Spacing="10">
+                    <TextBlock Classes="label" Text="{Binding Kicker}" Foreground="{DynamicResource Brush.Accent}" />
+                    <TextBlock Text="{Binding Heading}" FontSize="44" FontWeight="Bold" LetterSpacing="-0.6"
+                               TextWrapping="Wrap" MaxWidth="900" HorizontalAlignment="Left" />
+                    <StackPanel Orientation="Horizontal" Spacing="14">
+                        <Button Theme="{StaticResource GhostButton}" Padding="0" BorderThickness="0" Background="Transparent"
+                                Command="{Binding OpenArtistCommand}" ui:Tip.Text="Open the artist">
+                            <TextBlock Text="{Binding ArtistName}" FontSize="17" FontWeight="SemiBold" />
+                        </Button>
+                        <TextBlock Text="{Binding Meta}" FontSize="14" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,12,0,18">
+                        <Button Theme="{StaticResource PlayButton}" Command="{Binding PlayCommand}" ui:Tip.Text="Play the album">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" />
+                                <TextBlock Text="PLAY" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource GhostButton}" Padding="18,10" Command="{Binding ShuffleCommand}"
+                                ui:Tip.Text="Play the album in a random order">
+                            <StackPanel Orientation="Horizontal" Spacing="9">
+                                <PathIcon Data="{StaticResource Icon.Shuffle}" Width="16" Height="16" />
+                                <TextBlock Text="SHUFFLE" VerticalAlignment="Center" FontWeight="SemiBold" LetterSpacing="0.6" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource IconButton}" Padding="10" ui:Tip.Text="More">
+                            <PathIcon Data="{StaticResource Icon.DotsThree}" Width="20" Height="20" />
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                    <MenuItem Header="Play next" Command="{Binding PlayNextCommand}" />
+                                    <MenuItem Header="Add to the queue" Command="{Binding AddToQueueCommand}" />
+                                    <MenuItem Header="Open the artist" Command="{Binding OpenArtistCommand}" />
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.DataTemplates>
+                            <DataTemplate DataType="vm:DiscHeadingViewModel">
+                                <TextBlock Classes="shelf-title" Text="{Binding Title}" Margin="12,18,0,8" />
+                            </DataTemplate>
+                            <DataTemplate DataType="vm:TrackRowViewModel">
+                                <Button Theme="{StaticResource RailRow}" Padding="12,9" Margin="0,0,0,2" Classes.playing="{Binding IsPlaying}"
+                                        Command="{Binding PlayCommand}" ui:Tip.Text="{Binding PlayTip}">
+                                    <Button.ContextFlyout>
+                                        <MenuFlyout>
+                                            <MenuItem Header="Play from here" Command="{Binding PlayCommand}" />
+                                            <MenuItem Header="Play next" Command="{Binding PlayNextCommand}" />
+                                            <MenuItem Header="Add to the queue" Command="{Binding AddToQueueCommand}" />
+                                        </MenuFlyout>
+                                    </Button.ContextFlyout>
+                                    <Grid ColumnDefinitions="44,*,Auto" Classes="hover-reveal">
+                                        <Panel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Number}" FontSize="13.5" Classes="faint" IsVisible="{Binding !IsPlaying}" />
+                                            <PathIcon Data="{StaticResource Icon.Waveform.Fill}" Width="16" Height="16" HorizontalAlignment="Left"
+                                                      Foreground="{DynamicResource Brush.Accent}" IsVisible="{Binding IsPlaying}" />
+                                        </Panel>
+                                        <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                            <TextBlock Classes="track-title" Text="{Binding Title}" FontSize="14.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Guest}" IsVisible="{Binding HasGuest}" FontSize="12.5" Classes="faint" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding DurationText}" FontSize="13" Classes="faint"
+                                                   VerticalAlignment="Center" Margin="16,0,4,0" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.DataTemplates>
+                    </ItemsControl>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Panel>
+</UserControl>

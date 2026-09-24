@@ -267,6 +267,20 @@ public sealed class MetadataItem
     [JsonPropertyName("Country")]
     public List<Tag>? Country { get; init; }
 
+    /// <summary>Music: an album's styles, finer than its genres ("Neo-Traditionalist", "Country Pop").</summary>
+    [JsonPropertyName("Style")]
+    public List<Tag>? Style { get; init; }
+
+    [JsonPropertyName("Mood")]
+    public List<Tag>? Mood { get; init; }
+
+    /// <summary>Music: the release's format ("Album") and kind ("Single", "EP", "Compilation").</summary>
+    [JsonPropertyName("Format")]
+    public List<Tag>? Format { get; init; }
+
+    [JsonPropertyName("Subformat")]
+    public List<Tag>? Subformat { get; init; }
+
     [JsonPropertyName("Image")]
     public List<ItemImage>? Image { get; init; }
 
@@ -395,6 +409,25 @@ public sealed class MediaStream
 
     [JsonPropertyName("channels")]
     public int? Channels { get; init; }
+
+    /// <summary>
+    /// The server's loudness analysis of an audio stream: the gain in dB that brings the track to
+    /// the server's reference level. The server sends these as text, which the lenient reader takes.
+    /// </summary>
+    [JsonPropertyName("gain")]
+    public double? Gain { get; init; }
+
+    /// <summary>The same for the whole album, so an album keeps its own quiet and loud moments.</summary>
+    [JsonPropertyName("albumGain")]
+    public double? AlbumGain { get; init; }
+
+    /// <summary>Integrated loudness, LUFS.</summary>
+    [JsonPropertyName("loudness")]
+    public double? Loudness { get; init; }
+
+    /// <summary>Sample peak, as a fraction of full scale.</summary>
+    [JsonPropertyName("peak")]
+    public double? Peak { get; init; }
 
     /// <summary>The stream's place in the file, every kind counted from 0; absent for a subtitle file kept beside it.</summary>
     [JsonPropertyName("index")]

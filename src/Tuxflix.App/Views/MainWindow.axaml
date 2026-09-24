@@ -17,7 +17,7 @@
     <!-- The window draws its own frame: rounded, with a hairline ring, square when maximised. -->
     <Border Name="Frame" CornerRadius="{DynamicResource Radius.Window}" ClipToBounds="True" Background="{DynamicResource Brush.Base}">
         <Panel>
-            <Grid RowDefinitions="Auto,*,Auto">
+            <Grid RowDefinitions="Auto,*,Auto,Auto">
 
                 <!-- ================= Title bar ================= -->
                 <Border Name="TitleBar" Height="58" IsVisible="{Binding !IsImmersive}" Background="{DynamicResource Brush.Chrome}"
@@ -130,8 +130,13 @@
                     </Panel>
                 </DockPanel>
 
+                <!-- ================= Music, under every page once something is queued ================= -->
+                <Panel Grid.Row="2" IsVisible="{Binding ShowNowPlayingBar}">
+                    <views:NowPlayingBar DataContext="{Binding Music}" />
+                </Panel>
+
                 <!-- ================= Status bar ================= -->
-                <Border Grid.Row="2" Height="36" IsVisible="{Binding !IsImmersive}" Background="{DynamicResource Brush.Chrome}"
+                <Border Grid.Row="3" Height="36" IsVisible="{Binding !IsImmersive}" Background="{DynamicResource Brush.Chrome}"
                         BorderBrush="{DynamicResource Brush.Line.Soft}" BorderThickness="0,1,0,0">
                     <Grid ColumnDefinitions="*,Auto,*" Margin="16,0,12,0">
                         <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">

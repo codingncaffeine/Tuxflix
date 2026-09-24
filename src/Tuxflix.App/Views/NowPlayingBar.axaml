@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:music="using:Tuxflix.App.Music"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.NowPlayingBar"
+             x:DataType="music:MusicPlayer">
+
+    <!-- Music under every page: the cover and title, the transport and the position, the volume.
+         Clicking the cover or the queue button opens the whole Now Playing page. -->
+    <Border Height="82" Background="{DynamicResource Brush.Chrome}" BorderBrush="{DynamicResource Brush.Line.Soft}" BorderThickness="0,1,0,0">
+        <Grid ColumnDefinitions="*,Auto,*" Margin="16,0,16,0">
+
+            <Button Theme="{StaticResource GhostButton}" Padding="0" Background="Transparent" BorderThickness="0"
+                    HorizontalAlignment="Left" Command="{Binding ShowNowPlayingCommand}" ui:Tip.Text="Open Now Playing">
+                <StackPanel Orientation="Horizontal" Spacing="13">
+                    <Panel Width="54" Height="54">
+                        <Border CornerRadius="6" Background="{DynamicResource Brush.Panel}" BoxShadow="{StaticResource Shadow.Tile}" />
+                        <Border CornerRadius="6" ClipToBounds="True">
+                            <Panel>
+                                <PathIcon Data="{StaticResource Icon.MusicNotes}" Width="20" Height="20" Foreground="{DynamicResource Brush.Text.Disabled}" />
+                                <ui:RemoteImage Path="{Binding ArtPath}" DecodeWidth="108" DecodeHeight="108" />
+                            </Panel>
+                        </Border>
+                    </Panel>
+                    <StackPanel VerticalAlignment="Center" Spacing="2" MaxWidth="320">
+                        <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Artist}" FontSize="12.5" Classes="faint" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </StackPanel>
+            </Button>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                    <Button Theme="{StaticResource IconButton}" Classes.toggle-on="{Binding IsShuffled}"
+                            Command="{Binding ToggleShuffleCommand}" ui:Tip.Text="{Binding ShuffleTip}" ui:Tip.Keys="S">
+                        <PathIcon Data="{StaticResource Icon.Shuffle}" Width="17" Height="17" />
+                    </Button>
+                    <Button Theme="{StaticResource IconButton}" Command="{Binding PreviousCommand}" ui:Tip.Text="Previous" ui:Tip.Keys="P">
+                        <PathIcon Data="{StaticResource Icon.SkipBack.Fill}" Width="18" Height="18" />
+                    </Button>
+                    <Button Theme="{StaticResource PlayButton}" Padding="0" Width="40" Height="40" CornerRadius="20"
+                            Command="{Binding TogglePauseCommand}" ui:Tip.Text="{Binding PlayPauseTip}" ui:Tip.Keys="Space">
+                        <Panel>
+                            <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" Margin="2,0,0,0" IsVisible="{Binding IsPaused}" />
+                            <PathIcon Data="{StaticResource Icon.Pause.Fill}" Width="15" Height="15" Foreground="White" IsVisible="{Binding !IsPaused}" />
+                        </Panel>
+                    </Button>
+                    <Button Theme="{StaticResource IconButton}" Command="{Binding NextCommand}" ui:Tip.Text="Next" ui:Tip.Keys="N">
+                        <PathIcon Data="{StaticResource Icon.SkipForward.Fill}" Width="18" Height="18" />
+                    </Button>
+                    <Button Theme="{StaticResource IconButton}" Classes.toggle-on="{Binding IsRepeating}"
+                            Command="{Binding CycleRepeatCommand}" ui:Tip.Text="{Binding RepeatTip}" ui:Tip.Keys="R">
+                        <Panel>
+                            <PathIcon Data="{StaticResource Icon.Repeat}" Width="17" Height="17" IsVisible="{Binding !IsRepeatingOne}" />
+                            <PathIcon Data="{StaticResource Icon.RepeatOnce}" Width="17" Height="17" IsVisible="{Binding IsRepeatingOne}" />
+                        </Panel>
+                    </Button>
+                </StackPanel>
+                <Grid ColumnDefinitions="Auto,*,Auto" Width="520">
+                    <TextBlock Text="{Binding PositionText}" FontSize="11.5" Classes="faint" VerticalAlignment="Center" MinWidth="40" />
+                    <Slider Grid.Column="1" Name="Seek" Theme="{StaticResource SeekBar}" Margin="10,0"
+                            Maximum="{Binding SeekMaximum}" Value="{Binding SeekValue}" AutomationProperties.Name="Position" />
+                    <TextBlock Grid.Column="2" Text="{Binding DurationText}" FontSize="11.5" Classes="faint" VerticalAlignment="Center"
+                               MinWidth="40" TextAlignment="Right" />
+                </Grid>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
+                <Button Theme="{StaticResource IconButton}" Command="{Binding ToggleMuteCommand}" ui:Tip.Text="Mute" ui:Tip.Keys="M">
+                    <Panel>
+                        <PathIcon Data="{StaticResource Icon.SpeakerHigh}" Width="18" Height="18" IsVisible="{Binding !IsMuted}" />
+                        <PathIcon Data="{StaticResource Icon.SpeakerSlash}" Width="18" Height="18" IsVisible="{Binding IsMuted}" />
+                    </Panel>
+                </Button>
+                <Slider Theme="{StaticResource SeekBar}" Width="104" Maximum="150" Value="{Binding Volume}"
+                        VerticalAlignment="Center" ui:Tip.Text="Volume" AutomationProperties.Name="Volume" />
+                <Border Width="1" Height="22" Background="{DynamicResource Brush.Line.Hairline}" Margin="6,0" />
+                <Button Theme="{StaticResource IconButton}" Command="{Binding ShowNowPlayingCommand}" ui:Tip.Text="Now Playing and the queue">
+                    <PathIcon Data="{StaticResource Icon.Playlist}" Width="19" Height="19" />
+                </Button>
+                <Button Theme="{StaticResource IconButton}" Command="{Binding StopCommand}" ui:Tip.Text="Stop and clear the queue">
+                    <PathIcon Data="{StaticResource Icon.X}" Width="16" Height="16" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

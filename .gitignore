@@ -15,3 +15,6 @@ TestResults/
 # Secrets
 Secrets.cs
 *.secrets.json
+
+# Classic player skins are third-party: tested locally, never committed.
+*.wsz

@@ -16,6 +16,15 @@ internal static class Format
             : string.Create(CultureInfo.InvariantCulture, $"{Math.Max(1, (int)Math.Round(span.TotalMinutes))}m");
     }
 
+    /// <summary>"3:07" or "1:02:45": a position or a length, as players show them.</summary>
+    public static string Clock(double seconds)
+    {
+        var span = TimeSpan.FromSeconds(double.IsFinite(seconds) ? Math.Max(0, seconds) : 0);
+        return span.TotalHours >= 1
+            ? span.ToString("h':'mm':'ss", CultureInfo.InvariantCulture)
+            : span.ToString("m':'ss", CultureInfo.InvariantCulture);
+    }
+
     /// <summary>"1h 12m left".</summary>
     public static string Remaining(MetadataItem item)
     {

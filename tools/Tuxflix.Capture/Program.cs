@@ -83,7 +83,13 @@ void Capture(string pose)
     }
 
     // The keyring is the user's: a capture reads the real sign-in and never stores over or deletes it.
-    var shell = new ShellViewModel(settings, paths) { Keyring = new ReadOnlySecretStore(new Keyring()) };
+    // Nor does it make a sound or tell the server anything about what it plays.
+    var shell = new ShellViewModel(settings, paths)
+    {
+        Keyring = new ReadOnlySecretStore(new Keyring()),
+        ReportsPlayback = false,
+        Silent = true,
+    };
     var window = new MainWindow(shell, settings) { Width = width, Height = height };
     window.Show();
 
@@ -114,6 +120,38 @@ void Capture(string pose)
                   ?? throw new InvalidOperationException($"The rail has no {type}.");
         shell.OpenItem(row.Item);
         Settle(shell);
+    }
+
+    if (real && pose is "artist" or "album" or "nowplaying")
+    {
+        // An artist with a photo, by position in the rail (MUSIC_ARTIST picks another by name).
+        var wanted = Environment.GetEnvironmentVariable("MUSIC_ARTIST");
+        var artists = shell.Rail.Rows.OfType<RailItemRow>().Where(r => r.Item.Type == "artist" && r.Item.Thumb is not null).ToList();
+        var row = (wanted is { Length: > 0 } ? artists.FirstOrDefault(r => r.Item.Title.Contains(wanted, StringComparison.OrdinalIgnoreCase)) : null)
+                  ?? artists.Skip(artists.Count / 3).FirstOrDefault()
+                  ?? throw new InvalidOperationException("The rail has no artist.");
+        shell.OpenItem(row.Item);
+        Settle(shell);
+
+        if (pose is "album" or "nowplaying")
+        {
+            var album = (shell.Router.Current as ArtistPageViewModel)?.Albums.FirstOrDefault()?.Album
+                        ?? throw new InvalidOperationException("The artist has no album.");
+            shell.OpenItem(album);
+            Settle(shell);
+        }
+
+        if (pose == "nowplaying")
+        {
+            var page = shell.Router.Current as AlbumPageViewModel ?? throw new InvalidOperationException("No album page.");
+            page.PlayCommand.Execute(null);
+            var clock = Stopwatch.StartNew();
+            while (shell.Music?.Position is null or < 1.5 && clock.Elapsed < TimeSpan.FromSeconds(20)) Pump(TimeSpan.FromMilliseconds(100));
+            shell.ShowNowPlayingCommand.Execute(null);
+            Settle(shell);
+            Pump(TimeSpan.FromSeconds(1));
+            Settle(shell);
+        }
     }
 
     if (pose == "player")

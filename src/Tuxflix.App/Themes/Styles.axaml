@@ -170,6 +170,31 @@
         <Setter Property="Opacity" Value="1" />
     </Style>
 
+    <!-- The track that is playing reads in the accent wherever it is listed. -->
+    <Style Selector="Button.playing TextBlock.track-title">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+    </Style>
+
+    <!-- A transport toggle that is on (shuffle, repeat) takes the accent and a dot under it. -->
+    <Style Selector="Button.toggle-on PathIcon">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+    </Style>
+
+    <!-- The same reveal for a control that sits beside a tile rather than inside it: an album's
+         play button, a track row's play icon. -->
+    <Style Selector=":is(Panel).hover-reveal :is(Control).reveal">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector=":is(Panel).hover-reveal:pointerover :is(Control).reveal, :is(Panel).hover-reveal:focus-within :is(Control).reveal">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+
     <Style Selector="Button.tile Border#Ring">
         <Setter Property="BorderBrush" Value="#33FFFFFF" />
         <Setter Property="BorderThickness" Value="1" />

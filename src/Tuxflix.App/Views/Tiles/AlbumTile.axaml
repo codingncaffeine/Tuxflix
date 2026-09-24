@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Tiles.AlbumTile"
+             x:DataType="vm:AlbumTileViewModel">
+
+    <!-- A square cover: it lifts on hover like every tile, and a round play button rises in its
+         corner, so an album plays without opening it. -->
+    <StackPanel Width="176" Spacing="9" Margin="0,0,22,26">
+        <Panel Classes="hover-reveal">
+            <Button Classes="tile" Theme="{StaticResource TileButton}" Command="{Binding OpenCommand}"
+                    AutomationProperties.Name="{Binding Title}" ui:Tip.Text="{Binding Title}">
+                <Panel Width="176" Height="176">
+                    <Border Name="Lift" CornerRadius="{StaticResource Radius.Tile}" Background="{DynamicResource Brush.Panel}" />
+                    <Border CornerRadius="{StaticResource Radius.Tile}" ClipToBounds="True">
+                        <Panel>
+                            <PathIcon Data="{StaticResource Icon.VinylRecord}" Width="44" Height="44"
+                                      Foreground="{DynamicResource Brush.Text.Disabled}" />
+                            <ui:RemoteImage Path="{Binding CoverPath}" DecodeWidth="176" DecodeHeight="176" />
+                        </Panel>
+                    </Border>
+                    <Border Name="Ring" CornerRadius="{StaticResource Radius.Tile}" />
+                </Panel>
+            </Button>
+            <Button Classes="reveal" Theme="{StaticResource PlayButton}" Padding="0" Width="42" Height="42" CornerRadius="21"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,10"
+                    Command="{Binding PlayCommand}" ui:Tip.Text="{Binding PlayTip}">
+                <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" Margin="2,0,0,0" />
+            </Button>
+        </Panel>
+        <StackPanel Spacing="2">
+            <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Caption}" FontSize="12" Classes="faint" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

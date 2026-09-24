@@ -193,6 +193,20 @@ public sealed class PlexServerClient
     public async Task<IReadOnlyList<MetadataItem>> GetChildrenAsync(string ratingKey, CancellationToken cancellation) =>
         (await GetAsync($"/library/metadata/{Uri.EscapeDataString(ratingKey)}/children", cancellation).ConfigureAwait(false)).Metadata ?? [];
 
+    /// <summary>Full records for many items in one request (the server takes a comma-separated list), in the order given.</summary>
+    public async Task<IReadOnlyList<MetadataItem>> GetMetadataManyAsync(IReadOnlyList<string> ratingKeys, CancellationToken cancellation)
+    {
+        ArgumentNullException.ThrowIfNull(ratingKeys);
+        if (ratingKeys.Count == 0) return [];
+        var found = (await GetAsync($"/library/metadata/{string.Join(',', ratingKeys.Select(Uri.EscapeDataString))}", cancellation).ConfigureAwait(false)).Metadata ?? [];
+        var byKey = found.GroupBy(i => i.RatingKey, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+        return [.. ratingKeys.Where(byKey.ContainsKey).Select(k => byKey[k])];
+    }
+
+    /// <summary>Every leaf under an item: all the tracks of an artist, all the episodes of a series, in order.</summary>
+    public async Task<IReadOnlyList<MetadataItem>> GetAllLeavesAsync(string ratingKey, CancellationToken cancellation) =>
+        (await GetAsync($"/library/metadata/{Uri.EscapeDataString(ratingKey)}/allLeaves", cancellation).ConfigureAwait(false)).Metadata ?? [];
+
     private Uri Resolve(string pathAndQuery) => new(BaseUri, pathAndQuery);
 
     // The path only: a query string can carry things that do not belong in a message.

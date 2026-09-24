@@ -61,7 +61,7 @@ public sealed partial class LibraryRailViewModel(ShellViewModel shell) : Observa
         {
             var sections = await Task.Run(() => session.Client.GetSectionsAsync(CancellationToken.None));
             var loaded = new List<RailSection>();
-            foreach (var directory in sections.Where(s => s.Type is "movie" or "show"))
+            foreach (var directory in sections.Where(s => s.Type is "movie" or "show" or "artist"))
             {
                 var container = await Task.Run(() => session.Client.GetSectionItemsAsync(directory.Key, "titleSort", CancellationToken.None));
                 loaded.Add(new RailSection(this, directory, container.Metadata ?? []));
@@ -90,8 +90,8 @@ public sealed partial class LibraryRailViewModel(ShellViewModel shell) : Observa
         ArgumentNullException.ThrowIfNull(item);
         var key = item.Type switch
         {
-            "episode" => item.GrandparentRatingKey,
-            "season" => item.ParentRatingKey,
+            "episode" or "track" => item.GrandparentRatingKey,
+            "season" or "album" => item.ParentRatingKey,
             _ => item.RatingKey,
         };
 
@@ -122,6 +122,8 @@ public sealed partial class LibraryRailViewModel(ShellViewModel shell) : Observa
         var rows = new List<RailRow>();
         foreach (var section in _sections)
         {
+            // Music has no watched state: a watch filter hides it rather than listing every artist.
+            if (section.IsMusic && Filter != RailFilter.All) continue;
             var items = section.Items.Where(Matches).Where(i => text.Length == 0 || i.Title.Contains(text, StringComparison.CurrentCultureIgnoreCase)).ToList();
             section.VisibleCount = items.Count;
             if (items.Count == 0 && text.Length > 0) continue;
@@ -156,10 +158,18 @@ public sealed partial class LibraryRailViewModel(ShellViewModel shell) : Observa
         public RailSection(LibraryRailViewModel rail, LibraryDirectory directory, IReadOnlyList<MetadataItem> items)
         {
             Items = items;
-            Header = new RailSectionRow(rail, directory.Title, directory.Type == "show" ? "Icon.TelevisionSimple" : "Icon.FilmStrip");
+            IsMusic = directory.Type == "artist";
+            Header = new RailSectionRow(rail, directory.Title, directory.Type switch
+            {
+                "show" => "Icon.TelevisionSimple",
+                "artist" => "Icon.MusicNotes",
+                _ => "Icon.FilmStrip",
+            });
         }
 
         public IReadOnlyList<MetadataItem> Items { get; }
+
+        public bool IsMusic { get; }
 
         public RailSectionRow Header { get; }
 
