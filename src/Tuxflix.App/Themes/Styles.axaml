@@ -110,13 +110,16 @@
     </Style>
 
     <!-- ===== Search fields: a pill that lights its edge with the accent when focused ===== -->
+    <!-- A fixed height, centred: left to stretch, the pill fills whatever row it sits in. -->
     <Style Selector="TextBox.search">
         <Setter Property="Background" Value="{DynamicResource Brush.Fill.Input}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Line.Hairline}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="17" />
         <Setter Property="MinHeight" Value="34" />
-        <Setter Property="Padding" Value="4,7,10,7" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Padding" Value="4,0,10,0" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
