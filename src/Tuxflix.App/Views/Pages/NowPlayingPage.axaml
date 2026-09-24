@@ -100,6 +100,10 @@
                             </Button>
                             <Slider Theme="{StaticResource SeekBar}" Width="110" Maximum="150" Value="{Binding Music.Volume}"
                                     VerticalAlignment="Center" ui:Tip.Text="Volume" ui:Tip.Keys="Up" AutomationProperties.Name="Volume" />
+                            <Button Theme="{StaticResource IconButton}" Command="{Binding Music.ShowCompactPlayerCommand}" Margin="6,0,0,0"
+                                    ui:Tip.Text="Compact player, with classic skins">
+                                <PathIcon Data="{StaticResource Icon.PictureInPicture}" Width="19" Height="19" />
+                            </Button>
                         </StackPanel>
                     </Grid>
                 </StackPanel>

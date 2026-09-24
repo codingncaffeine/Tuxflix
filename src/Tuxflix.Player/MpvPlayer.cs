@@ -36,6 +36,7 @@ public sealed unsafe class MpvPlayer : IDisposable
     private readonly Thread _events;
     private readonly Dictionary<ulong, string> _observed = [];
     private readonly ConcurrentDictionary<ulong, string> _requests = new();
+    private readonly ConcurrentDictionary<ulong, Action> _fallbacks = new();
     private long _nextRequest;
     private IntPtr _handle;
     private volatile bool _disposing;
@@ -100,11 +101,24 @@ public sealed unsafe class MpvPlayer : IDisposable
     }
 
     /// <summary>Queues a command and returns at once.</summary>
-    public void PostCommand(params string[] arguments)
+    public void PostCommand(params string[] arguments) => Post(null, arguments);
+
+    /// <summary>
+    /// Queues a command and returns at once; <paramref name="refused"/> runs, on mpv's event thread,
+    /// if mpv turns it down, for a caller that has another way to the same end.
+    /// </summary>
+    public void PostCommand(Action refused, params string[] arguments)
+    {
+        ArgumentNullException.ThrowIfNull(refused);
+        Post(refused, arguments);
+    }
+
+    private void Post(Action? refused, string[] arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         if (_disposing) return;
         var id = Remember($"command {arguments[0]}");
+        if (refused is not null) _fallbacks[id] = refused;
         var handles = new IntPtr[arguments.Length + 1];
         try
         {
@@ -202,6 +216,7 @@ public sealed unsafe class MpvPlayer : IDisposable
         if (result >= 0) return;
         _requests.TryRemove(id, out var what);
         Log.Warn($"mpv could not queue {what}: {LibMpv.Describe(result)}");
+        if (_fallbacks.TryRemove(id, out var refused)) refused();
     }
 
     private void Observe(string name, MpvFormat format)
@@ -227,9 +242,18 @@ public sealed unsafe class MpvPlayer : IDisposable
                         Report((MpvEventProperty*)e->Data);
                         break;
                     case MpvEventId.CommandReply or MpvEventId.SetPropertyReply:
+                        _fallbacks.TryRemove(e->ReplyUserdata, out var fallback);
                         if (_requests.TryRemove(e->ReplyUserdata, out var what) && e->Error < 0)
                         {
-                            Log.Warn($"mpv refused {what}: {LibMpv.Describe(e->Error)}");
+                            if (fallback is null)
+                            {
+                                Log.Warn($"mpv refused {what}: {LibMpv.Describe(e->Error)}");
+                            }
+                            else
+                            {
+                                Log.Info($"mpv refused {what} ({LibMpv.Describe(e->Error)}); taking the other way.");
+                                fallback();
+                            }
                         }
 
                         break;

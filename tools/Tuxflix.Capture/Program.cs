@@ -3,6 +3,8 @@
 //   dotnet run --project tools/Tuxflix.Capture -c Release -- <output-dir> [WIDTHxHEIGHT] [pose ...]
 //
 // Poses: home, home-hover, movie, series, welcome, discover, tooltip. With none given, all of them.
+// With --real also: artist, album, nowplaying, and classic (the compact player over a playing album;
+// CLASSIC_SKIN=path.wsz wears that skin, otherwise the base skin, fetched as the app fetches it).
 // Every run uses a throwaway profile under the output directory; nothing touches the real one.
 
 using System.Diagnostics;
@@ -122,7 +124,7 @@ void Capture(string pose)
         Settle(shell);
     }
 
-    if (real && pose is "artist" or "album" or "nowplaying")
+    if (real && pose is "artist" or "album" or "nowplaying" or "classic")
     {
         // An artist with a photo, by position in the rail (MUSIC_ARTIST picks another by name).
         var wanted = Environment.GetEnvironmentVariable("MUSIC_ARTIST");
@@ -133,7 +135,7 @@ void Capture(string pose)
         shell.OpenItem(row.Item);
         Settle(shell);
 
-        if (pose is "album" or "nowplaying")
+        if (pose is "album" or "nowplaying" or "classic")
         {
             var album = (shell.Router.Current as ArtistPageViewModel)?.Albums.FirstOrDefault()?.Album
                         ?? throw new InvalidOperationException("The artist has no album.");
@@ -141,7 +143,7 @@ void Capture(string pose)
             Settle(shell);
         }
 
-        if (pose == "nowplaying")
+        if (pose is "nowplaying" or "classic")
         {
             var page = shell.Router.Current as AlbumPageViewModel ?? throw new InvalidOperationException("No album page.");
             page.PlayCommand.Execute(null);
@@ -152,6 +154,29 @@ void Capture(string pose)
             Pump(TimeSpan.FromSeconds(1));
             Settle(shell);
         }
+    }
+
+    if (pose == "classic")
+    {
+        var skinFile = Environment.GetEnvironmentVariable("CLASSIC_SKIN");
+        if (skinFile is { Length: > 0 })
+        {
+            using var library = new Tuxflix.App.Classic.SkinLibrary(Path.Combine(paths.Data, "skins"));
+            shell.Settings.Classic.Skin = Result(library.ImportAsync(skinFile));
+        }
+
+        Wait(window.ShowClassicAsync());
+        var classic = window.Classic ?? throw new InvalidOperationException("The compact player did not open.");
+        // The analyser needs its decode to run ahead, and the marquee a step or two.
+        Pump(TimeSpan.FromSeconds(3));
+        var shot = classic.CaptureRenderedFrame() ?? throw new InvalidOperationException("The compact player rendered nothing.");
+        var name = "classic-" + (skinFile is { Length: > 0 } ? Path.GetFileNameWithoutExtension(skinFile) : "base") + ".png";
+        shot.Save(Path.Combine(output, name), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+        Console.WriteLine($"{pose}: {Path.Combine(output, name)} ({shot.PixelSize.Width}x{shot.PixelSize.Height}, skin {classic.View.Skin.Name})");
+        classic.Close();
+        Pump(TimeSpan.FromMilliseconds(200));
+        window.Close();
+        return;
     }
 
     if (pose == "player")
@@ -239,6 +264,20 @@ void Settle(ShellViewModel shell)
 
     // Let the fade-ins finish.
     Pump(TimeSpan.FromMilliseconds(400));
+}
+
+// Runs the dispatcher until the task is done: the capture runs on the UI thread, so it cannot block on it.
+T Result<T>(Task<T> task)
+{
+    Wait(task);
+    return task.Result;
+}
+
+void Wait(Task task)
+{
+    var clock = Stopwatch.StartNew();
+    while (!task.IsCompleted && clock.Elapsed < TimeSpan.FromSeconds(60)) Pump(TimeSpan.FromMilliseconds(50));
+    task.GetAwaiter().GetResult();
 }
 
 void Pump(TimeSpan duration)

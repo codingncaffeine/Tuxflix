@@ -4,8 +4,10 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Tuxflix.App.Classic;
 using Tuxflix.App.Controls;
 using Tuxflix.App.ViewModels;
+using Tuxflix.Core.Diagnostics;
 using Tuxflix.Core.Settings;
 
 namespace Tuxflix.App.Views;
@@ -14,6 +16,10 @@ public partial class MainWindow : Window
 {
     private readonly ShellViewModel? _shell;
     private readonly SettingsStore? _settings;
+    private SkinLibrary? _skins;
+    private ClassicPlayerWindow? _classic;
+    private bool _openingClassic;
+    private bool _quitting;
 
     /// <summary>For the XAML loader and the designer.</summary>
     public MainWindow()
@@ -49,13 +55,67 @@ public partial class MainWindow : Window
         AddHandler(PointerPressedEvent, OnMouseButtons, RoutingStrategies.Tunnel);
         KeyDown += OnKeyDown;
         Closing += (_, _) => RememberPlacement();
+        shell.CompactPlayerRequested += () => _ = ShowClassicAsync();
     }
+
+    /// <summary>The compact classic player, while it stands in for this window.</summary>
+    public ClassicPlayerWindow? Classic => _classic;
 
     /// <summary>Brings the window forward when another launch hands over to this one.</summary>
     public void BringForward()
     {
+        // A launch while the compact player is up asks for Tuxflix itself: the full window.
+        if (_classic is not null)
+        {
+            _classic.Close();
+            return;
+        }
+
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Activate();
+    }
+
+    /// <summary>
+    /// Opens the compact classic player and steps aside for it; closing the classic window brings
+    /// this one back. The skin loads (and, the first time, downloads) on workers before either
+    /// window changes, so a slow network never leaves the screen empty.
+    /// </summary>
+    public async Task ShowClassicAsync()
+    {
+        if (_classic is not null)
+        {
+            _classic.Activate();
+            return;
+        }
+
+        if (_openingClassic || _shell?.Music is not { } music) return;
+        _openingClassic = true;
+        try
+        {
+            _skins ??= new SkinLibrary(Path.Combine(_shell.Paths.Data, "skins"));
+            var skin = await _skins.LoadAsync(_shell.Settings.Classic.Skin);
+            var window = _classic = new ClassicPlayerWindow(_shell, music, _skins, skin, Icon);
+            window.Closed += (_, _) =>
+            {
+                _classic = null;
+                if (_quitting) return;
+                Show();
+                Activate();
+            };
+            window.QuitRequested += () =>
+            {
+                _quitting = true;
+                window.Close();
+                Close();
+            };
+            window.Show();
+            Hide();
+            Log.Info($"Compact player opened with the {skin.Name} skin.");
+        }
+        finally
+        {
+            _openingClassic = false;
+        }
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -79,6 +139,12 @@ public partial class MainWindow : Window
     private void OnClose(object? sender, RoutedEventArgs e) => Close();
 
     private void OnQuit(object? sender, RoutedEventArgs e) => Close();
+
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        _skins?.Dispose();
+    }
 
     private void OnRailResize(object? sender, VectorEventArgs e)
     {

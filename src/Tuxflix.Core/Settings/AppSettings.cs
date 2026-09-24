@@ -25,6 +25,46 @@ public sealed class AppSettings
 
     /// <summary>Width of the library rail in device-independent pixels.</summary>
     public double RailWidth { get; set; } = 288;
+
+    /// <summary>The compact classic player: its skin, its size and which of its windows show.</summary>
+    public ClassicPlayerSettings Classic { get; set; } = new();
+
+    /// <summary>The music equalizer, kept between runs.</summary>
+    public EqualizerSettings Equalizer { get; set; } = new();
+}
+
+public sealed class ClassicPlayerSettings
+{
+    /// <summary>The <c>.wsz</c> file in use; none means the classic base skin.</summary>
+    public string? Skin { get; set; }
+
+    /// <summary>Pixels per skin pixel: 2 ("double size") suits today's screens.</summary>
+    public int Scale { get; set; } = 2;
+
+    public bool ShowEqualizer { get; set; } = true;
+
+    public bool ShowPlaylist { get; set; } = true;
+
+    /// <summary>"Spectrum", "Scope" or "Off", as the small analyser was left.</summary>
+    public string Visualizer { get; set; } = "Spectrum";
+
+    /// <summary>The time counts down what is left rather than up.</summary>
+    public bool ShowRemaining { get; set; }
+
+    /// <summary>The window stays above the others.</summary>
+    public bool AlwaysOnTop { get; set; }
+
+    /// <summary>The main window is rolled up to its title bar ("windowshade").</summary>
+    public bool Shaded { get; set; }
+}
+
+public sealed class EqualizerSettings
+{
+    public bool On { get; set; }
+
+    public double Preamp { get; set; }
+
+    public double[] Bands { get; set; } = new double[10];
 }
 
 public sealed class WindowPlacement

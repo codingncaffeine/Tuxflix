@@ -92,6 +92,13 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
         _shell = shell;
         _session = session;
         Queue.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasQueue));
+
+        // The equalizer as it was left; its chain goes on when mpv starts.
+        var eq = shell.Settings.Equalizer;
+        EqualizerPreamp = Math.Clamp(eq.Preamp, -12, 12);
+        var bands = eq.Bands ?? [];
+        for (var i = 0; i < 10 && i < bands.Length; i++) EqualizerBands[i] = Math.Clamp(bands[i], -12, 12);
+        IsEqualizerOn = eq.On;
     }
 
     public ObservableCollection<QueueEntry> Queue { get; } = [];
@@ -165,8 +172,149 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
         _ => "Repeat",
     };
 
-    /// <summary>The mpv playing the queue, once started: the visualizer follows its clock.</summary>
+    /// <summary>The mpv playing the queue, once started.</summary>
     public SharedPlayer? Player => _player;
+
+    // ===== The equalizer =====
+
+    /// <summary>The ten bands' gains in dB, at Winamp's classic centres (60 Hz to 16 kHz), so a classic skin's labels hold.</summary>
+    public double[] EqualizerBands { get; } = new double[10];
+
+    /// <summary>The preamp, dB.</summary>
+    public double EqualizerPreamp { get; private set; }
+
+    [ObservableProperty]
+    public partial bool IsEqualizerOn { get; private set; }
+
+    /// <summary>A band, the preamp or the switch changed: the windows that draw the equalizer redraw.</summary>
+    public event Action? EqualizerChanged;
+
+    public void SetEqualizerBand(int band, double decibels)
+    {
+        if (band is < 0 or > 9) return;
+        EqualizerBands[band] = Math.Clamp(decibels, -12, 12);
+        if (IsEqualizerOn) Tune("g", Number(EqualizerBands[band]), $"equalizer@b{band}");
+        RememberEqualizer();
+    }
+
+    public void SetEqualizerPreamp(double decibels)
+    {
+        EqualizerPreamp = Math.Clamp(decibels, -12, 12);
+        if (IsEqualizerOn) Tune("volume", Number(EqualizerPreamp) + "dB", "volume@pre");
+        RememberEqualizer();
+    }
+
+    public void SetEqualizer(bool on)
+    {
+        IsEqualizerOn = on;
+        ApplyAudioChain();
+        RememberEqualizer();
+    }
+
+    /// <summary>Sets every band and the preamp at once (a preset), without ten re-applications.</summary>
+    public void SetEqualizer(double preamp, IReadOnlyList<double> bands)
+    {
+        ArgumentNullException.ThrowIfNull(bands);
+        EqualizerPreamp = Math.Clamp(preamp, -12, 12);
+        for (var i = 0; i < 10 && i < bands.Count; i++) EqualizerBands[i] = Math.Clamp(bands[i], -12, 12);
+        ApplyAudioChain();
+        RememberEqualizer();
+    }
+
+    /// <summary>Keeps the equalizer for the next run, then tells the windows that draw it.</summary>
+    private void RememberEqualizer()
+    {
+        var eq = _shell.Settings.Equalizer;
+        eq.On = IsEqualizerOn;
+        eq.Preamp = EqualizerPreamp;
+        eq.Bands = [.. EqualizerBands];
+        _shell.SaveSettings();
+        EqualizerChanged?.Invoke();
+    }
+
+    /// <summary>Left (-1) to right (1): the classic player's balance slider.</summary>
+    public double Balance { get; private set; }
+
+    public void SetBalance(double balance)
+    {
+        Balance = Math.Clamp(balance, -1, 1);
+        if (_chainHasBalance) Tune("balance_out", Number(Balance), "stereotools@bal");
+        else if (Balance != 0) ApplyAudioChain();
+    }
+
+    private bool _chainHasBalance;
+    private bool _rebuildQueued;
+
+    /// <summary>
+    /// Moves one filter of the chain. mpv builds a chain's graph only when audio next flows through
+    /// it, so a command sent just after a rebuild (or while paused) is refused; the chain is then
+    /// rebuilt, once, with every value as it stands by then, and nothing a slider did is lost.
+    /// </summary>
+    private void Tune(params string[] command) =>
+        _player?.Player.PostCommand(() => Dispatcher.UIThread.Post(RebuildSoon), ["af-command", "fx", .. command]);
+
+    private void RebuildSoon()
+    {
+        if (_rebuildQueued) return;
+        _rebuildQueued = true;
+        DispatcherTimer.RunOnce(
+            () =>
+            {
+                _rebuildQueued = false;
+                ApplyAudioChain();
+            },
+            TimeSpan.FromMilliseconds(250));
+    }
+
+    /// <summary>
+    /// The equalizer and the balance as one labelled mpv filter: ten peaking biquads, a preamp and
+    /// a stereo balance, each named, so a slider moves one of them with <c>af-command</c> and the
+    /// audio never re-initialises. With the equalizer off and the balance centred there is no filter
+    /// at all, not a flat one: nothing touches the samples. A balance once moved stays in the chain
+    /// until the chain is next rebuilt, so bringing it back to the centre never interrupts the sound.
+    /// </summary>
+    private void ApplyAudioChain()
+    {
+        if (_player is not { } shared) return;
+        var parts = new List<string>();
+        if (IsEqualizerOn)
+        {
+            parts.AddRange(Enumerable.Range(0, 10).Select(i =>
+                string.Create(CultureInfo.InvariantCulture, $"equalizer@b{i}=f={Classic.ClassicSprites.EqFrequencies[i]}:t=q:w=1.1:g={EqualizerBands[i]:0.##}")));
+            parts.Add($"volume@pre=volume={Number(EqualizerPreamp)}dB");
+        }
+
+        _chainHasBalance = Balance != 0;
+        if (_chainHasBalance) parts.Add($"stereotools@bal=balance_out={Number(Balance)}");
+        shared.Player.PostProperty("af", parts.Count == 0 ? string.Empty : $"@fx:lavfi=[{string.Join(",", parts)}]");
+    }
+
+    private static string Number(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    /// <summary>What is playing and where, readable from any thread: the visualizers follow it.</summary>
+    public PlayClock Clock => _clock;
+
+    private volatile PlayClock _clock = PlayClock.Nothing;
+
+    /// <summary>The analysis the visualizers draw from, started when the first one shows.</summary>
+    public VisualizerFeed Visuals => _visuals ??= new VisualizerFeed(this, ShadowOptions);
+
+    private VisualizerFeed? _visuals;
+
+    /// <summary>The options a second, silent decode of the same file needs: the server's headers.</summary>
+    private Dictionary<string, string> ShadowOptions() => new()
+    {
+        ["user-agent"] = $"Tuxflix/{BuildInfo.Version}",
+        ["http-header-fields"] = string.Join(",", _session.Client.MediaHeaders(_shell.Identity).Select(h => $"{h.Name}: {h.Value}")),
+    };
+
+    private void UpdateClock() =>
+        _clock = new PlayClock(
+            Current is { } entry ? Url(entry.Track) : null,
+            Current?.Track.RatingKey,
+            Position,
+            System.Diagnostics.Stopwatch.GetTimestamp(),
+            !IsPaused && Current is not null);
 
     /// <summary>The current track changed (or the queue ended): raised on the UI thread.</summary>
     public event Action? TrackChanged;
@@ -246,6 +394,9 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
 
     [RelayCommand]
     private void ShowNowPlaying() => _shell.ShowNowPlayingCommand.Execute(null);
+
+    [RelayCommand]
+    private void ShowCompactPlayer() => _shell.ShowCompactPlayerCommand.Execute(null);
 
     [RelayCommand]
     private void TogglePause()
@@ -361,6 +512,27 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
         if (!IsPaused) _player?.Player.PostFlag("pause", true);
     }
 
+    /// <summary>The classic players' stop: playback halts at the start of the track, and the queue stays.</summary>
+    [ObservableProperty]
+    public partial bool IsHalted { get; private set; }
+
+    public void Halt()
+    {
+        if (_player is not { } shared || Current is null) return;
+        shared.Player.PostFlag("pause", true);
+        shared.Player.PostCommand("seek", "0", "absolute");
+        IsHalted = true;
+    }
+
+    /// <summary>Plays again after a pause or a halt; with nothing loaded, the queue from its start.</summary>
+    public void Resume()
+    {
+        if (_player is not { } shared || !HasQueue) return;
+        if (Current is null) PlayEntry(Queue[0]);
+        shared.Player.PostFlag("pause", false);
+        IsHalted = false;
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
@@ -368,6 +540,7 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
         _filling?.Cancel();
         _reporter?.Stop();
         if (Current is not null) ReportState("stopped");
+        _visuals?.Dispose();
         var shared = _player;
         _player = null;
 
@@ -413,6 +586,7 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
         player.Player.Ended += (reason, error) => OnEnded(reason, error);
         _player = player;
         if (_disposed) _ = Task.Run(player.Release);
+        ApplyAudioChain();
         return player;
     }
 
@@ -517,12 +691,14 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
             case "time-pos" when change.Number is { } seconds:
                 Position = seconds;
                 if (!IsScrubbing) SeekValue = seconds;
+                UpdateClock();
                 break;
             case "duration" when change.Number is { } seconds && seconds > 0:
                 Duration = seconds;
                 break;
             case "pause" when change.Flag is { } paused:
                 _pauseFlag = paused;
+                if (!paused) IsHalted = false;
                 UpdatePaused();
                 break;
             case "mute" when change.Flag is { } muted:
@@ -551,6 +727,7 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
         var paused = _pauseFlag || _idle;
         if (paused == IsPaused) return;
         IsPaused = paused;
+        UpdateClock();
         if (!_idle) ReportState(paused ? "paused" : "playing");
     }
 
@@ -565,6 +742,7 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
         Duration = (entry?.Track.Duration ?? 0) / 1000.0;
         _reported = string.Empty;
         EnsureReporter();
+        UpdateClock();
         TrackChanged?.Invoke();
     }
 

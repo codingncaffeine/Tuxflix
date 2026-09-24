@@ -304,6 +304,15 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     }
 
+    /// <summary>The compact classic player was asked for: the main window opens it and steps aside.</summary>
+    public event Action? CompactPlayerRequested;
+
+    [RelayCommand]
+    private void ShowCompactPlayer()
+    {
+        if (Music is not null) CompactPlayerRequested?.Invoke();
+    }
+
     [RelayCommand(CanExecute = nameof(CanGoBack))]
     private void GoBack() => Router.Back();
 

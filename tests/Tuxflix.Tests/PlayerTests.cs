@@ -47,6 +47,43 @@ public sealed class PlayerTests
     }
 
     [Fact]
+    public async Task ACommandMpvRefusesRunsItsFallbackAndOneItTakesDoesNot()
+    {
+        if (!MpvPlayer.IsAvailable) Assert.Skip("libmpv is not installed here.");
+
+        // Audio this time, to a null device that takes it in real time, so a filter graph runs.
+        using var player = new MpvPlayer(new Dictionary<string, string>
+        {
+            ["vo"] = "null",
+            ["ao"] = "null",
+            ["idle"] = "yes",
+            ["config"] = "no",
+            ["terminal"] = "no",
+        });
+        var loaded = new TaskCompletionSource();
+        player.FileLoaded += () => loaded.TrySetResult();
+        player.Load("av://lavfi:sine=frequency=440:duration=60");
+        await loaded.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        // No filter carries this label: refused, and the fallback runs.
+        var refused = new TaskCompletionSource();
+        player.PostCommand(() => refused.TrySetResult(), "af-command", "nowhere", "g", "3", "equalizer@b0");
+        await refused.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        // A labelled chain that audio has flowed through takes the command: no fallback. mpv answers
+        // in order, so a second, refused command marks when the first has been answered.
+        player.PostProperty("af", "@fx:lavfi=[equalizer@b0=f=60:t=q:w=1.1:g=0]");
+        await Task.Delay(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
+        var fellBack = false;
+        var answered = new TaskCompletionSource();
+        player.PostCommand(() => fellBack = true, "af-command", "fx", "g", "3", "equalizer@b0");
+        player.PostCommand(() => answered.TrySetResult(), "af-command", "nowhere", "g", "3", "equalizer@b0");
+        await answered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        Assert.False(fellBack, "mpv refused a command for a filter it has");
+    }
+
+    [Fact]
     public async Task ASourceThatCannotOpenEndsAsAFailure()
     {
         if (!MpvPlayer.IsAvailable) Assert.Skip("libmpv is not installed here.");

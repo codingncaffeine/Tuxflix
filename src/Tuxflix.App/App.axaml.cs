@@ -31,7 +31,7 @@ public sealed class App : Application
         else if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Launch is { } launch)
         {
             var settings = launch.Settings;
-            var probing = launch.Options.ProbePlayer;
+            var probing = launch.Options.ProbePlayer || launch.Options.ProbeClassic;
             var shell = new ShellViewModel(settings, launch.Paths)
             {
                 // A probe may borrow a copied profile's sign-in: it reads the keyring and never
@@ -55,12 +55,18 @@ public sealed class App : Application
                 instance.ArgumentsReceived += _ => Dispatcher.UIThread.Post(window.BringForward);
             }
 
-            window.Opened += (_, _) =>
+            // Opened comes again whenever the window is shown after hiding (the compact player hides
+            // it); the application starts once.
+            void Started(object? sender, EventArgs e)
             {
+                window.Opened -= Started;
                 WindowingBackend.WindowOpened(window);
                 shell.Start(launch.Options.Demo);
                 if (launch.Options.ProbePlayer) Player.PlayerProbe.Run(shell, window);
-            };
+                if (launch.Options.ProbeClassic) Classic.ClassicProbe.Run(shell, window);
+            }
+
+            window.Opened += Started;
 
             // A session logout or `kill` asks politely with SIGTERM: close the window the normal way
             // so its placement and settings are saved, instead of vanishing mid-flight.

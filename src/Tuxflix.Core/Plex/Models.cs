@@ -410,6 +410,10 @@ public sealed class MediaStream
     [JsonPropertyName("channels")]
     public int? Channels { get; init; }
 
+    /// <summary>An audio stream's sample rate in hertz.</summary>
+    [JsonPropertyName("samplingRate")]
+    public int? SamplingRate { get; init; }
+
     /// <summary>
     /// The server's loudness analysis of an audio stream: the gain in dB that brings the track to
     /// the server's reference level. The server sends these as text, which the lenient reader takes.
