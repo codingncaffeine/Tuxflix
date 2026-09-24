@@ -1,0 +1,89 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:pages="using:Tuxflix.App.Views.Pages"
+             xmlns:tiles="using:Tuxflix.App.Views.Tiles"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.App"
+             Name="Tuxflix"
+             RequestedThemeVariant="Dark">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="/Themes/Tokens.axaml" />
+                <ResourceInclude Source="/Themes/Icons.axaml" />
+                <ResourceInclude Source="/Themes/ControlThemes.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.DataTemplates>
+        <!-- Pages -->
+        <DataTemplate DataType="vm:HomePageViewModel"><pages:HomePage /></DataTemplate>
+        <DataTemplate DataType="vm:ItemPageViewModel"><pages:ItemPage /></DataTemplate>
+        <DataTemplate DataType="vm:WelcomePageViewModel"><pages:WelcomePage /></DataTemplate>
+        <DataTemplate DataType="vm:ComingSoonPageViewModel"><pages:ComingSoonPage /></DataTemplate>
+
+        <!-- Artwork tiles -->
+        <DataTemplate DataType="vm:PosterTileViewModel"><tiles:PosterTile /></DataTemplate>
+        <DataTemplate DataType="vm:LandscapeTileViewModel"><tiles:LandscapeTile /></DataTemplate>
+
+        <!-- A tooltip's text, with its shortcut drawn as keycaps -->
+        <DataTemplate DataType="ui:TipContent">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding Text}" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="280" />
+                <ItemsControl ItemsSource="{Binding Keys}" IsVisible="{Binding HasKeys}" VerticalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Border Classes="keycap"><TextBlock Text="{Binding}" /></Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+    </Application.DataTemplates>
+
+    <Application.Styles>
+        <!-- The stock control templates, coloured from the brand palette so a control Tuxflix does
+             not theme itself (a menu, a scroll bar, a text box) still belongs to the same family. -->
+        <FluentTheme>
+            <FluentTheme.Palettes>
+                <ColorPaletteResources x:Key="Dark"
+                                       Accent="#FF9150"
+                                       AltHigh="#070B18"
+                                       AltLow="#0B1126"
+                                       AltMedium="#0F162E"
+                                       AltMediumHigh="#0B1126"
+                                       AltMediumLow="#121B37"
+                                       BaseHigh="#EDF1FB"
+                                       BaseLow="#2A355A"
+                                       BaseMedium="#A9B4D0"
+                                       BaseMediumHigh="#CBD3E6"
+                                       BaseMediumLow="#6E7BA0"
+                                       ChromeAltLow="#CBD3E6"
+                                       ChromeBlackHigh="#000000"
+                                       ChromeBlackLow="#CBD3E6"
+                                       ChromeBlackMedium="#000000"
+                                       ChromeBlackMediumLow="#000000"
+                                       ChromeDisabledHigh="#2A355A"
+                                       ChromeDisabledLow="#6E7BA0"
+                                       ChromeGray="#8792B0"
+                                       ChromeHigh="#3A4670"
+                                       ChromeLow="#121B37"
+                                       ChromeMedium="#18223F"
+                                       ChromeMediumLow="#1D284A"
+                                       ChromeWhite="#FFFFFF"
+                                       ListLow="#18223F"
+                                       ListMedium="#212C4F"
+                                       RegionColor="#0B1126"
+                                       ErrorText="#EF4E57" />
+            </FluentTheme.Palettes>
+        </FluentTheme>
+        <StyleInclude Source="/Themes/Styles.axaml" />
+    </Application.Styles>
+
+</Application>

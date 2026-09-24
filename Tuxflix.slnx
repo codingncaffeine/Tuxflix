@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Tuxflix.Core/Tuxflix.Core.csproj" />
+    <Project Path="src/Tuxflix.App/Tuxflix.App.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Tuxflix.Capture/Tuxflix.Capture.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Tuxflix.Tests/Tuxflix.Tests.csproj" />
+    <Project Path="tests/Tuxflix.HeadlessTests/Tuxflix.HeadlessTests.csproj" />
+  </Folder>
+</Solution>

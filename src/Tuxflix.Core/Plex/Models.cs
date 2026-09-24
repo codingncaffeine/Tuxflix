@@ -1,0 +1,445 @@
+using System.Text.Json.Serialization;
+
+namespace Tuxflix.Core.Plex;
+
+// The shapes Plex Media Server answers with when asked for JSON. Property names are Plex's own;
+// arrays of child elements are capitalised (Metadata, Media, Part) because that is how the server
+// spells them. Fields are added as the interface starts reading them, not ahead of use.
+
+/// <summary>Every server response wraps its payload in a MediaContainer.</summary>
+public sealed class PlexEnvelope
+{
+    [JsonPropertyName("MediaContainer")]
+    public MediaContainer? MediaContainer { get; init; }
+}
+
+public sealed class MediaContainer
+{
+    [JsonPropertyName("size")]
+    public int Size { get; init; }
+
+    [JsonPropertyName("totalSize")]
+    public int? TotalSize { get; init; }
+
+    [JsonPropertyName("offset")]
+    public int? Offset { get; init; }
+
+    [JsonPropertyName("title1")]
+    public string? Title1 { get; init; }
+
+    [JsonPropertyName("title2")]
+    public string? Title2 { get; init; }
+
+    [JsonPropertyName("friendlyName")]
+    public string? FriendlyName { get; init; }
+
+    [JsonPropertyName("machineIdentifier")]
+    public string? MachineIdentifier { get; init; }
+
+    [JsonPropertyName("version")]
+    public string? Version { get; init; }
+
+    [JsonPropertyName("librarySectionID")]
+    public int? LibrarySectionId { get; init; }
+
+    [JsonPropertyName("librarySectionTitle")]
+    public string? LibrarySectionTitle { get; init; }
+
+    [JsonPropertyName("Directory")]
+    public List<LibraryDirectory>? Directory { get; init; }
+
+    [JsonPropertyName("Metadata")]
+    public List<MetadataItem>? Metadata { get; init; }
+
+    [JsonPropertyName("Hub")]
+    public List<Hub>? Hub { get; init; }
+
+    /// <summary>What <c>/services/ultrablur/colors</c> answers with.</summary>
+    [JsonPropertyName("UltraBlurColors")]
+    public List<UltraBlurColors>? UltraBlurColors { get; init; }
+}
+
+/// <summary>A library section, or any other directory a listing returns.</summary>
+public sealed class LibraryDirectory
+{
+    [JsonPropertyName("key")]
+    public string Key { get; init; } = string.Empty;
+
+    [JsonPropertyName("type")]
+    public string? Type { get; init; }
+
+    [JsonPropertyName("title")]
+    public string Title { get; init; } = string.Empty;
+
+    [JsonPropertyName("agent")]
+    public string? Agent { get; init; }
+
+    [JsonPropertyName("language")]
+    public string? Language { get; init; }
+
+    [JsonPropertyName("uuid")]
+    public string? Uuid { get; init; }
+
+    [JsonPropertyName("thumb")]
+    public string? Thumb { get; init; }
+
+    [JsonPropertyName("art")]
+    public string? Art { get; init; }
+
+    [JsonPropertyName("updatedAt")]
+    public long? UpdatedAt { get; init; }
+
+    [JsonPropertyName("scannedAt")]
+    public long? ScannedAt { get; init; }
+
+    [JsonPropertyName("hidden")]
+    public int? Hidden { get; init; }
+}
+
+public sealed class Hub
+{
+    [JsonPropertyName("hubKey")]
+    public string? HubKey { get; init; }
+
+    [JsonPropertyName("key")]
+    public string? Key { get; init; }
+
+    [JsonPropertyName("title")]
+    public string Title { get; init; } = string.Empty;
+
+    [JsonPropertyName("type")]
+    public string? Type { get; init; }
+
+    [JsonPropertyName("hubIdentifier")]
+    public string? HubIdentifier { get; init; }
+
+    [JsonPropertyName("context")]
+    public string? Context { get; init; }
+
+    [JsonPropertyName("size")]
+    public int Size { get; init; }
+
+    [JsonPropertyName("more")]
+    public bool More { get; init; }
+
+    [JsonPropertyName("style")]
+    public string? Style { get; init; }
+
+    [JsonPropertyName("promoted")]
+    public bool Promoted { get; init; }
+
+    [JsonPropertyName("Metadata")]
+    public List<MetadataItem>? Metadata { get; init; }
+}
+
+/// <summary>A movie, show, season, episode, or any other library item.</summary>
+public sealed class MetadataItem
+{
+    [JsonPropertyName("ratingKey")]
+    public string RatingKey { get; init; } = string.Empty;
+
+    [JsonPropertyName("key")]
+    public string? Key { get; init; }
+
+    [JsonPropertyName("guid")]
+    public string? Guid { get; init; }
+
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = string.Empty;
+
+    [JsonPropertyName("title")]
+    public string Title { get; init; } = string.Empty;
+
+    [JsonPropertyName("titleSort")]
+    public string? TitleSort { get; init; }
+
+    [JsonPropertyName("originalTitle")]
+    public string? OriginalTitle { get; init; }
+
+    [JsonPropertyName("studio")]
+    public string? Studio { get; init; }
+
+    [JsonPropertyName("contentRating")]
+    public string? ContentRating { get; init; }
+
+    [JsonPropertyName("summary")]
+    public string? Summary { get; init; }
+
+    [JsonPropertyName("tagline")]
+    public string? Tagline { get; init; }
+
+    [JsonPropertyName("rating")]
+    public double? Rating { get; init; }
+
+    [JsonPropertyName("audienceRating")]
+    public double? AudienceRating { get; init; }
+
+    [JsonPropertyName("userRating")]
+    public double? UserRating { get; init; }
+
+    [JsonPropertyName("year")]
+    public int? Year { get; init; }
+
+    [JsonPropertyName("index")]
+    public int? Index { get; init; }
+
+    [JsonPropertyName("parentIndex")]
+    public int? ParentIndex { get; init; }
+
+    [JsonPropertyName("parentRatingKey")]
+    public string? ParentRatingKey { get; init; }
+
+    [JsonPropertyName("parentTitle")]
+    public string? ParentTitle { get; init; }
+
+    [JsonPropertyName("parentThumb")]
+    public string? ParentThumb { get; init; }
+
+    [JsonPropertyName("grandparentRatingKey")]
+    public string? GrandparentRatingKey { get; init; }
+
+    [JsonPropertyName("grandparentTitle")]
+    public string? GrandparentTitle { get; init; }
+
+    [JsonPropertyName("grandparentThumb")]
+    public string? GrandparentThumb { get; init; }
+
+    [JsonPropertyName("grandparentArt")]
+    public string? GrandparentArt { get; init; }
+
+    [JsonPropertyName("thumb")]
+    public string? Thumb { get; init; }
+
+    [JsonPropertyName("art")]
+    public string? Art { get; init; }
+
+    [JsonPropertyName("duration")]
+    public long? Duration { get; init; }
+
+    [JsonPropertyName("originallyAvailableAt")]
+    public string? OriginallyAvailableAt { get; init; }
+
+    [JsonPropertyName("addedAt")]
+    public long? AddedAt { get; init; }
+
+    [JsonPropertyName("updatedAt")]
+    public long? UpdatedAt { get; init; }
+
+    [JsonPropertyName("lastViewedAt")]
+    public long? LastViewedAt { get; init; }
+
+    [JsonPropertyName("viewCount")]
+    public int? ViewCount { get; init; }
+
+    [JsonPropertyName("viewOffset")]
+    public long? ViewOffset { get; init; }
+
+    [JsonPropertyName("leafCount")]
+    public int? LeafCount { get; init; }
+
+    [JsonPropertyName("viewedLeafCount")]
+    public int? ViewedLeafCount { get; init; }
+
+    [JsonPropertyName("childCount")]
+    public int? ChildCount { get; init; }
+
+    [JsonPropertyName("librarySectionID")]
+    public int? LibrarySectionId { get; init; }
+
+    [JsonPropertyName("librarySectionTitle")]
+    public string? LibrarySectionTitle { get; init; }
+
+    [JsonPropertyName("Media")]
+    public List<Media>? Media { get; init; }
+
+    [JsonPropertyName("Genre")]
+    public List<Tag>? Genre { get; init; }
+
+    [JsonPropertyName("Director")]
+    public List<Tag>? Director { get; init; }
+
+    [JsonPropertyName("Writer")]
+    public List<Tag>? Writer { get; init; }
+
+    [JsonPropertyName("Role")]
+    public List<Tag>? Role { get; init; }
+
+    [JsonPropertyName("Country")]
+    public List<Tag>? Country { get; init; }
+
+    [JsonPropertyName("Image")]
+    public List<ItemImage>? Image { get; init; }
+
+    [JsonPropertyName("UltraBlurColors")]
+    public UltraBlurColors? UltraBlurColors { get; init; }
+
+    [JsonIgnore]
+    public bool IsWatched => LeafCount is > 0
+        ? ViewedLeafCount >= LeafCount
+        : ViewCount is > 0 && ViewOffset is null or 0;
+
+    /// <summary>How far through the item is, 0 to 1, or null when it has not been started.</summary>
+    [JsonIgnore]
+    public double? Progress => ViewOffset is > 0 && Duration is > 0
+        ? Math.Clamp((double)ViewOffset.Value / Duration.Value, 0, 1)
+        : null;
+
+    [JsonIgnore]
+    public int UnwatchedLeaves => LeafCount is { } leaves ? Math.Max(0, leaves - (ViewedLeafCount ?? 0)) : 0;
+}
+
+public sealed class Media
+{
+    [JsonPropertyName("id")]
+    public long Id { get; init; }
+
+    [JsonPropertyName("duration")]
+    public long? Duration { get; init; }
+
+    [JsonPropertyName("bitrate")]
+    public int? Bitrate { get; init; }
+
+    [JsonPropertyName("width")]
+    public int? Width { get; init; }
+
+    [JsonPropertyName("height")]
+    public int? Height { get; init; }
+
+    [JsonPropertyName("aspectRatio")]
+    public double? AspectRatio { get; init; }
+
+    [JsonPropertyName("audioChannels")]
+    public int? AudioChannels { get; init; }
+
+    [JsonPropertyName("audioCodec")]
+    public string? AudioCodec { get; init; }
+
+    [JsonPropertyName("videoCodec")]
+    public string? VideoCodec { get; init; }
+
+    [JsonPropertyName("videoResolution")]
+    public string? VideoResolution { get; init; }
+
+    [JsonPropertyName("container")]
+    public string? Container { get; init; }
+
+    [JsonPropertyName("videoFrameRate")]
+    public string? VideoFrameRate { get; init; }
+
+    [JsonPropertyName("videoProfile")]
+    public string? VideoProfile { get; init; }
+
+    [JsonPropertyName("Part")]
+    public List<MediaPart>? Part { get; init; }
+}
+
+public sealed class MediaPart
+{
+    [JsonPropertyName("id")]
+    public long Id { get; init; }
+
+    [JsonPropertyName("key")]
+    public string? Key { get; init; }
+
+    [JsonPropertyName("duration")]
+    public long? Duration { get; init; }
+
+    [JsonPropertyName("file")]
+    public string? File { get; init; }
+
+    [JsonPropertyName("size")]
+    public long? Size { get; init; }
+
+    [JsonPropertyName("container")]
+    public string? Container { get; init; }
+
+    [JsonPropertyName("Stream")]
+    public List<MediaStream>? Stream { get; init; }
+}
+
+public sealed class MediaStream
+{
+    [JsonPropertyName("id")]
+    public long Id { get; init; }
+
+    /// <summary>1 video, 2 audio, 3 subtitle.</summary>
+    [JsonPropertyName("streamType")]
+    public int StreamType { get; init; }
+
+    [JsonPropertyName("codec")]
+    public string? Codec { get; init; }
+
+    [JsonPropertyName("language")]
+    public string? Language { get; init; }
+
+    [JsonPropertyName("languageCode")]
+    public string? LanguageCode { get; init; }
+
+    [JsonPropertyName("displayTitle")]
+    public string? DisplayTitle { get; init; }
+
+    [JsonPropertyName("extendedDisplayTitle")]
+    public string? ExtendedDisplayTitle { get; init; }
+
+    [JsonPropertyName("title")]
+    public string? Title { get; init; }
+
+    [JsonPropertyName("selected")]
+    public bool Selected { get; init; }
+
+    [JsonPropertyName("default")]
+    public bool Default { get; init; }
+
+    [JsonPropertyName("forced")]
+    public bool Forced { get; init; }
+
+    [JsonPropertyName("channels")]
+    public int? Channels { get; init; }
+
+    [JsonPropertyName("key")]
+    public string? Key { get; init; }
+}
+
+public sealed class Tag
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; init; }
+
+    [JsonPropertyName("tag")]
+    public string TagText { get; init; } = string.Empty;
+
+    [JsonPropertyName("role")]
+    public string? Role { get; init; }
+
+    [JsonPropertyName("thumb")]
+    public string? Thumb { get; init; }
+}
+
+public sealed class ItemImage
+{
+    /// <summary>coverPoster, background, snapshot or clearLogo.</summary>
+    [JsonPropertyName("type")]
+    public string? Type { get; init; }
+
+    [JsonPropertyName("url")]
+    public string? Url { get; init; }
+
+    [JsonPropertyName("alt")]
+    public string? Alt { get; init; }
+}
+
+/// <summary>The four corner colours Plex computes for an item's backdrop, as hex without '#'.</summary>
+public sealed class UltraBlurColors
+{
+    [JsonPropertyName("topLeft")]
+    public string? TopLeft { get; init; }
+
+    [JsonPropertyName("topRight")]
+    public string? TopRight { get; init; }
+
+    [JsonPropertyName("bottomRight")]
+    public string? BottomRight { get; init; }
+
+    [JsonPropertyName("bottomLeft")]
+    public string? BottomLeft { get; init; }
+}

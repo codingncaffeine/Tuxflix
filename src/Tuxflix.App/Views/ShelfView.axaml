@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.ShelfView"
+             x:DataType="vm:ShelfViewModel">
+
+    <!-- A Steam shelf: spaced capitals, a count, a hairline to the edge, and arrows to page it. -->
+    <StackPanel Spacing="6">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="36,0,26,0">
+            <TextBlock Classes="shelf-title" Text="{Binding Title}" />
+            <TextBlock Grid.Column="1" Classes="shelf-count" Text="{Binding CountText}" Margin="10,0,0,0" />
+            <Border Grid.Column="2" Height="1" Margin="18,0,12,0" VerticalAlignment="Center"
+                    Background="{DynamicResource Brush.Line.Hairline}" />
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2">
+                <Button Name="LeftButton" Theme="{StaticResource IconButton}" Padding="7" Click="OnScrollLeft"
+                        ui:Tip.Text="Scroll left">
+                    <PathIcon Data="{StaticResource Icon.CaretLeft.Bold}" Width="13" Height="13" />
+                </Button>
+                <Button Name="RightButton" Theme="{StaticResource IconButton}" Padding="7" Click="OnScrollRight"
+                        ui:Tip.Text="Scroll right">
+                    <PathIcon Data="{StaticResource Icon.CaretRight.Bold}" Width="13" Height="13" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Tiles}" Margin="36,14,36,26">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="18" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </ScrollViewer>
+    </StackPanel>
+</UserControl>

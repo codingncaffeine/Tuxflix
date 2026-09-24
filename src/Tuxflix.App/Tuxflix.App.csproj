@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>tuxflix</AssemblyName>
+    <RootNamespace>Tuxflix.App</RootNamespace>
+    <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <!-- The build time rides in the informational version, so the log and the version switch can say
+       which build is running: every build of a working session shares one version number. -->
+  <PropertyGroup>
+    <InformationalVersion>$(VersionPrefix)+$([System.DateTime]::Now.ToString('yyyy-MM-dd HH:mm'))</InformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tuxflix.HeadlessTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+    <!-- The native Wayland backend is its own package; it is what renders at the monitor's
+         fractional scale instead of being scaled by the compositor. See WindowingBackend. -->
+    <PackageReference Include="Avalonia.Wayland" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
+    <!-- The base control templates. Every colour comes from Themes/Tokens.axaml through the
+         palette, and the controls that carry the look have control themes of their own. -->
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="$(MvvmToolkitVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tuxflix.Core\Tuxflix.Core.csproj" />
+  </ItemGroup>
+
+</Project>

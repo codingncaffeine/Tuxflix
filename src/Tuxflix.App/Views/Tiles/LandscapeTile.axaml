@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Tiles.LandscapeTile"
+             x:DataType="vm:LandscapeTileViewModel">
+
+    <!-- Continue Watching: a wide card with the title over the art, how far along, and what is left;
+         hover brings up a play glyph. -->
+    <Button Classes="tile" Theme="{StaticResource TileButton}"
+            Command="{Binding OpenCommand}"
+            AutomationProperties.Name="{Binding AccessibleName}">
+        <Panel Width="344" Height="194">
+            <Border Name="Lift" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Panel}" />
+            <Border CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True">
+                <Panel>
+                    <ui:RemoteImage Path="{Binding ImagePath}" DecodeWidth="344" DecodeHeight="194" />
+                    <Border Background="{DynamicResource Brush.Scrim.Card}" />
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Bottom" Margin="16,0,16,17">
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="#D9EDF1FB" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding RemainingText}" FontSize="11.5" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Bottom" Margin="12,0,0,1" />
+                    </Grid>
+                    <ProgressBar Theme="{StaticResource ThinProgress}" VerticalAlignment="Bottom"
+                                 Value="{Binding Progress}" IsVisible="{Binding HasProgress}" />
+                    <Border Classes="reveal" Width="56" Height="56" CornerRadius="28" Margin="0,0,0,26"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Background="#A6040712" BorderBrush="#80FFFFFF" BorderThickness="1.5"
+                            BoxShadow="0 6 18 0 #99020510">
+                        <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="20" Height="20" Margin="3,0,0,0" Foreground="White" />
+                    </Border>
+                </Panel>
+            </Border>
+            <Border Name="Ring" CornerRadius="{StaticResource Radius.Card}" />
+        </Panel>
+    </Button>
+</UserControl>

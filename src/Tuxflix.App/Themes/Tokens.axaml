@@ -1,0 +1,168 @@
+<!--
+    The design tokens. Every colour, gradient, shadow and radius in the interface comes from here,
+    so the look changes in one place and no control invents a colour of its own.
+
+    The palette is taken from the Tuxflix icon and banner: deep navy-indigo surfaces, and the
+    artwork's ribbon of orange, coral, violet and sky blue. Surfaces step lighter from the chrome
+    to the rail to the canvas, so the artwork on the canvas is what the eye goes to. Orange is the
+    accent (selection, focus, progress); the warm end of the ribbon is Play; sky blue marks
+    anything new.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== Surfaces ===== -->
+    <Color x:Key="Color.Base">#070B18</Color>
+    <Color x:Key="Color.Chrome.Top">#111A34</Color>
+    <Color x:Key="Color.Chrome.Bottom">#0B1126</Color>
+    <Color x:Key="Color.Rail.Top">#0F162E</Color>
+    <Color x:Key="Color.Rail.Bottom">#090E1F</Color>
+    <Color x:Key="Color.Canvas.Top">#182346</Color>
+    <Color x:Key="Color.Canvas.Middle">#121B37</Color>
+    <Color x:Key="Color.Canvas.Bottom">#0B1227</Color>
+    <Color x:Key="Color.Panel">#18223F</Color>
+    <Color x:Key="Color.Raised">#212C4F</Color>
+    <Color x:Key="Color.Overlay">#1B2546</Color>
+
+    <!-- ===== Text ===== -->
+    <Color x:Key="Color.Text.Primary">#EDF1FB</Color>
+    <Color x:Key="Color.Text.Secondary">#A9B4D0</Color>
+    <Color x:Key="Color.Text.Tertiary">#6E7BA0</Color>
+    <Color x:Key="Color.Text.Disabled">#465073</Color>
+
+    <!-- ===== The ribbon: accent and signal colours ===== -->
+    <Color x:Key="Color.Accent">#FF9150</Color>
+    <Color x:Key="Color.Accent.Light">#FFB27E</Color>
+    <Color x:Key="Color.Accent.Dark">#E86F32</Color>
+    <Color x:Key="Color.Accent.Ink">#2A1204</Color>
+    <Color x:Key="Color.Coral">#F2556A</Color>
+    <Color x:Key="Color.Violet">#A96BEA</Color>
+    <Color x:Key="Color.Sky">#5AAEF0</Color>
+    <Color x:Key="Color.Sky.Ink">#061430</Color>
+    <Color x:Key="Color.Danger">#EF4E57</Color>
+    <Color x:Key="Color.Success">#4CC38A</Color>
+
+    <SolidColorBrush x:Key="Brush.Base" Color="{StaticResource Color.Base}" />
+    <SolidColorBrush x:Key="Brush.Panel" Color="{StaticResource Color.Panel}" />
+    <SolidColorBrush x:Key="Brush.Raised" Color="{StaticResource Color.Raised}" />
+    <SolidColorBrush x:Key="Brush.Overlay" Color="{StaticResource Color.Overlay}" />
+    <SolidColorBrush x:Key="Brush.Text.Primary" Color="{StaticResource Color.Text.Primary}" />
+    <SolidColorBrush x:Key="Brush.Text.Secondary" Color="{StaticResource Color.Text.Secondary}" />
+    <SolidColorBrush x:Key="Brush.Text.Tertiary" Color="{StaticResource Color.Text.Tertiary}" />
+    <SolidColorBrush x:Key="Brush.Text.Disabled" Color="{StaticResource Color.Text.Disabled}" />
+    <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}" />
+    <SolidColorBrush x:Key="Brush.Accent.Ink" Color="{StaticResource Color.Accent.Ink}" />
+    <SolidColorBrush x:Key="Brush.Accent.Soft" Color="#2EFF9150" />
+    <SolidColorBrush x:Key="Brush.Accent.Softer" Color="#17FF9150" />
+    <SolidColorBrush x:Key="Brush.Accent.Edge" Color="#66FF9150" />
+    <SolidColorBrush x:Key="Brush.Sky" Color="{StaticResource Color.Sky}" />
+    <SolidColorBrush x:Key="Brush.Sky.Ink" Color="{StaticResource Color.Sky.Ink}" />
+    <SolidColorBrush x:Key="Brush.Violet" Color="{StaticResource Color.Violet}" />
+    <SolidColorBrush x:Key="Brush.Danger" Color="{StaticResource Color.Danger}" />
+    <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource Color.Success}" />
+
+    <!-- Hairlines and fills are white at low alpha, so they read the same over every gradient. -->
+    <SolidColorBrush x:Key="Brush.Line.Soft" Color="#0CFFFFFF" />
+    <SolidColorBrush x:Key="Brush.Line.Hairline" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="Brush.Line.Strong" Color="#26FFFFFF" />
+    <SolidColorBrush x:Key="Brush.Fill.Subtle" Color="#0AFFFFFF" />
+    <SolidColorBrush x:Key="Brush.Fill.Input" Color="#0FFFFFFF" />
+    <SolidColorBrush x:Key="Brush.Fill.Hover" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="Brush.Fill.Pressed" Color="#1FFFFFFF" />
+
+    <LinearGradientBrush x:Key="Brush.Chrome" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="{StaticResource Color.Chrome.Top}" />
+        <GradientStop Offset="1" Color="{StaticResource Color.Chrome.Bottom}" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.Rail" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="{StaticResource Color.Rail.Top}" />
+        <GradientStop Offset="1" Color="{StaticResource Color.Rail.Bottom}" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.Canvas" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="{StaticResource Color.Canvas.Top}" />
+        <GradientStop Offset="0.45" Color="{StaticResource Color.Canvas.Middle}" />
+        <GradientStop Offset="1" Color="{StaticResource Color.Canvas.Bottom}" />
+    </LinearGradientBrush>
+
+    <!-- The periwinkle bloom behind the clapperboard in the banner, as the canvas's light source. -->
+    <RadialGradientBrush x:Key="Brush.Canvas.Glow" Center="10%,0%" GradientOrigin="10%,0%" RadiusX="75%" RadiusY="60%">
+        <GradientStop Offset="0" Color="#38566BC4" />
+        <GradientStop Offset="1" Color="#00566BC4" />
+    </RadialGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.Raised.Gradient" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#1F2A4C" />
+        <GradientStop Offset="1" Color="#18213F" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.Raised.Gradient.Hover" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#27345C" />
+        <GradientStop Offset="1" Color="#1D284A" />
+    </LinearGradientBrush>
+
+    <!-- The whole ribbon, for signature moments: the brand mark, the visualizer, the active tab. -->
+    <LinearGradientBrush x:Key="Brush.Ribbon" StartPoint="0%,0%" EndPoint="100%,0%">
+        <GradientStop Offset="0" Color="#FF9A52" />
+        <GradientStop Offset="0.35" Color="{StaticResource Color.Coral}" />
+        <GradientStop Offset="0.7" Color="{StaticResource Color.Violet}" />
+        <GradientStop Offset="1" Color="{StaticResource Color.Sky}" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.Accent.Selected" StartPoint="0%,0%" EndPoint="100%,0%">
+        <GradientStop Offset="0" Color="#33FF9150" />
+        <GradientStop Offset="1" Color="#06FF9150" />
+    </LinearGradientBrush>
+
+    <!-- The warm end of the ribbon: Play, and nothing else. -->
+    <LinearGradientBrush x:Key="Brush.Play" StartPoint="0%,0%" EndPoint="100%,100%">
+        <GradientStop Offset="0" Color="#FF9A52" />
+        <GradientStop Offset="1" Color="{StaticResource Color.Coral}" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.Play.Hover" StartPoint="0%,0%" EndPoint="100%,100%">
+        <GradientStop Offset="0" Color="#FFAB6B" />
+        <GradientStop Offset="1" Color="#FF677C" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.Progress" StartPoint="0%,0%" EndPoint="100%,0%">
+        <GradientStop Offset="0" Color="#FF9A52" />
+        <GradientStop Offset="1" Color="#FF7A5C" />
+    </LinearGradientBrush>
+
+    <!-- Scrims keep text legible over artwork of any brightness. -->
+    <LinearGradientBrush x:Key="Brush.Scrim.Bottom" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0.35" Color="#00040712" />
+        <GradientStop Offset="0.75" Color="#A6040712" />
+        <GradientStop Offset="1" Color="#EB040712" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.Scrim.Card" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0.2" Color="#00040712" />
+        <GradientStop Offset="0.68" Color="#8C040712" />
+        <GradientStop Offset="1" Color="#F2040712" />
+    </LinearGradientBrush>
+
+    <!-- ===== Shadows: elevation reads as depth, never as a border ===== -->
+    <BoxShadows x:Key="Shadow.Tile">0 4 14 0 #8C020510</BoxShadows>
+    <BoxShadows x:Key="Shadow.Tile.Hover">0 16 36 0 #C2020510</BoxShadows>
+    <BoxShadows x:Key="Shadow.Popup">0 12 32 0 #B3020510</BoxShadows>
+    <BoxShadows x:Key="Shadow.Raised">inset 0 1 0 0 #12FFFFFF, 0 2 8 0 #4D020510</BoxShadows>
+    <BoxShadows x:Key="Shadow.Play">0 6 20 0 #66F2556A, inset 0 1 0 0 #59FFFFFF</BoxShadows>
+    <BoxShadows x:Key="Shadow.Play.Hover">0 10 30 0 #99F2556A, inset 0 1 0 0 #73FFFFFF</BoxShadows>
+    <BoxShadows x:Key="Shadow.Glow.Success">0 0 8 0 #B34CC38A</BoxShadows>
+    <BoxShadows x:Key="Shadow.Mark">0 4 16 0 #66A96BEA</BoxShadows>
+
+    <!-- ===== Shape ===== -->
+    <CornerRadius x:Key="Radius.Small">4</CornerRadius>
+    <CornerRadius x:Key="Radius.Control">7</CornerRadius>
+    <CornerRadius x:Key="Radius.Card">8</CornerRadius>
+    <CornerRadius x:Key="Radius.Tile">5</CornerRadius>
+    <CornerRadius x:Key="Radius.Window">10</CornerRadius>
+
+    <!-- The stock templates read these two for every control and popup they draw. -->
+    <CornerRadius x:Key="ControlCornerRadius">7</CornerRadius>
+    <CornerRadius x:Key="OverlayCornerRadius">10</CornerRadius>
+
+</ResourceDictionary>

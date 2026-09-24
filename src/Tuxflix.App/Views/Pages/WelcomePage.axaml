@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.WelcomePage"
+             x:DataType="vm:WelcomePageViewModel">
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="30" Margin="40,48">
+            <Panel MaxWidth="900">
+                <Border CornerRadius="14" Background="{DynamicResource Brush.Panel}" BoxShadow="0 24 60 0 #CC020510, 0 0 80 0 #33A96BEA" />
+                <Border CornerRadius="14" ClipToBounds="True">
+                    <Image Source="/Assets/welcome-banner.jpg" Stretch="Uniform" />
+                </Border>
+                <Border CornerRadius="14" BorderThickness="1" BorderBrush="#26FFFFFF" />
+            </Panel>
+
+            <StackPanel Spacing="10" HorizontalAlignment="Center">
+                <TextBlock Text="Welcome to Tuxflix" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" LetterSpacing="-0.4" />
+                <TextBlock Text="Your Plex libraries, laid out the way a game library should feel."
+                           FontSize="15" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
+                <Button Theme="{StaticResource PlayButton}" IsEnabled="False" ToolTip.ShowOnDisabled="True"
+                        ui:Tip.Text="Signing in to Plex arrives in the next build">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <PathIcon Data="{StaticResource Icon.UserCircle.Fill}" Width="16" Height="16" Foreground="White" />
+                        <TextBlock Text="SIGN IN WITH PLEX" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Theme="{StaticResource GhostButton}" Padding="22,12" Command="{Binding OpenDemoCommand}"
+                        ui:Tip.Text="Look around a built-in library of invented films and series">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <PathIcon Data="{StaticResource Icon.Sparkle}" Width="15" Height="15" />
+                        <TextBlock Text="EXPLORE THE DEMO LIBRARY" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,243 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.ItemPage"
+             x:DataType="vm:ItemPageViewModel">
+
+    <!-- Steam's game page, for something to watch: hero art with the title over it, the play bar
+         with the numbers that matter, then the story, the episodes, the cast and the details. -->
+    <Panel>
+
+        <!-- ===== UltraBlur: the page takes on the backdrop's own light ===== -->
+        <!-- The bottom corners' blend underneath, the top corners' blend fading in over it from the
+             top: the two together are a smooth four-corner gradient, darkened so text stays legible. -->
+        <Panel IsVisible="{Binding HasBlur}" IsHitTestVisible="False">
+            <Border Background="{Binding BlurBottom}" />
+            <Border Background="{Binding BlurTop}">
+                <Border.OpacityMask>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="Black" />
+                        <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                </Border.OpacityMask>
+            </Border>
+            <Border Background="#8C070B18" />
+        </Panel>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+
+            <!-- ===== Hero: the backdrop fades out at its foot into whatever is behind the page ===== -->
+            <Panel Height="460">
+                <Panel IsHitTestVisible="False">
+                    <Panel.OpacityMask>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                            <GradientStop Offset="0" Color="Black" />
+                            <GradientStop Offset="0.55" Color="Black" />
+                            <GradientStop Offset="1" Color="Transparent" />
+                        </LinearGradientBrush>
+                    </Panel.OpacityMask>
+                    <ui:RemoteImage Path="{Binding BackdropPath}" DecodeWidth="1600" DecodeHeight="900" />
+                    <Border>
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                                <GradientStop Offset="0" Color="#E60B1227" />
+                                <GradientStop Offset="0.45" Color="#800B1227" />
+                                <GradientStop Offset="1" Color="#140B1227" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                </Panel>
+
+                <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Bottom" Margin="44,0,44,36">
+                    <Panel Width="156" Height="234">
+                        <Border CornerRadius="7" Background="{DynamicResource Brush.Panel}" BoxShadow="0 18 44 0 #D9020510" />
+                        <Border CornerRadius="7" ClipToBounds="True">
+                            <ui:RemoteImage Path="{Binding PosterPath}" DecodeWidth="156" DecodeHeight="234" />
+                        </Border>
+                        <Border CornerRadius="7" BorderThickness="1" BorderBrush="#26FFFFFF" />
+                    </Panel>
+
+                    <StackPanel Grid.Column="1" Margin="30,0,0,6" VerticalAlignment="Bottom" Spacing="9">
+                        <TextBlock Classes="label" Text="{Binding Kicker}" Foreground="{DynamicResource Brush.Accent}" />
+                        <ui:RemoteImage Path="{Binding LogoPath}" Format="Png" IsVisible="{Binding HasLogo}"
+                                        DecodeWidth="520" DecodeHeight="170" MaxWidth="520" MaxHeight="170"
+                                        Stretch="Uniform" HorizontalAlignment="Left" Margin="0,2,0,4"
+                                        AutomationProperties.Name="{Binding HeadingTitle}" />
+                        <TextBlock Text="{Binding HeadingTitle}" FontSize="46" FontWeight="Bold" LetterSpacing="-0.6"
+                                   IsVisible="{Binding ShowTextTitle}"
+                                   TextWrapping="Wrap" MaxWidth="900" HorizontalAlignment="Left" />
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Border Classes="rating" IsVisible="{Binding HasContentRating}" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ContentRating}" />
+                            </Border>
+                            <TextBlock Text="{Binding Meta}" FontSize="14" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Tagline}" IsVisible="{Binding HasTagline}" FontSize="15" FontStyle="Italic"
+                                   Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    </StackPanel>
+                </Grid>
+            </Panel>
+
+            <!-- ===== Play bar ===== -->
+            <Border Margin="44,0" Padding="18,16" CornerRadius="{StaticResource Radius.Card}"
+                    Background="#B30A1024" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
+                    BoxShadow="0 12 32 0 #73020510">
+                <Grid ColumnDefinitions="Auto,*">
+                    <Button Theme="{StaticResource PlayButton}" IsEnabled="False" ToolTip.ShowOnDisabled="True"
+                            ui:Tip.Text="Playback arrives with the player, the next phase" ui:Tip.Keys="Space">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" />
+                            <TextBlock Text="{Binding PlayLabel}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="40" Margin="38,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="LAST WATCHED" />
+                            <TextBlock Text="{Binding LastWatched}" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="RUNTIME" />
+                            <TextBlock Text="{Binding Runtime}" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="AUDIENCE" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <PathIcon Data="{StaticResource Icon.Star.Fill}" Width="12" Height="12" Foreground="{DynamicResource Brush.Accent}" />
+                                <TextBlock Text="{Binding AudienceRating}" FontSize="14" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Spacing="6" IsVisible="{Binding HasProgress}" VerticalAlignment="Center">
+                            <TextBlock Classes="label" Text="{Binding RemainingText}" />
+                            <Border CornerRadius="2" ClipToBounds="True" Width="150">
+                                <ProgressBar Theme="{StaticResource ThinProgress}" Value="{Binding Progress}" Background="#26FFFFFF" />
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ===== Body ===== -->
+            <Grid ColumnDefinitions="*,340" Margin="44,34,44,52">
+                <StackPanel Spacing="36">
+                    <StackPanel Spacing="12">
+                        <TextBlock Classes="shelf-title" Text="STORYLINE" />
+                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" FontSize="14.5" LineHeight="23"
+                                   MaxWidth="820" HorizontalAlignment="Left" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="14" IsVisible="{Binding IsSeries}">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <TextBlock Classes="shelf-title" Text="EPISODES" />
+                            <ItemsControl Grid.Column="1" ItemsSource="{Binding Seasons}" Margin="22,0,0,0" IsVisible="{Binding HasSeasons}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SeasonTabViewModel">
+                                        <Button Theme="{StaticResource GhostButton}" Classes="season" Classes.selected="{Binding IsSelected}"
+                                                Padding="12,5" Margin="0,0,6,0" FontSize="12" LetterSpacing="0.4"
+                                                Content="{Binding Title}" Command="{Binding SelectCommand}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding Episodes}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EpisodeRowViewModel">
+                                    <Button Theme="{StaticResource RailRow}" Padding="10" Margin="0,0,0,4" Command="{Binding OpenCommand}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <Panel Width="192" Height="108">
+                                                <Border CornerRadius="6" Background="{DynamicResource Brush.Panel}" BoxShadow="{StaticResource Shadow.Tile}" />
+                                                <Border CornerRadius="6" ClipToBounds="True">
+                                                    <Panel>
+                                                        <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="192" DecodeHeight="108" />
+                                                        <ProgressBar Theme="{StaticResource ThinProgress}" VerticalAlignment="Bottom"
+                                                                     Value="{Binding Progress}" IsVisible="{Binding HasProgress}" />
+                                                    </Panel>
+                                                </Border>
+                                                <Border Classes="badge-watched" IsVisible="{Binding IsWatched}" Margin="0,6,6,0">
+                                                    <PathIcon Data="{StaticResource Icon.Check.Bold}" Width="10" Height="10" Foreground="White" />
+                                                </Border>
+                                            </Panel>
+                                            <StackPanel Grid.Column="1" Margin="18,4,14,0" Spacing="6" VerticalAlignment="Top">
+                                                <TextBlock Text="{Binding Heading}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Summary}" FontSize="13" TextWrapping="Wrap" MaxLines="2"
+                                                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{Binding Runtime}" FontSize="12.5" Classes="faint" Margin="0,6,4,0" />
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="16" IsVisible="{Binding HasCast}">
+                        <TextBlock Classes="shelf-title" Text="CAST" />
+                        <ItemsControl ItemsSource="{Binding Cast}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CastMemberViewModel">
+                                    <StackPanel Width="108" Margin="0,0,14,18" Spacing="8">
+                                        <Panel Width="84" Height="84">
+                                            <Border CornerRadius="42" Background="{DynamicResource Brush.Panel}" BoxShadow="{StaticResource Shadow.Tile}" />
+                                            <Border CornerRadius="42" ClipToBounds="True">
+                                                <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="84" DecodeHeight="84" />
+                                            </Border>
+                                            <Border CornerRadius="42" BorderThickness="1" BorderBrush="#1FFFFFFF" />
+                                        </Panel>
+                                        <StackPanel Spacing="1">
+                                            <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding Role}" FontSize="11.5" TextAlignment="Center" TextWrapping="Wrap" Classes="faint" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- ===== Details panel ===== -->
+                <Border Grid.Column="1" Margin="32,0,0,0" VerticalAlignment="Top" Padding="22,20" CornerRadius="10"
+                        Background="#8C0F162E" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
+                        BoxShadow="{StaticResource Shadow.Raised}">
+                    <StackPanel Spacing="18">
+                        <TextBlock Classes="shelf-title" Text="DETAILS" />
+                        <StackPanel Spacing="4" IsVisible="{Binding HasDirector}">
+                            <TextBlock Classes="label" Text="DIRECTED BY" />
+                            <TextBlock Text="{Binding Director}" FontSize="13.5" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Spacing="4" IsVisible="{Binding HasStudio}">
+                            <TextBlock Classes="label" Text="STUDIO" />
+                            <TextBlock Text="{Binding Studio}" FontSize="13.5" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Spacing="8">
+                            <TextBlock Classes="label" Text="GENRES" />
+                            <ItemsControl ItemsSource="{Binding Genres}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Border Classes="chip" Margin="0,0,6,6"><TextBlock Text="{Binding}" /></Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        <StackPanel Spacing="4" IsVisible="{Binding HasMediaSummary}">
+                            <TextBlock Classes="label" Text="VIDEO AND AUDIO" />
+                            <TextBlock Text="{Binding MediaSummary}" FontSize="13.5" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+    </Panel>
+</UserControl>

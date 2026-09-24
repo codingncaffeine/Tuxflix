@@ -1,0 +1,268 @@
+<!--
+    Application-wide styles: typography roles, the search field, the parts of a tile that react
+    to hover, and the rule that popups draw inside the window.
+-->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="using:Tuxflix.App.Controls">
+
+    <!-- Tooltips, menus and drop-downs draw in the window's overlay layer: the same surface as
+         the window, so their rounded corners and shadows look identical on every backend. -->
+    <Style Selector="Popup">
+        <Setter Property="ShouldUseOverlayLayer" Value="True" />
+    </Style>
+
+    <Style Selector="Window">
+        <Setter Property="FontFamily" Value="fonts:Inter#Inter" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    </Style>
+
+    <!-- ===== Typography roles ===== -->
+    <Style Selector="TextBlock.page-title">
+        <Setter Property="FontSize" Value="30" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="-0.3" />
+    </Style>
+
+    <Style Selector="TextBlock.shelf-title">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="2" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.shelf-count">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LetterSpacing" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.rail-header">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="1.8" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.label">
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="1.5" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}" />
+    </Style>
+
+    <Style Selector="TextBlock.muted">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+    </Style>
+
+    <Style Selector="TextBlock.faint">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}" />
+    </Style>
+
+    <!-- Watched titles step back, as uninstalled games do in Steam's list. -->
+    <Style Selector="TextBlock.watched">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}" />
+    </Style>
+
+    <Style Selector="PathIcon.caret">
+        <Setter Property="RenderTransform" Value="rotate(0deg)" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="PathIcon.caret.collapsed">
+        <Setter Property="RenderTransform" Value="rotate(-90deg)" />
+    </Style>
+
+    <!-- The rail's LIBRARY HOME lights its house with the accent while home is showing. -->
+    <Style Selector="Button.selected PathIcon.home-icon">
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+    </Style>
+
+    <!-- The chosen season among its siblings. -->
+    <Style Selector="Button.season.selected">
+        <Setter Property="Background" Value="{DynamicResource Brush.Accent.Soft}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent.Edge}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    </Style>
+
+    <!-- ===== Keycap, as tooltips and the search field show shortcuts ===== -->
+    <Style Selector="Border.keycap">
+        <Setter Property="Background" Value="{DynamicResource Brush.Fill.Hover}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Line.Strong}" />
+        <Setter Property="BorderThickness" Value="1,1,1,2" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Padding" Value="5,0,5,1" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Border.keycap > TextBlock">
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+    </Style>
+
+    <!-- ===== Search fields: a pill that lights its edge with the accent when focused ===== -->
+    <Style Selector="TextBox.search">
+        <Setter Property="Background" Value="{DynamicResource Brush.Fill.Input}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Line.Hairline}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="17" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="4,7,10,7" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Brush.Accent}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource Brush.Accent.Soft}" />
+        <Setter Property="PlaceholderForeground" Value="{DynamicResource Brush.Text.Tertiary}" />
+    </Style>
+
+    <Style Selector="TextBox.search:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource Brush.Fill.Hover}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Line.Strong}" />
+    </Style>
+
+    <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="#14FFFFFF" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent.Edge}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="TextBox.rail">
+        <Setter Property="CornerRadius" Value="8" />
+    </Style>
+
+    <!-- ===== Artwork tiles: the lift is the button's; everything else is the tile's own parts ===== -->
+    <Style Selector="Button.tile Border#Lift">
+        <Setter Property="BoxShadow" Value="{DynamicResource Shadow.Tile}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.18" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Button.tile:pointerover Border#Lift">
+        <Setter Property="BoxShadow" Value="{DynamicResource Shadow.Tile.Hover}" />
+    </Style>
+
+    <Style Selector="Button.tile :is(Control).reveal">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Button.tile:pointerover :is(Control).reveal, Button.tile:focus-within :is(Control).reveal">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+
+    <Style Selector="Button.tile Border#Ring">
+        <Setter Property="BorderBrush" Value="#33FFFFFF" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Button.tile:pointerover Border#Ring">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+
+    <!-- Artwork fades in as it arrives rather than popping. -->
+    <Style Selector="ui|RemoteImage">
+        <Setter Property="Stretch" Value="UniformToFill" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.22" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <!-- ===== Badges on artwork ===== -->
+    <Style Selector="Border.badge-new">
+        <Setter Property="Background" Value="{DynamicResource Brush.Sky}" />
+        <Setter Property="CornerRadius" Value="0,0,4,4" />
+        <Setter Property="Padding" Value="8,2,8,3" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+    </Style>
+
+    <Style Selector="Border.badge-new > TextBlock">
+        <Setter Property="FontSize" Value="9.5" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="1.4" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Sky.Ink}" />
+    </Style>
+
+    <Style Selector="Border.badge-count">
+        <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="7,1,7,2" />
+        <Setter Property="MinWidth" Value="22" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Margin" Value="0,8,8,0" />
+        <Setter Property="BoxShadow" Value="0 2 6 0 #80020510" />
+    </Style>
+
+    <Style Selector="Border.badge-count > TextBlock">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Ink}" />
+    </Style>
+
+    <Style Selector="Border.badge-watched">
+        <Setter Property="Background" Value="#D9040712" />
+        <Setter Property="BorderBrush" Value="#40FFFFFF" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="11" />
+        <Setter Property="Width" Value="22" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Margin" Value="0,8,8,0" />
+    </Style>
+
+    <!-- ===== Chips: genres and facts on the details page ===== -->
+    <Style Selector="Border.chip">
+        <Setter Property="Background" Value="{DynamicResource Brush.Fill.Input}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Line.Hairline}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="10,3,10,4" />
+    </Style>
+
+    <Style Selector="Border.chip > TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+    </Style>
+
+    <Style Selector="Border.rating">
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Line.Strong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Padding" Value="5,0,5,1" />
+    </Style>
+
+    <Style Selector="Border.rating > TextBlock">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+    </Style>
+
+</Styles>

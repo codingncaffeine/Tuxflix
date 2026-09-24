@@ -1,0 +1,173 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Tuxflix.App.ViewModels"
+        xmlns:views="using:Tuxflix.App.Views"
+        xmlns:ui="using:Tuxflix.App.Controls"
+        x:Class="Tuxflix.App.Views.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Title="Tuxflix"
+        Width="1440" Height="900"
+        MinWidth="980" MinHeight="620"
+        Icon="/Assets/tuxflix-256.png"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent,None"
+        ExtendClientAreaToDecorationsHint="True"
+        WindowDecorations="None">
+
+    <!-- The window draws its own frame: rounded, with a hairline ring, square when maximised. -->
+    <Border Name="Frame" CornerRadius="{DynamicResource Radius.Window}" ClipToBounds="True" Background="{DynamicResource Brush.Base}">
+        <Panel>
+            <Grid RowDefinitions="58,*,36">
+
+                <!-- ================= Title bar ================= -->
+                <Border Name="TitleBar" Background="{DynamicResource Brush.Chrome}"
+                        BorderBrush="{DynamicResource Brush.Line.Soft}" BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" Margin="12,0,10,0">
+
+                        <Button Theme="{StaticResource IconButton}" Padding="4"
+                                Command="{Binding GoHomeCommand}"
+                                ui:Tip.Text="Tuxflix: library home">
+                            <Border Width="32" Height="32" CornerRadius="8" ClipToBounds="True" BoxShadow="{StaticResource Shadow.Mark}">
+                                <Image Source="/Assets/brand-mark-96.png" Stretch="UniformToFill" />
+                            </Border>
+                        </Button>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" Margin="8,0,0,0">
+                            <Button Theme="{StaticResource IconButton}" Command="{Binding GoBackCommand}"
+                                    ui:Tip.Text="Back" ui:Tip.Keys="Alt+Left" ToolTip.ShowOnDisabled="True">
+                                <PathIcon Data="{StaticResource Icon.ArrowLeft.Bold}" Width="16" Height="16" />
+                            </Button>
+                            <Button Theme="{StaticResource IconButton}" Command="{Binding GoForwardCommand}"
+                                    ui:Tip.Text="Forward" ui:Tip.Keys="Alt+Right" ToolTip.ShowOnDisabled="True">
+                                <PathIcon Data="{StaticResource Icon.ArrowRight.Bold}" Width="16" Height="16" />
+                            </Button>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="14,0,0,0">
+                            <Button Theme="{StaticResource NavTab}" Content="LIBRARY"
+                                    Classes.selected="{Binding IsLibraryTab}"
+                                    Command="{Binding GoHomeCommand}"
+                                    ui:Tip.Text="Your libraries and everything in them" ui:Tip.Keys="Ctrl+1" />
+                            <Button Theme="{StaticResource NavTab}" Content="DISCOVER"
+                                    Classes.selected="{Binding IsDiscoverTab}"
+                                    Command="{Binding ShowDiscoverCommand}"
+                                    ui:Tip.Text="Your Watchlist and what is new" ui:Tip.Keys="Ctrl+2" />
+                            <Button Theme="{StaticResource NavTab}" Content="ACTIVITY"
+                                    Classes.selected="{Binding IsActivityTab}"
+                                    Command="{Binding ShowActivityCommand}"
+                                    ui:Tip.Text="What is playing, your history and your statistics" ui:Tip.Keys="Ctrl+3" />
+                        </StackPanel>
+
+                        <TextBox Grid.Column="4" Name="SearchBox" Classes="search" Width="300"
+                                 PlaceholderText="Search your libraries"
+                                 AutomationProperties.Name="Search your libraries">
+                            <TextBox.InnerLeftContent>
+                                <PathIcon Data="{StaticResource Icon.MagnifyingGlass}" Width="14" Height="14" Margin="13,0,7,0"
+                                          Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                            </TextBox.InnerLeftContent>
+                            <TextBox.InnerRightContent>
+                                <Border Classes="keycap" Margin="0,0,10,0"><TextBlock Text="Ctrl K" /></Border>
+                            </TextBox.InnerRightContent>
+                        </TextBox>
+
+                        <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4" Margin="12,0,4,0">
+                            <Button Theme="{StaticResource IconButton}" Command="{Binding ShowDownloadsCommand}"
+                                    ui:Tip.Text="Downloads">
+                                <PathIcon Data="{StaticResource Icon.DownloadSimple}" Width="18" Height="18" />
+                            </Button>
+                            <Button Theme="{StaticResource IconButton}" Padding="4" ui:Tip.Text="{Binding AccountName}">
+                                <Border Width="30" Height="30" CornerRadius="15" Background="{DynamicResource Brush.Ribbon}"
+                                        BoxShadow="0 2 8 0 #66020510">
+                                    <TextBlock Text="{Binding AccountInitials}" FontSize="12" FontWeight="Bold" Foreground="White"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{Binding AccountName}" IsEnabled="False" />
+                                        <Separator />
+                                        <MenuItem Header="Open the demo library" Command="{Binding OpenDemoCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="Quit Tuxflix" Click="OnQuit" InputGesture="Ctrl+Q" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="6" Name="CaptionButtons" Orientation="Horizontal" Spacing="2">
+                            <Border Width="1" Height="22" Background="{DynamicResource Brush.Line.Hairline}" Margin="6,0,8,0" />
+                            <Button Theme="{StaticResource CaptionButton}" Click="OnMinimize" ui:Tip.Text="Minimize">
+                                <PathIcon Data="{StaticResource Icon.Minus.Bold}" Width="12" Height="12" />
+                            </Button>
+                            <Button Theme="{StaticResource CaptionButton}" Name="MaximizeButton" Click="OnToggleMaximize" ui:Tip.Text="Maximize">
+                                <PathIcon Name="MaximizeIcon" Data="{StaticResource Icon.Square.Bold}" Width="11" Height="11" />
+                            </Button>
+                            <Button Theme="{StaticResource CaptionButton}" Classes="close" Click="OnClose" ui:Tip.Text="Close">
+                                <PathIcon Data="{StaticResource Icon.X.Bold}" Width="12" Height="12" />
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- ================= Body: the rail beside the canvas ================= -->
+                <DockPanel Grid.Row="1">
+                    <Panel DockPanel.Dock="Left" IsVisible="{Binding ShowRail}">
+                        <views:LibraryRail Name="Rail" DataContext="{Binding Rail}" />
+                        <Thumb Name="RailResizer" Width="6" HorizontalAlignment="Right" Margin="0,0,-3,0"
+                               Cursor="SizeWestEast" Background="Transparent" />
+                    </Panel>
+
+                    <Panel>
+                        <Border Background="{DynamicResource Brush.Canvas}" />
+                        <Border Background="{DynamicResource Brush.Canvas.Glow}" IsHitTestVisible="False" />
+                        <TransitioningContentControl Content="{Binding Router.Current}">
+                            <TransitioningContentControl.PageTransition>
+                                <CrossFade Duration="0:0:0.14" />
+                            </TransitioningContentControl.PageTransition>
+                        </TransitioningContentControl>
+                    </Panel>
+                </DockPanel>
+
+                <!-- ================= Status bar ================= -->
+                <Border Grid.Row="2" Background="{DynamicResource Brush.Chrome}"
+                        BorderBrush="{DynamicResource Brush.Line.Soft}" BorderThickness="0,1,0,0">
+                    <Grid ColumnDefinitions="*,Auto,*" Margin="16,0,12,0">
+                        <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource Brush.Success}"
+                                    BoxShadow="{StaticResource Shadow.Glow.Success}" IsVisible="{Binding IsConnected}" />
+                            <Border Width="8" Height="8" CornerRadius="4" Background="{DynamicResource Brush.Text.Disabled}"
+                                    IsVisible="{Binding !IsConnected}" />
+                            <TextBlock Text="{Binding ServerName}" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding ServerDetail}" FontSize="12" Classes="faint" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Theme="{StaticResource IconButton}" Padding="12,3"
+                                Command="{Binding ShowDownloadsCommand}" ui:Tip.Text="Open downloads">
+                            <StackPanel Orientation="Horizontal" Spacing="9">
+                                <PathIcon Data="{StaticResource Icon.DownloadSimple}" Width="14" Height="14" />
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="DOWNLOADS" Classes="label" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                                    <TextBlock Text="Nothing queued" FontSize="10.5" Classes="faint" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="2" Theme="{StaticResource IconButton}" Padding="12,3" HorizontalAlignment="Right"
+                                Command="{Binding ShowActivityCommand}" ui:Tip.Text="Open activity">
+                            <StackPanel Orientation="Horizontal" Spacing="9">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="ACTIVITY" Classes="label" HorizontalAlignment="Right" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                                    <TextBlock Text="Nothing playing" FontSize="10.5" Classes="faint" HorizontalAlignment="Right" />
+                                </StackPanel>
+                                <PathIcon Data="{StaticResource Icon.Pulse}" Width="14" Height="14" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Border Name="Ring" CornerRadius="{DynamicResource Radius.Window}" BorderThickness="1"
+                    BorderBrush="#24FFFFFF" IsHitTestVisible="False" />
+        </Panel>
+    </Border>
+</Window>

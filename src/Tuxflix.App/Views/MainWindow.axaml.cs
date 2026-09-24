@@ -1,0 +1,175 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
+using Tuxflix.App.Controls;
+using Tuxflix.App.ViewModels;
+using Tuxflix.Core.Settings;
+
+namespace Tuxflix.App.Views;
+
+public partial class MainWindow : Window
+{
+    private readonly ShellViewModel? _shell;
+    private readonly SettingsStore? _settings;
+
+    /// <summary>For the XAML loader and the designer.</summary>
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
+
+    public MainWindow(ShellViewModel shell, SettingsStore settings)
+        : this()
+    {
+        _shell = shell;
+        _settings = settings;
+        DataContext = shell;
+
+        if (settings.Current.UseSystemTitleBar)
+        {
+            WindowDecorations = WindowDecorations.Full;
+            ExtendClientAreaToDecorationsHint = false;
+            CaptionButtons.IsVisible = false;
+            Frame.CornerRadius = default;
+            Ring.IsVisible = false;
+        }
+        else
+        {
+            WindowFrame.Apply(this);
+            WindowFrame.Drags(this, TitleBar);
+        }
+
+        RestorePlacement(settings.Current.Window);
+        Rail.Width = Math.Clamp(settings.Current.RailWidth, 220, 440);
+        RailResizer.DragDelta += OnRailResize;
+
+        AddHandler(PointerPressedEvent, OnMouseButtons, RoutingStrategies.Tunnel);
+        KeyDown += OnKeyDown;
+        Closing += (_, _) => RememberPlacement();
+    }
+
+    /// <summary>Brings the window forward when another launch hands over to this one.</summary>
+    public void BringForward()
+    {
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property != WindowStateProperty || _settings?.Current.UseSystemTitleBar == true) return;
+
+        // A maximised or full-screen window has square corners and no ring: it meets the screen edge.
+        var framed = WindowState == WindowState.Normal;
+        Frame.CornerRadius = framed ? new CornerRadius(10) : default;
+        Ring.IsVisible = framed;
+        MaximizeIcon.Data = this.FindResource(framed ? "Icon.Square.Bold" : "Icon.Copy.Bold") as Geometry;
+        Tip.SetText(MaximizeButton, framed ? "Maximize" : "Restore");
+    }
+
+    private void OnMinimize(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void OnToggleMaximize(object? sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void OnClose(object? sender, RoutedEventArgs e) => Close();
+
+    private void OnQuit(object? sender, RoutedEventArgs e) => Close();
+
+    private void OnRailResize(object? sender, VectorEventArgs e)
+    {
+        Rail.Width = Math.Clamp(Rail.Width + e.Vector.X, 220, 440);
+        if (_settings is not null) _settings.Current.RailWidth = Rail.Width;
+    }
+
+    // The mouse's side buttons go back and forward, as they do in Steam and every browser.
+    private void OnMouseButtons(object? sender, PointerPressedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(this).Properties;
+        if (point.IsXButton1Pressed && _shell?.GoBackCommand.CanExecute(null) == true)
+        {
+            _shell.GoBackCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (point.IsXButton2Pressed && _shell?.GoForwardCommand.CanExecute(null) == true)
+        {
+            _shell.GoForwardCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_shell is null) return;
+        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        var alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+
+        switch (e.Key)
+        {
+            case Key.Left when alt && _shell.GoBackCommand.CanExecute(null):
+                _shell.GoBackCommand.Execute(null);
+                break;
+            case Key.Right when alt && _shell.GoForwardCommand.CanExecute(null):
+                _shell.GoForwardCommand.Execute(null);
+                break;
+            case Key.Home when alt:
+            case Key.D1 when ctrl:
+                _shell.GoHomeCommand.Execute(null);
+                break;
+            case Key.D2 when ctrl:
+                _shell.ShowDiscoverCommand.Execute(null);
+                break;
+            case Key.D3 when ctrl:
+                _shell.ShowActivityCommand.Execute(null);
+                break;
+            case Key.K when ctrl:
+                SearchBox.Focus();
+                SearchBox.SelectAll();
+                break;
+            case Key.Q when ctrl:
+                Close();
+                break;
+            case Key.F11:
+                WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
+                break;
+            case Key.Escape when WindowState == WindowState.FullScreen:
+                WindowState = WindowState.Normal;
+                break;
+            default:
+                return;
+        }
+
+        e.Handled = true;
+    }
+
+    private void RestorePlacement(WindowPlacement? placement)
+    {
+        if (placement is null || placement.Width < MinWidth || placement.Height < MinHeight) return;
+        Width = placement.Width;
+        Height = placement.Height;
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Position = new PixelPoint(placement.X, placement.Y);
+        if (placement.Maximized) WindowState = WindowState.Maximized;
+    }
+
+    private void RememberPlacement()
+    {
+        if (_settings is null) return;
+        var maximized = WindowState == WindowState.Maximized;
+        var previous = _settings.Current.Window;
+        _settings.Current.Window = new WindowPlacement
+        {
+            // A maximised window keeps the size it will restore to.
+            X = maximized && previous is not null ? previous.X : Position.X,
+            Y = maximized && previous is not null ? previous.Y : Position.Y,
+            Width = maximized && previous is not null ? previous.Width : Bounds.Width,
+            Height = maximized && previous is not null ? previous.Height : Bounds.Height,
+            Maximized = maximized,
+        };
+        _settings.Save();
+    }
+}

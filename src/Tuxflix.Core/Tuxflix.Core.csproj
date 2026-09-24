@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Everything that is not drawing: the Plex client, its models, settings, paths, the log and
+       the demo library. No Avalonia here, so all of it is testable without a display. -->
+  <PropertyGroup>
+    <RootNamespace>Tuxflix.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tuxflix.Tests" />
+  </ItemGroup>
+
+</Project>
