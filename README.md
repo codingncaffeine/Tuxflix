@@ -27,6 +27,10 @@ src/Tuxflix.App/bin/Release/net10.0/tuxflix --demo
 
 `--portable DIR` keeps settings, cache and logs in `DIR` instead of the XDG folders.
 
-## Third-party material
+## Licence
 
-See [NOTICES.txt](NOTICES.txt).
+Tuxflix is free software: you can redistribute it and modify it under the terms of the
+[GNU General Public License](LICENSE), version 3 or (at your option) any later version. It comes
+with no warranty.
+
+Third-party material keeps its own licence; see [NOTICES.txt](NOTICES.txt).

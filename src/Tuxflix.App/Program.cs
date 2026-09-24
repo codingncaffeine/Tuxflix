@@ -11,10 +11,16 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        // Before anything opens a file: one line on standard output that a script can read.
+        // Before anything opens a file. The first line is the one a script reads; the licence follows, as GNU tools print it.
         if (args.Any(a => a is "--version" or "-V"))
         {
             Console.WriteLine($"Tuxflix {BuildInfo.Stamp}");
+            Console.WriteLine("""
+                Copyright (C) 2026 Tuxflix contributors
+                License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
+                This is free software: you are free to change and redistribute it.
+                There is NO WARRANTY, to the extent permitted by law.
+                """);
             return 0;
         }
 
@@ -25,7 +31,7 @@ internal static class Program
 
                   --demo            Open the built-in demo library instead of a server.
                   --portable DIR    Keep settings, cache and logs in DIR instead of the XDG folders.
-                  --version         Print the version and build time, then exit.
+                  --version         Print the version, build time and licence, then exit.
                 """);
             return 0;
         }
