@@ -309,6 +309,22 @@ public sealed class DemoCatalog
                         LastViewedAt = watched || next ? Now.AddHours(-(i * 5) - 1).ToUnixTimeSeconds() : null,
                         LibrarySectionId = 2,
                         LibrarySectionTitle = "TV Shows",
+                        Media =
+                        [
+                            new()
+                            {
+                                Id = 90_000 + showId * 100 + ordinal,
+                                Duration = duration,
+                                Width = 1920,
+                                Height = 1080,
+                                VideoCodec = "hevc",
+                                VideoResolution = "1080",
+                                AudioCodec = "eac3",
+                                AudioChannels = 6,
+                                Container = "mkv",
+                                Part = [new() { Id = 95_000 + showId * 100 + ordinal, Key = $"/library/parts/{episodeKey}/1700000000/file.mkv", Duration = duration, Container = "mkv" }],
+                            },
+                        ],
                     };
 
                     if (watched) watchedSoFar++;

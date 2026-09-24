@@ -1,0 +1,151 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             xmlns:player="using:Tuxflix.App.Player"
+             x:Class="Tuxflix.App.Views.Pages.PlayerPage"
+             x:DataType="vm:PlayerPageViewModel"
+             Background="Black"
+             Focusable="True">
+
+    <UserControl.Styles>
+        <!-- The controls fade away while watching and come back with the pointer. -->
+        <Style Selector="Panel#Overlay">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.25" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Panel#Overlay.hidden">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+    </UserControl.Styles>
+
+    <Panel Name="Stage">
+        <player:MpvVideoView Name="Video" Player="{Binding Player}" />
+
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBuffering}" Width="180" Height="3" MinHeight="3"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Foreground="{DynamicResource Brush.Accent}" Background="#33FFFFFF" />
+
+        <Panel Name="Overlay">
+            <!-- ===== Top: back, and what is playing ===== -->
+            <Border Name="TopBar" VerticalAlignment="Top" Height="130" Background="{DynamicResource Brush.Scrim.Top}">
+                <Grid ColumnDefinitions="Auto,*" Margin="18,16,24,0" VerticalAlignment="Top">
+                    <Button Theme="{StaticResource IconButton}" Command="{Binding LeaveCommand}" Padding="10"
+                            Foreground="White" ui:Tip.Text="Back" ui:Tip.Keys="Esc">
+                        <PathIcon Data="{StaticResource Icon.ArrowLeft.Bold}" Width="20" Height="20" />
+                    </Button>
+                    <StackPanel Grid.Column="1" Margin="14,4,0,0" Spacing="3">
+                        <TextBlock Text="{Binding Heading}" FontSize="20" FontWeight="Bold" Foreground="White" />
+                        <TextBlock Text="{Binding Subheading}" FontSize="13.5" Foreground="#CCFFFFFF" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ===== Bottom: the seek bar and the transport ===== -->
+            <Border Name="BottomBar" VerticalAlignment="Bottom" Background="{DynamicResource Brush.Scrim.Player}" Padding="30,70,30,22">
+                <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <TextBlock Text="{Binding PositionText}" FontSize="13" FontWeight="SemiBold" Foreground="White"
+                                   VerticalAlignment="Center" MinWidth="56" />
+                        <Slider Grid.Column="1" Name="Seek" Theme="{StaticResource SeekBar}" Margin="14,0"
+                                Maximum="{Binding SeekMaximum}" Value="{Binding SeekValue}"
+                                AutomationProperties.Name="Position" />
+                        <TextBlock Grid.Column="2" Text="{Binding RemainingText}" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="#CCFFFFFF" VerticalAlignment="Center" MinWidth="56" TextAlignment="Right" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Theme="{StaticResource IconButton}" Foreground="White" Command="{Binding SkipBackCommand}"
+                                    ui:Tip.Text="Back 10 seconds" ui:Tip.Keys="Left">
+                                <Panel Width="26" Height="26">
+                                    <PathIcon Data="{StaticResource Icon.ArrowCounterClockwise}" Width="26" Height="26" />
+                                    <TextBlock Text="10" FontSize="8.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,1,0,0" />
+                                </Panel>
+                            </Button>
+                            <Button Theme="{StaticResource IconButton}" Foreground="White" Padding="12" Command="{Binding TogglePauseCommand}"
+                                    ui:Tip.Text="Play or pause" ui:Tip.Keys="Space">
+                                <Panel>
+                                    <PathIcon Data="{StaticResource Icon.Pause.Fill}" Width="24" Height="24" IsVisible="{Binding !IsPaused}" />
+                                    <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="24" Height="24" IsVisible="{Binding IsPaused}" />
+                                </Panel>
+                            </Button>
+                            <Button Theme="{StaticResource IconButton}" Foreground="White" Command="{Binding SkipForwardCommand}"
+                                    ui:Tip.Text="Forward 30 seconds" ui:Tip.Keys="Right">
+                                <Panel Width="26" Height="26">
+                                    <PathIcon Data="{StaticResource Icon.ArrowClockwise}" Width="26" Height="26" />
+                                    <TextBlock Text="30" FontSize="8.5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,1,0,0" />
+                                </Panel>
+                            </Button>
+                            <Border Width="1" Height="20" Background="#33FFFFFF" Margin="8,0" />
+                            <Button Theme="{StaticResource IconButton}" Foreground="White" Command="{Binding ToggleMuteCommand}"
+                                    ui:Tip.Text="Mute" ui:Tip.Keys="M">
+                                <Panel>
+                                    <PathIcon Data="{StaticResource Icon.SpeakerHigh}" Width="20" Height="20" IsVisible="{Binding !IsMuted}" />
+                                    <PathIcon Data="{StaticResource Icon.SpeakerSlash}" Width="20" Height="20" IsVisible="{Binding IsMuted}" />
+                                </Panel>
+                            </Button>
+                            <Slider Theme="{StaticResource SeekBar}" Width="110" Maximum="150" Value="{Binding Volume}"
+                                    VerticalAlignment="Center" ui:Tip.Text="Volume" ui:Tip.Keys="Up" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                            <Button Theme="{StaticResource IconButton}" Foreground="White" ui:Tip.Text="Audio track" ui:Tip.Keys="A">
+                                <PathIcon Data="{StaticResource Icon.MusicNotes}" Width="20" Height="20" />
+                                <Button.Flyout>
+                                    <MenuFlyout ItemsSource="{Binding AudioTracks}" Placement="TopEdgeAlignedRight">
+                                        <MenuFlyout.ItemContainerTheme>
+                                            <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:TrackOption">
+                                                <Setter Property="Header" Value="{Binding Label}" />
+                                                <Setter Property="Command" Value="{Binding ChooseCommand}" />
+                                                <Setter Property="ToggleType" Value="Radio" />
+                                                <Setter Property="IsChecked" Value="{Binding IsSelected}" />
+                                            </ControlTheme>
+                                        </MenuFlyout.ItemContainerTheme>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                            <Button Theme="{StaticResource IconButton}" Foreground="White" ui:Tip.Text="Subtitles" ui:Tip.Keys="S">
+                                <PathIcon Data="{StaticResource Icon.Subtitles}" Width="20" Height="20" />
+                                <Button.Flyout>
+                                    <MenuFlyout ItemsSource="{Binding SubtitleTracks}" Placement="TopEdgeAlignedRight">
+                                        <MenuFlyout.ItemContainerTheme>
+                                            <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:TrackOption">
+                                                <Setter Property="Header" Value="{Binding Label}" />
+                                                <Setter Property="Command" Value="{Binding ChooseCommand}" />
+                                                <Setter Property="ToggleType" Value="Radio" />
+                                                <Setter Property="IsChecked" Value="{Binding IsSelected}" />
+                                            </ControlTheme>
+                                        </MenuFlyout.ItemContainerTheme>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                            <Button Theme="{StaticResource IconButton}" Foreground="White" Click="OnFullScreen"
+                                    ui:Tip.Text="Full screen" ui:Tip.Keys="F">
+                                <PathIcon Data="{StaticResource Icon.CornersOut}" Width="20" Height="20" />
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- ===== When it cannot play ===== -->
+        <Border IsVisible="{Binding HasError}" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560"
+                Padding="28,24" CornerRadius="12" Background="#E60F162E" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
+                BoxShadow="{StaticResource Shadow.Popup}">
+            <StackPanel Spacing="16">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="22" Height="22" Foreground="{DynamicResource Brush.Accent}" />
+                    <TextBlock Text="{Binding ErrorMessage}" FontSize="14.5" TextWrapping="Wrap" MaxWidth="460" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button Theme="{StaticResource GhostButton}" Content="GO BACK" HorizontalAlignment="Left" Command="{Binding LeaveCommand}"
+                        ui:Tip.Text="Back to where you were" />
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

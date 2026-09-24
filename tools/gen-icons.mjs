@@ -28,7 +28,8 @@ const ICONS = {
     "shuffle", "repeat", "queue", "pulse", "chart-bar", "sort-ascending", "keyboard",
     "game-controller", "warning", "warning-circle", "play-circle", "film-slate", "users",
     "user", "clock-counter-clockwise", "x-circle", "wifi-high", "lightning", "lock-simple",
-    "link-simple", "sparkle", "compass", "list", "sidebar-simple",
+    "link-simple", "sparkle", "compass", "list", "sidebar-simple", "arrow-counter-clockwise",
+    "arrow-clockwise",
   ],
   fill: [
     "house", "play", "pause", "star", "check-circle", "bookmark-simple", "circle",

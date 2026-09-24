@@ -41,6 +41,10 @@ public abstract partial class MediaTileViewModel(ShellViewModel shell, MetadataI
 
     [RelayCommand]
     private void Open() => shell.OpenItem(Item);
+
+    /// <summary>Straight into the player, from where it was left.</summary>
+    [RelayCommand]
+    private void Play() => shell.Play(Item, resume: true);
 }
 
 /// <summary>A 2:3 poster, the shape of a Steam capsule.</summary>

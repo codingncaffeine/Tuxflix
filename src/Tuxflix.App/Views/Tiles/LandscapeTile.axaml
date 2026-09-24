@@ -26,12 +26,15 @@
                     </Grid>
                     <ProgressBar Theme="{StaticResource ThinProgress}" VerticalAlignment="Bottom"
                                  Value="{Binding Progress}" IsVisible="{Binding HasProgress}" />
-                    <Border Classes="reveal" Width="56" Height="56" CornerRadius="28" Margin="0,0,0,26"
+                    <Button Classes="reveal" Theme="{StaticResource IconButton}" Padding="0" CornerRadius="28" Margin="0,0,0,26"
                             HorizontalAlignment="Center" VerticalAlignment="Center"
-                            Background="#A6040712" BorderBrush="#80FFFFFF" BorderThickness="1.5"
-                            BoxShadow="0 6 18 0 #99020510">
-                        <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="20" Height="20" Margin="3,0,0,0" Foreground="White" />
-                    </Border>
+                            Command="{Binding PlayCommand}" ui:Tip.Text="Resume" ui:Tip.Keys="Space">
+                        <Border Width="56" Height="56" CornerRadius="28"
+                                Background="#A6040712" BorderBrush="#80FFFFFF" BorderThickness="1.5"
+                                BoxShadow="0 6 18 0 #99020510">
+                            <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="20" Height="20" Margin="3,0,0,0" Foreground="White" />
+                        </Border>
+                    </Button>
                 </Panel>
             </Border>
             <Border Name="Ring" CornerRadius="{StaticResource Radius.Card}" />

@@ -138,6 +138,18 @@
         <GradientStop Offset="1" Color="#EB040712" />
     </LinearGradientBrush>
 
+    <!-- The player's scrims: legible controls over any frame, the picture clear between them. -->
+    <LinearGradientBrush x:Key="Brush.Scrim.Top" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#CC000000" />
+        <GradientStop Offset="1" Color="#00000000" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.Scrim.Player" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#00000000" />
+        <GradientStop Offset="0.45" Color="#8C000000" />
+        <GradientStop Offset="1" Color="#E6000000" />
+    </LinearGradientBrush>
+
     <LinearGradientBrush x:Key="Brush.Scrim.Card" StartPoint="0%,0%" EndPoint="0%,100%">
         <GradientStop Offset="0.2" Color="#00040712" />
         <GradientStop Offset="0.68" Color="#8C040712" />

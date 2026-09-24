@@ -33,7 +33,12 @@ public sealed class App : Application
             var shell = new ShellViewModel(settings, launch.Paths);
             var window = new MainWindow(shell, settings);
             desktop.MainWindow = window;
-            desktop.ShutdownRequested += (_, _) => settings.Save();
+            desktop.ShutdownRequested += (_, _) =>
+            {
+                // A player open at exit tells the server where it stopped, as leaving it would.
+                shell.Router.Current?.Deactivate();
+                settings.Save();
+            };
 
             if (launch.Instance is { } instance)
             {
@@ -45,6 +50,7 @@ public sealed class App : Application
             {
                 WindowingBackend.WindowOpened(window);
                 shell.Start(launch.Options.Demo);
+                if (launch.Options.ProbePlayer) Player.PlayerProbe.Run(shell, window);
             };
 
             // A session logout or `kill` asks politely with SIGTERM: close the window the normal way

@@ -114,6 +114,23 @@ void Capture(string pose)
         Settle(shell);
     }
 
+    if (pose == "player")
+    {
+        // The overlay over a black picture: there is no OpenGL on the headless platform.
+        var item = shell.Router.Current is HomePageViewModel home
+            ? home.Shelves.SelectMany(s => s.Tiles).First().Item
+            : throw new InvalidOperationException("No home page to pick from.");
+        shell.Play(item, resume: true);
+        Settle(shell);
+    }
+
+    if (pose == "stream")
+    {
+        StreamCheck(shell);
+        window.Close();
+        return;
+    }
+
     switch (real ? string.Empty : pose)
     {
         case "movie":
@@ -220,4 +237,42 @@ static (string Client, string? Server) ReadRealProfile()
                  ?? throw new InvalidOperationException("The real profile has no client identifier yet; sign in with Tuxflix first.");
     var server = root.TryGetProperty("lastServerId", out var last) ? last.GetString() : null;
     return (client, server);
+}
+
+// Plays the first Continue Watching item silently (no picture, no sound, no progress reported) to
+// prove the server hands the player its file: header token, direct play, demuxing, time moving.
+static void StreamCheck(ShellViewModel shell)
+{
+    var session = shell.Session ?? throw new InvalidOperationException("No server is open.");
+    var home = shell.Router.Current as HomePageViewModel ?? throw new InvalidOperationException("No home page.");
+    var item = home.Shelves.SelectMany(s => s.Tiles).Select(t => t.Item).First(i => i.Type is "movie" or "episode");
+    var full = session.Client.GetMetadataAsync(item.RatingKey, CancellationToken.None).GetAwaiter().GetResult() ?? item;
+    var part = full.Media?.FirstOrDefault()?.Part?.FirstOrDefault()?.Key ?? throw new InvalidOperationException("No part to play.");
+    var headers = string.Join(",", session.Client.MediaHeaders(shell.Identity).Select(h => $"{h.Name}: {h.Value}"));
+
+    using var player = new Tuxflix.Player.MpvPlayer(new Dictionary<string, string>
+    {
+        ["vo"] = "null",
+        ["ao"] = "null",
+        ["config"] = "no",
+        ["terminal"] = "no",
+        ["idle"] = "yes",
+        ["http-header-fields"] = headers,
+    });
+    var loaded = new ManualResetEventSlim();
+    var positions = new System.Collections.Concurrent.ConcurrentBag<double>();
+    string? failure = null;
+    player.FileLoaded += () => loaded.Set();
+    player.Ended += (reason, error) => { if (reason == Tuxflix.Player.EndReason.Failed) { failure = error; loaded.Set(); } };
+    player.Changed += change => { if (change is { Name: "time-pos", Number: { } s }) positions.Add(s); };
+
+    var start = (full.ViewOffset ?? 0) / 1000.0;
+    player.Load(session.Client.MediaUri(part).ToString(), start);
+    if (!loaded.Wait(TimeSpan.FromSeconds(20))) throw new InvalidOperationException("The file did not load within 20 seconds.");
+    if (failure is not null) throw new InvalidOperationException($"The file did not open: {failure}");
+    Thread.Sleep(TimeSpan.FromSeconds(4));
+
+    Console.WriteLine($"stream: {full.Type} loaded; video {player.GetString("video-codec")} {player.GetString("width")}x{player.GetString("height")}, "
+                      + $"audio {player.GetString("audio-codec-name")}; container {player.GetString("file-format")}; "
+                      + $"asked to start at {start:0.0} s, reached {(positions.IsEmpty ? 0 : positions.Max()):0.0} s after 4 s.");
 }

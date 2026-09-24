@@ -95,6 +95,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public bool IsHome => Router.Current is HomePageViewModel;
 
+    /// <summary>The page takes the whole window: the title and status bars step aside.</summary>
+    public bool IsImmersive => Router.Current?.IsImmersive == true;
+
     /// <summary>Called once the window is on screen: the demo, a remembered sign-in, or the welcome page.</summary>
     public void Start(bool demo)
     {
@@ -320,6 +323,14 @@ public sealed partial class ShellViewModel : ObservableObject
         Rail.Highlight(item);
     }
 
+    /// <summary>Plays a film or an episode, from where it was left when <paramref name="resume"/>.</summary>
+    public void Play(MetadataItem item, bool resume)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (Session is not { } session) return;
+        Router.Navigate(new PlayerPageViewModel(this, session, item, resume));
+    }
+
     public void SaveSettings() => _settings.Save();
 
     public AppSettings Settings => _settings.Current;
@@ -342,6 +353,7 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(IsActivityTab));
         OnPropertyChanged(nameof(ShowRail));
         OnPropertyChanged(nameof(IsHome));
+        OnPropertyChanged(nameof(IsImmersive));
         GoBackCommand.NotifyCanExecuteChanged();
         GoForwardCommand.NotifyCanExecuteChanged();
     }

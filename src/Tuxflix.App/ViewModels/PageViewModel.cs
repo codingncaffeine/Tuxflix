@@ -27,6 +27,9 @@ public abstract partial class PageViewModel : ObservableObject
     /// <summary>Whether the library rail stands beside this page, as it does in Steam's library.</summary>
     public virtual bool ShowsRail => Tab == TopTab.Library;
 
+    /// <summary>Whether the page takes the whole window, the title and status bars hidden: the player.</summary>
+    public virtual bool IsImmersive => false;
+
     [ObservableProperty]
     public partial bool IsLoading { get; set; }
 
@@ -67,7 +70,8 @@ public abstract partial class PageViewModel : ObservableObject
         }
     }
 
-    public void Deactivate() => _loading?.Cancel();
+    /// <summary>Called when the router leaves this page; a page that holds something lets go of it here.</summary>
+    public virtual void Deactivate() => _loading?.Cancel();
 
     protected virtual Task LoadAsync(CancellationToken cancellation) => Task.CompletedTask;
 }

@@ -352,6 +352,65 @@
         </Setter>
     </ControlTheme>
 
+    <!-- ===== The player's seek bar: a thin rail that thickens under the hand, warm fill, round thumb ===== -->
+    <ControlTheme x:Key="SeekFill" TargetType="RepeatButton">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Height="{TemplateBinding Height}" CornerRadius="3" Background="{DynamicResource Brush.Progress}" VerticalAlignment="Center" />
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <ControlTheme x:Key="SeekRest" TargetType="RepeatButton">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Height="{TemplateBinding Height}" CornerRadius="3" Background="#40FFFFFF" VerticalAlignment="Center" />
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <ControlTheme x:Key="SeekThumb" TargetType="Thumb">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Width="16" Height="16" CornerRadius="8" Background="White" BoxShadow="0 2 8 0 #99000000" />
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+
+    <ControlTheme x:Key="SeekBar" TargetType="Slider">
+        <Setter Property="Minimum" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid Name="Hit" Height="24" Background="Transparent">
+                    <Track Name="PART_Track" Orientation="Horizontal"
+                           Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                           Value="{TemplateBinding Value, Mode=TwoWay}">
+                        <Track.DecreaseButton>
+                            <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SeekFill}" Height="4" Focusable="False" />
+                        </Track.DecreaseButton>
+                        <Track.IncreaseButton>
+                            <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SeekRest}" Height="4" Focusable="False" />
+                        </Track.IncreaseButton>
+                        <Thumb Name="thumb" Theme="{StaticResource SeekThumb}" Opacity="0">
+                            <Thumb.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+                                </Transitions>
+                            </Thumb.Transitions>
+                        </Thumb>
+                    </Track>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ RepeatButton">
+            <Setter Property="Height" Value="6" />
+        </Style>
+        <Style Selector="^:pointerover /template/ Thumb#thumb">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+    </ControlTheme>
+
     <!-- ===== Tooltips: a raised card with a shadow; popups draw in the window's overlay layer ===== -->
     <ControlTheme x:Key="{x:Type ToolTip}" TargetType="ToolTip">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />

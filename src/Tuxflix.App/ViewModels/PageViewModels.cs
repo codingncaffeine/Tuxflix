@@ -132,10 +132,48 @@ public sealed partial class ItemPageViewModel(ShellViewModel shell, ServerSessio
     [RelayCommand]
     private async Task PlayAsync()
     {
-        // Until the player exists a press must still answer, never do nothing at all.
-        PlayNotice = "Playback arrives with the player, which is being built next.";
+        try
+        {
+            // A film or an episode plays itself; a series or a season plays what is next in it.
+            var target = Item.Type is "movie" or "episode" ? Item : await NextEpisodeAsync();
+            if (target is null)
+            {
+                await SayAsync("There is nothing in this to play.");
+                return;
+            }
+
+            shell.Play(target, resume: target.Progress is > 0 and < 1);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Tuxflix.Core.Diagnostics.Log.Warn("What to play next could not be found.", ex);
+            await SayAsync("The server could not be asked what to play next.");
+        }
+    }
+
+    /// <summary>The episode to play: the first started or unwatched one, else the very first.</summary>
+    private async Task<MetadataItem?> NextEpisodeAsync()
+    {
+        var seasons = Item.Type == "season"
+            ? [Item]
+            : Seasons.Count > 0 ? Seasons.Select(s => s.Season).ToList() : [.. await Task.Run(() => session.Client.GetChildrenAsync(Item.RatingKey, CancellationToken.None))];
+
+        MetadataItem? first = null;
+        foreach (var season in seasons.Where(s => s.Index is not 0).Concat(seasons.Where(s => s.Index is 0)))
+        {
+            var episodes = await Task.Run(() => session.Client.GetChildrenAsync(season.RatingKey, CancellationToken.None));
+            first ??= episodes.FirstOrDefault();
+            if (episodes.FirstOrDefault(e => !e.IsWatched) is { } next) return next;
+        }
+
+        return first;
+    }
+
+    private async Task SayAsync(string notice)
+    {
+        PlayNotice = notice;
         await Task.Delay(TimeSpan.FromSeconds(6));
-        PlayNotice = null;
+        if (PlayNotice == notice) PlayNotice = null;
     }
 
     public string RemainingText => Format.Remaining(Item);

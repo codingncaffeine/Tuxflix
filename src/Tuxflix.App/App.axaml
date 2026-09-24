@@ -27,6 +27,7 @@
         <DataTemplate DataType="vm:SignInPageViewModel"><pages:SignInPage /></DataTemplate>
         <DataTemplate DataType="vm:ServersPageViewModel"><pages:ServersPage /></DataTemplate>
         <DataTemplate DataType="vm:StatusPageViewModel"><pages:StatusPage /></DataTemplate>
+        <DataTemplate DataType="vm:PlayerPageViewModel"><pages:PlayerPage /></DataTemplate>
 
         <!-- Artwork tiles -->
         <DataTemplate DataType="vm:PosterTileViewModel"><tiles:PosterTile /></DataTemplate>

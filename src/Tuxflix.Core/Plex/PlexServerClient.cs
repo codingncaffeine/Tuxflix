@@ -59,6 +59,57 @@ public sealed class PlexServerClient
         }
     }
 
+    /// <summary>The address of a media part, for the player; the token travels in a header.</summary>
+    public Uri MediaUri(string partKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(partKey);
+        return Resolve(partKey);
+    }
+
+    /// <summary>The headers a player sends with every request for media, token included.</summary>
+    public IReadOnlyList<(string Name, string Value)> MediaHeaders(PlexClientIdentity identity)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+        var headers = new List<(string, string)>
+        {
+            ("X-Plex-Client-Identifier", identity.ClientIdentifier),
+            ("X-Plex-Product", PlexClientIdentity.Product),
+            ("X-Plex-Version", identity.Version),
+        };
+        if (Token is not null) headers.Add(("X-Plex-Token", Token));
+        return headers;
+    }
+
+    /// <summary>
+    /// Tells the server where playback is, so the place is kept and other clients show it.
+    /// </summary>
+    /// <param name="state">playing, paused, buffering or stopped.</param>
+    public async Task ReportTimelineAsync(string ratingKey, string state, long time, long duration, CancellationToken cancellation)
+    {
+        var query = string.Create(
+            CultureInfo.InvariantCulture,
+            $"/:/timeline?ratingKey={Uri.EscapeDataString(ratingKey)}&key={Uri.EscapeDataString("/library/metadata/" + ratingKey)}&state={state}&time={time}&duration={duration}&context=library");
+        await SendAsync(HttpMethod.Post, query, cancellation).ConfigureAwait(false);
+    }
+
+    /// <summary>Marks an item watched.</summary>
+    public async Task ScrobbleAsync(string ratingKey, CancellationToken cancellation) =>
+        await SendAsync(HttpMethod.Put, $"/:/scrobble?identifier=com.plexapp.plugins.library&key={Uri.EscapeDataString(ratingKey)}", cancellation).ConfigureAwait(false);
+
+    private async Task SendAsync(HttpMethod method, string pathAndQuery, CancellationToken cancellation)
+    {
+        if (IsDemo) return;
+        using var request = new HttpRequestMessage(method, Resolve(pathAndQuery));
+        if (Token is not null) request.Headers.TryAddWithoutValidation("X-Plex-Token", Token);
+        using var response = await _http.SendAsync(request, cancellation).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new PlexUnauthorizedException($"{Name} refused the sign-in for {Describe(pathAndQuery)}.");
+        }
+
+        response.EnsureSuccessStatusCode();
+    }
+
     public async Task<byte[]> GetBytesAsync(Uri uri, CancellationToken cancellation)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
