@@ -58,7 +58,20 @@ internal static class Format
             parts.Add(resolution.Equals("4k", StringComparison.OrdinalIgnoreCase) ? "4K" : resolution.All(char.IsDigit) ? resolution + "p" : resolution.ToUpperInvariant());
         }
 
-        if (media.VideoCodec is { } video) parts.Add(video.ToUpperInvariant());
+        if (media.VideoCodec is { } video)
+        {
+            parts.Add(video.ToLowerInvariant() switch
+            {
+                "h264" => "H.264",
+                "hevc" or "h265" => "HEVC",
+                "mpeg2video" => "MPEG-2",
+                "mpeg4" => "MPEG-4",
+                "mpeg1video" => "MPEG-1",
+                "vc1" => "VC-1",
+                "msmpeg4v3" => "DivX",
+                _ => video.ToUpperInvariant(),
+            });
+        }
         if (media.AudioCodec is { } audio)
         {
             var name = audio.ToLowerInvariant() switch

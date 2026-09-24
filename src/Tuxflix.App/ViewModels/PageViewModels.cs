@@ -22,12 +22,18 @@ public sealed class HomePageViewModel(ShellViewModel shell, ServerSession sessio
     {
         var hubs = await Task.Run(() => session.Client.GetHomeHubsAsync(cancellation), cancellation);
         Shelves.Clear();
+
+        // Servers send Continue Watching and On Deck side by side, and they overlap almost entirely;
+        // an item shows on the first wide shelf that has it, and a shelf left empty is dropped, as
+        // Plex's own apps merge the two.
+        var shownWide = new HashSet<string>(StringComparer.Ordinal);
         foreach (var hub in hubs)
         {
             // Films and series for now; music, photo and clip shelves arrive with their own phases.
             var items = hub.Metadata?.Where(i => i.Type is "movie" or "show" or "season" or "episode").ToList() ?? [];
-            if (items.Count == 0) continue;
             var landscape = hub.HubIdentifier is { } id && (id.StartsWith("home.continue", StringComparison.Ordinal) || id.StartsWith("home.ondeck", StringComparison.Ordinal));
+            if (landscape) items = [.. items.Where(i => shownWide.Add(i.RatingKey))];
+            if (items.Count == 0) continue;
             IEnumerable<MediaTileViewModel> tiles = landscape
                 ? items.Select(i => new LandscapeTileViewModel(shell, i))
                 : items.Select(i => new PosterTileViewModel(shell, i));
