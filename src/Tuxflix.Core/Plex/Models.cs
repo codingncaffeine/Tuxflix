@@ -396,8 +396,17 @@ public sealed class MediaStream
     [JsonPropertyName("channels")]
     public int? Channels { get; init; }
 
+    /// <summary>The stream's place in the file, every kind counted from 0; absent for a subtitle file kept beside it.</summary>
+    [JsonPropertyName("index")]
+    public int? Index { get; init; }
+
+    /// <summary>Where a subtitle file kept beside the media is served (<c>/library/streams/…</c>).</summary>
     [JsonPropertyName("key")]
     public string? Key { get; init; }
+
+    /// <summary>A subtitle kept in a file of its own beside the media, not inside it.</summary>
+    [JsonIgnore]
+    public bool IsExternal => Index is null && Key is not null;
 }
 
 public sealed class Tag

@@ -92,6 +92,19 @@ public sealed class PlexServerClient
         await SendAsync(HttpMethod.Post, query, cancellation).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Remembers the viewer's audio or subtitle choice for a part, and the like streams in the
+    /// item's other parts, so every Plex player starts with it next time.
+    /// </summary>
+    /// <param name="subtitleStreamId">The subtitle stream, or 0 for none.</param>
+    public async Task SelectStreamsAsync(long partId, long? audioStreamId, long? subtitleStreamId, CancellationToken cancellation)
+    {
+        var query = string.Create(CultureInfo.InvariantCulture, $"/library/parts/{partId}?allParts=1");
+        if (audioStreamId is { } audio) query += string.Create(CultureInfo.InvariantCulture, $"&audioStreamID={audio}");
+        if (subtitleStreamId is { } subtitle) query += string.Create(CultureInfo.InvariantCulture, $"&subtitleStreamID={subtitle}");
+        await SendAsync(HttpMethod.Put, query, cancellation).ConfigureAwait(false);
+    }
+
     /// <summary>Marks an item watched.</summary>
     public async Task ScrobbleAsync(string ratingKey, CancellationToken cancellation) =>
         await SendAsync(HttpMethod.Put, $"/:/scrobble?identifier=com.plexapp.plugins.library&key={Uri.EscapeDataString(ratingKey)}", cancellation).ConfigureAwait(false);

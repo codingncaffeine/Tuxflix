@@ -7,6 +7,7 @@ using Tuxflix.App.ViewModels;
 using Tuxflix.App.Views;
 using Tuxflix.Core;
 using Tuxflix.Core.Diagnostics;
+using Tuxflix.Core.Security;
 using Tuxflix.Core.Settings;
 
 namespace Tuxflix.App;
@@ -30,7 +31,15 @@ public sealed class App : Application
         else if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Launch is { } launch)
         {
             var settings = SettingsStore.Load(launch.Paths.SettingsFile);
-            var shell = new ShellViewModel(settings, launch.Paths);
+            var probing = launch.Options.ProbePlayer;
+            var shell = new ShellViewModel(settings, launch.Paths)
+            {
+                // A probe may borrow a copied profile's sign-in: it reads the keyring and never
+                // writes it, plays in silence, and leaves the server's record of progress alone.
+                Keyring = probing ? new ReadOnlySecretStore(new Keyring()) : new Keyring(),
+                ReportsPlayback = !probing,
+                Silent = probing,
+            };
             var window = new MainWindow(shell, settings);
             desktop.MainWindow = window;
             desktop.ShutdownRequested += (_, _) =>

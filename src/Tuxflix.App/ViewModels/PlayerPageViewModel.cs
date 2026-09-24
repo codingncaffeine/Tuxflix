@@ -16,14 +16,17 @@ namespace Tuxflix.App.ViewModels;
 /// <remarks>
 /// The token travels in a request header mpv sends, never in a URL. Progress is reported every
 /// ten seconds while playing and at every change of state, and once more as "stopped" on the way
-/// out; a file played to the end is marked watched. The page lets go of the player when it is
-/// left, and the video view lets go when it is taken off the screen: whichever is last destroys it.
+/// out; a file played to the end is marked watched. Playback starts with the audio and subtitles the
+/// server selected for the viewer, and a track chosen here is told back to the server. The page
+/// lets go of the player when it is left, and the video view lets go when it is taken off the
+/// screen: whichever is last destroys it.
 /// </remarks>
 public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSession session, MetadataItem item, bool resume) : PageViewModel
 {
     private static readonly TimeSpan ReportEvery = TimeSpan.FromSeconds(10);
 
     private MetadataItem _item = item;
+    private MediaPart? _part;
     private string? _source;
     private double _start;
     private bool _loaded;
@@ -110,6 +113,8 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
             return;
         }
 
+        _part = part;
+
         // The demo has no files; it plays a moving test pattern instead.
         _source = session.IsDemo
             ? "av://lavfi:testsrc2=size=1280x720:rate=30"
@@ -121,7 +126,11 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         var shared = new SharedPlayer(new MpvPlayer(Options()));
         shared.Player.Changed += change => Dispatcher.UIThread.Post(() => Apply(change));
         shared.Player.Ended += (reason, error) => Dispatcher.UIThread.Post(() => OnEnded(reason, error));
-        shared.Player.FileLoaded += () => Dispatcher.UIThread.Post(RefreshTracks);
+        shared.Player.FileLoaded += () => Dispatcher.UIThread.Post(() =>
+        {
+            ApplyServerChoice();
+            RefreshTracks();
+        });
         Player = shared;
         Log.Info($"Playing {(session.IsDemo ? "the demo pattern" : "directly from the server")}{(_start > 0 ? $", resuming at {Clock(_start)}" : string.Empty)}.");
     }
@@ -136,12 +145,14 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         _reporter = new DispatcherTimer { Interval = ReportEvery };
         _reporter.Tick += (_, _) => Report(IsPaused ? "paused" : "playing", force: true);
         _reporter.Start();
+        KeepAwake(true);
     }
 
     public override void Deactivate()
     {
         base.Deactivate();
         _reporter?.Stop();
+        KeepAwake(false);
         if (Player is { } shared)
         {
             if (_loaded && !_finished) Report("stopped", force: true);
@@ -150,6 +161,12 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
             Player = null;
         }
     }
+
+    /// <summary>The screen stays awake while the picture moves, and may sleep when it is paused or gone.</summary>
+    private static void KeepAwake(bool awake) =>
+        _ = awake
+            ? Platform.ScreenSaverInhibitor.Shared.InhibitAsync("Playing video")
+            : Platform.ScreenSaverInhibitor.Shared.ReleaseAsync();
 
     [RelayCommand]
     private void TogglePause()
@@ -181,7 +198,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
     private Dictionary<string, string> Options()
     {
         var headers = string.Join(",", session.Client.MediaHeaders(shell.Identity).Select(h => $"{h.Name}: {h.Value}"));
-        return new Dictionary<string, string>
+        var options = new Dictionary<string, string>
         {
             ["vo"] = "libmpv",
             ["hwdec"] = "auto-safe",
@@ -199,10 +216,27 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
             ["demuxer-max-bytes"] = "400MiB",
             ["demuxer-readahead-secs"] = "30",
             ["volume-max"] = "150",
+            // What the desktop's volume mixer shows for the sound: the application, then what plays.
+            ["audio-client-name"] = "Tuxflix",
+            ["force-media-title"] = MediaTitle(),
+            ["title"] = "${media-title}",
             ["user-agent"] = $"Tuxflix/{BuildInfo.Version}",
             ["http-header-fields"] = headers,
         };
+
+        // mpv's own volume, applied to the samples: the desktop's volume for the stream is left alone.
+        if (shell.Silent) options["volume"] = "0";
+
+        // The server's subtitle selection is applied once the file is open; until then none shows,
+        // so a subtitle the file marks as its default cannot flash up first.
+        if (_part is { } part && StreamChoice.IsKnown(part)) options["sid"] = "no";
+        return options;
     }
+
+    /// <summary>What is playing, in one line: the show, the episode and its name, or the film and its year.</summary>
+    private string MediaTitle() =>
+        string.Join(" · ", new[] { Heading, _item.Type == "episode" ? Format.EpisodeCode(_item) : null, _item.Type == "episode" ? _item.Title : _item.Year?.ToString(CultureInfo.InvariantCulture) }
+            .Where(part => !string.IsNullOrWhiteSpace(part)));
 
     private void Apply(PlayerChange change)
     {
@@ -218,6 +252,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
             case "pause" when change.Flag is { } paused:
                 IsPaused = paused;
                 Report(paused ? "paused" : "playing", force: false);
+                KeepAwake(!paused);
                 break;
             case "paused-for-cache" when change.Flag is { } waiting:
                 IsBuffering = waiting;
@@ -245,30 +280,34 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
 
         if (reason != EndReason.Finished || _finished) return;
         _finished = true;
+        KeepAwake(false);
         _reporter?.Stop();
 
         // Played to the end: the server hears "stopped" at the end, and the item is marked watched.
         var ratingKey = _item.RatingKey;
         var duration = (long)(Duration * 1000);
-        _ = Task.Run(async () =>
+        if (shell.ReportsPlayback)
         {
-            try
+            _ = Task.Run(async () =>
             {
-                await session.Client.ReportTimelineAsync(ratingKey, "stopped", duration, duration, CancellationToken.None);
-                await session.Client.ScrobbleAsync(ratingKey, CancellationToken.None);
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or PlexUnauthorizedException)
-            {
-                Log.Warn("The server could not be told the item was watched.", ex);
-            }
-        });
+                try
+                {
+                    await session.Client.ReportTimelineAsync(ratingKey, "stopped", duration, duration, CancellationToken.None);
+                    await session.Client.ScrobbleAsync(ratingKey, CancellationToken.None);
+                }
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or PlexUnauthorizedException)
+                {
+                    Log.Warn("The server could not be told the item was watched.", ex);
+                }
+            });
+        }
 
         shell.GoBackCommand.Execute(null);
     }
 
     private void Report(string state, bool force)
     {
-        if (!_loaded || (!force && state == _reported)) return;
+        if (!_loaded || !shell.ReportsPlayback || (!force && state == _reported)) return;
         _reported = state;
         var ratingKey = _item.RatingKey;
         var time = (long)(Position * 1000);
@@ -286,36 +325,130 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         });
     }
 
+    /// <summary>Starts with the audio and subtitles the server selected, not the file's own defaults.</summary>
+    private void ApplyServerChoice()
+    {
+        if (Player is not { } shared || _part is not { } part || !StreamChoice.IsKnown(part)) return;
+        var tracks = ListTracks(shared.Player).ConvertAll(t => t.Track);
+
+        if (StreamChoice.Selected(part, StreamChoice.Audio) is { } audio && StreamChoice.TrackFor(audio, part, tracks) is { } audioTrack)
+        {
+            shared.Player.SetProperty("aid", audioTrack.Id);
+        }
+
+        var subtitle = StreamChoice.Selected(part, StreamChoice.Subtitle);
+        if (subtitle is { IsExternal: true })
+        {
+            LoadSubtitle(subtitle);
+        }
+        else if (subtitle is not null && StreamChoice.TrackFor(subtitle, part, tracks) is { } subtitleTrack)
+        {
+            shared.Player.SetProperty("sid", subtitleTrack.Id);
+        }
+
+        Log.Info($"Tracks as the server selected them; subtitles {(subtitle is null ? "off" : subtitle.IsExternal ? "from a file beside the media" : "on")}.");
+    }
+
     private void RefreshTracks()
     {
         if (Player is not { } shared) return;
         var player = shared.Player;
-        var count = (int)(player.GetNumber("track-list/count") ?? 0);
+        var listed = ListTracks(player);
+        var tracks = listed.ConvertAll(t => t.Track);
         AudioTracks.Clear();
         SubtitleTracks.Clear();
-        SubtitleTracks.Add(new TrackOption(this, "sid", "no", "Off", player.GetString("sid") is null or "no"));
+        SubtitleTracks.Add(new TrackOption(this, "sid", "no", "Off", player.GetString("sid") is null or "no", stream: null));
+        foreach (var (track, label, selected) in listed)
+        {
+            // The server's names for its streams are the ones every other Plex player shows.
+            var stream = _part is { } part ? StreamChoice.StreamFor(track, part, tracks, SourceOf) : null;
+            var name = stream?.ExtendedDisplayTitle ?? stream?.DisplayTitle ?? label;
+            (track.Type == "audio" ? AudioTracks : SubtitleTracks).Add(new TrackOption(this, track.Type == "audio" ? "aid" : "sid", track.Id, name, selected, stream));
+        }
+
+        // Subtitle files beside the media are offered too, and loaded when chosen.
+        if (_part is { } withFiles)
+        {
+            foreach (var external in StreamChoice.ExternalSubtitles(withFiles).Where(s => tracks.TrueForAll(t => t.Source != SourceOf(s))))
+            {
+                SubtitleTracks.Add(new TrackOption(this, "sid", string.Empty, external.ExtendedDisplayTitle ?? external.DisplayTitle ?? "Subtitles", false, external));
+            }
+        }
+    }
+
+    /// <summary>The audio and subtitle tracks the player lists now, with a label from the file's own tags.</summary>
+    private static List<(PlayerTrack Track, string Label, bool Selected)> ListTracks(MpvPlayer player)
+    {
+        var listed = new List<(PlayerTrack, string, bool)>();
+        var count = (int)(player.GetNumber("track-list/count") ?? 0);
         for (var i = 0; i < count; i++)
         {
             var type = player.GetString($"track-list/{i}/type");
             var id = player.GetString($"track-list/{i}/id");
             if (id is null || type is not ("audio" or "sub")) continue;
+            var external = player.GetString($"track-list/{i}/external") == "yes";
+            var index = player.GetNumber($"track-list/{i}/ff-index");
+            var track = new PlayerTrack(
+                type,
+                id,
+                external || index is null ? null : (int)index.Value,
+                external ? player.GetString($"track-list/{i}/external-filename") : null);
             var label = string.Join("  ·  ", new[]
             {
                 player.GetString($"track-list/{i}/title"),
                 Language(player.GetString($"track-list/{i}/lang")),
                 player.GetString($"track-list/{i}/codec")?.ToUpperInvariant(),
             }.Where(part => !string.IsNullOrWhiteSpace(part)).Distinct());
-            var selected = player.GetString($"track-list/{i}/selected") == "yes";
-            var option = new TrackOption(this, type == "audio" ? "aid" : "sid", id, label.Length > 0 ? label : $"Track {id}", selected);
-            (type == "audio" ? AudioTracks : SubtitleTracks).Add(option);
+            listed.Add((track, label.Length > 0 ? label : $"Track {id}", player.GetString($"track-list/{i}/selected") == "yes"));
         }
+
+        return listed;
     }
 
     internal void Select(TrackOption option)
     {
-        Player?.Player.SetProperty(option.Property, option.Id);
+        if (Player is not { } shared) return;
+        if (option.Id.Length == 0 && option.Stream is { IsExternal: true } external)
+        {
+            // A file beside the media: it arrives in the next track list, already chosen.
+            LoadSubtitle(external);
+        }
+        else
+        {
+            shared.Player.SetProperty(option.Property, option.Id);
+        }
+
         foreach (var other in option.Property == "aid" ? AudioTracks : SubtitleTracks) other.IsSelected = ReferenceEquals(other, option);
+        Remember(option);
     }
+
+    /// <summary>Tells the server the viewer's choice, as Plex players do, so it holds on every device.</summary>
+    private void Remember(TrackOption option)
+    {
+        if (!shell.ReportsPlayback || _part is not { Id: > 0 } part) return;
+        long? audio = option.Property == "aid" ? option.Stream?.Id : null;
+        long? subtitle = option.Property != "sid" ? null : option.Id == "no" ? 0 : option.Stream?.Id;
+        if (audio is null && subtitle is null) return;
+
+        var partId = part.Id;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await session.Client.SelectStreamsAsync(partId, audio, subtitle, CancellationToken.None);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or PlexUnauthorizedException)
+            {
+                Log.Warn("The server could not be told which track was chosen.", ex);
+            }
+        });
+    }
+
+    private void LoadSubtitle(MediaStream external) =>
+        Player?.Player.Command("sub-add", SourceOf(external), "select", external.ExtendedDisplayTitle ?? external.DisplayTitle ?? "Subtitles");
+
+    /// <summary>Where the player fetches a subtitle file kept beside the media; the token goes in a header.</summary>
+    private string SourceOf(MediaStream stream) => session.Client.MediaUri(stream.Key!).ToString();
 
     private static string? Language(string? code) =>
         code is { Length: > 0 } && CultureInfo.GetCultures(CultureTypes.NeutralCultures)
@@ -331,13 +464,17 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
 }
 
 /// <summary>An audio or subtitle track the viewer can choose.</summary>
-public sealed partial class TrackOption(PlayerPageViewModel page, string property, string id, string label, bool selected) : ObservableObject
+/// <param name="id">The player's track id; empty for a subtitle file the player has not loaded yet.</param>
+/// <param name="stream">The server's stream for the track, when the server lists it.</param>
+public sealed partial class TrackOption(PlayerPageViewModel page, string property, string id, string label, bool selected, MediaStream? stream) : ObservableObject
 {
     public string Property { get; } = property;
 
     public string Id { get; } = id;
 
     public string Label { get; } = label;
+
+    public MediaStream? Stream { get; } = stream;
 
     [ObservableProperty]
     public partial bool IsSelected { get; set; } = selected;

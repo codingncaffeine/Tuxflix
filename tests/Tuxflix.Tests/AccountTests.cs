@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Tuxflix.Core.Plex;
+using Tuxflix.Core.Security;
 using Xunit;
 
 namespace Tuxflix.Tests;
@@ -169,5 +170,42 @@ public sealed class ConnectionPickerTests
         var network = new FakeNetwork(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
 
         Assert.Null(await ConnectionPicker.PickAsync(Client(network), server, TestContext.Current.CancellationToken));
+    }
+}
+
+public sealed class ReadOnlySecretStoreTests
+{
+    private sealed class MemorySecrets : ISecretStore
+    {
+        public Dictionary<string, string> Secrets { get; } = [];
+
+        public Task<string?> LookupAsync(string account) => Task.FromResult(Secrets.GetValueOrDefault(account));
+
+        public Task<bool> StoreAsync(string account, string label, string secret)
+        {
+            Secrets[account] = secret;
+            return Task.FromResult(true);
+        }
+
+        public Task ClearAsync(string account)
+        {
+            Secrets.Remove(account);
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task ReadsTheSecretAndNeverChangesIt()
+    {
+        var real = new MemorySecrets();
+        real.Secrets["plex-client"] = "the-real-token";
+        var store = new ReadOnlySecretStore(real);
+
+        Assert.Equal("the-real-token", await store.LookupAsync("plex-client"));
+        Assert.False(await store.StoreAsync("plex-client", "label", "another-token"));
+        await store.ClearAsync("plex-client");
+        Assert.False(await store.StoreAsync("plex-other", "label", "a-token"));
+
+        Assert.Equal(new Dictionary<string, string> { ["plex-client"] = "the-real-token" }, real.Secrets);
     }
 }

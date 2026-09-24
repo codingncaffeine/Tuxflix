@@ -54,6 +54,18 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public ISecretStore Keyring { get; init; } = new Keyring();
 
+    /// <summary>
+    /// Whether players tell the server where playback is and mark what was finished as watched.
+    /// Off for probe runs against a real server, which must leave the viewer's progress as it was.
+    /// </summary>
+    public bool ReportsPlayback { get; init; } = true;
+
+    /// <summary>
+    /// Whether players start at volume zero. Probe runs do: the sound device still opens and is fed,
+    /// so the whole audio path is exercised, but nothing is heard.
+    /// </summary>
+    public bool Silent { get; init; }
+
     /// <summary>Opens a web page in the desktop's browser; replaced under test so no browser opens.</summary>
     public Action<string> OpenUrl { get; init; } = OpenInBrowser;
 

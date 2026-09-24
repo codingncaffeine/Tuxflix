@@ -31,6 +31,7 @@
          palette, and the controls that carry the look have control themes of their own. -->
     <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="$(MvvmToolkitVersion)" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="$(TmdsDbusVersion)" />
   </ItemGroup>
 
   <ItemGroup>

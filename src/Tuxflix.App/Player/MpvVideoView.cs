@@ -54,6 +54,18 @@ public sealed unsafe class MpvVideoView : OpenGlControlBase
     /// <summary>When set, every drawn frame reports three sampled pixels (for the probe): top, middle, bottom.</summary>
     public Action<uint, uint, uint>? Sampled { get; set; }
 
+    private Action<int, int, byte[]>? _capture;
+
+    /// <summary>
+    /// For the probe: hands the next drawn frame to <paramref name="done"/> as width, height and
+    /// RGBA bytes, in OpenGL's row order (the bottom row first).
+    /// </summary>
+    public void CaptureNextFrame(Action<int, int, byte[]> done)
+    {
+        _capture = done;
+        RequestNextFrameRendering();
+    }
+
     protected override void OnOpenGlInit(GlInterface gl)
     {
         _gl = gl;
@@ -114,6 +126,13 @@ public sealed unsafe class MpvVideoView : OpenGlControlBase
         {
             // GL rows run bottom-up: the last row is the top of the picture as it is shown.
             sampled(Pixel(width / 2, height - 3), Pixel(width / 2, height / 2), Pixel(width / 2, 2));
+        }
+
+        if (Interlocked.Exchange(ref _capture, null) is { } capture && _readPixels is not null)
+        {
+            var pixels = new byte[width * height * 4];
+            fixed (byte* data = pixels) _readPixels(0, 0, width, height, 0x1908 /* GL_RGBA */, 0x1401 /* GL_UNSIGNED_BYTE */, data);
+            capture(width, height, pixels);
         }
     }
 

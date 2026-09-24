@@ -19,6 +19,7 @@ using Tuxflix.App.ViewModels;
 using Tuxflix.App.Views;
 using Tuxflix.Core;
 using Tuxflix.Core.Plex;
+using Tuxflix.Core.Security;
 using Tuxflix.Core.Settings;
 
 if (args.Length < 1)
@@ -81,7 +82,8 @@ void Capture(string pose)
         settings.Current.LastServerId = realServer;
     }
 
-    var shell = new ShellViewModel(settings, paths);
+    // The keyring is the user's: a capture reads the real sign-in and never stores over or deletes it.
+    var shell = new ShellViewModel(settings, paths) { Keyring = new ReadOnlySecretStore(new Keyring()) };
     var window = new MainWindow(shell, settings) { Width = width, Height = height };
     window.Show();
 
