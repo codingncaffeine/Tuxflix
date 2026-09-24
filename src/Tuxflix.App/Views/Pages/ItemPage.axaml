@@ -86,8 +86,8 @@
                     Background="#B30A1024" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
                     BoxShadow="0 12 32 0 #73020510">
                 <Grid ColumnDefinitions="Auto,*">
-                    <Button Theme="{StaticResource PlayButton}" IsEnabled="False" ToolTip.ShowOnDisabled="True"
-                            ui:Tip.Text="Playback arrives with the player, the next phase" ui:Tip.Keys="Space">
+                    <Button Theme="{StaticResource PlayButton}" Command="{Binding PlayCommand}"
+                            ui:Tip.Text="Play from where you left off" ui:Tip.Keys="Space">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" />
                             <TextBlock Text="{Binding PlayLabel}" VerticalAlignment="Center" />
@@ -118,6 +118,15 @@
                         </StackPanel>
                     </StackPanel>
                 </Grid>
+            </Border>
+
+            <!-- What a press of Play did, when it could not play. -->
+            <Border IsVisible="{Binding HasPlayNotice}" Margin="44,12,44,0" Padding="16,10" CornerRadius="8" HorizontalAlignment="Left"
+                    Background="{DynamicResource Brush.Accent.Softer}" BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <PathIcon Data="{StaticResource Icon.Info}" Width="16" Height="16" Foreground="{DynamicResource Brush.Accent}" />
+                    <TextBlock Text="{Binding PlayNotice}" FontSize="13.5" VerticalAlignment="Center" />
+                </StackPanel>
             </Border>
 
             <!-- ===== Body ===== -->

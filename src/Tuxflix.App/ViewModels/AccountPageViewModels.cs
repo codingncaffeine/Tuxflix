@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Tuxflix.Core.Diagnostics;
@@ -57,17 +56,7 @@ public sealed partial class SignInPageViewModel(ShellViewModel shell) : PageView
     [RelayCommand]
     private void OpenBrowser()
     {
-        if (SignInLink is null) return;
-        try
-        {
-            var start = new ProcessStartInfo("xdg-open") { UseShellExecute = false };
-            start.ArgumentList.Add(SignInLink);
-            using var _ = Process.Start(start);
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
-        {
-            Log.Warn("The browser could not be opened for the sign-in; the link is on the page to copy.", ex);
-        }
+        if (SignInLink is not null) shell.OpenUrl(SignInLink);
     }
 
     [RelayCommand]
@@ -109,7 +98,7 @@ public sealed partial class ServersPageViewModel : PageViewModel
     protected override async Task LoadAsync(CancellationToken cancellation)
     {
         // Ask every server at once; each row fills in its own answer as it arrives.
-        using var http = _shell.Identity.CreateHttpClient();
+        using var http = _shell.CreateHttpClient();
         await Task.WhenAll(Servers.Select(row => row.ProbeAsync(http, cancellation)));
     }
 }
@@ -155,7 +144,7 @@ public sealed partial class ServerRowViewModel(ShellViewModel shell, PlexResourc
     {
         try
         {
-            await shell.ConnectAsync(Server, CancellationToken.None);
+            await shell.ConnectAsync(Server);
         }
         catch (Exception ex)
         {

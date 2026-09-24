@@ -23,14 +23,20 @@ public sealed partial class ShellViewModel : ObservableObject
     private string KeyringAccount => "plex-" + Identity.ClientIdentifier;
 
     private readonly SettingsStore _settings;
+    private readonly HttpMessageHandler? _network;
     private readonly HttpClient _plexTv;
+    private CancellationTokenSource? _connecting;
 
-    public ShellViewModel(SettingsStore settings, AppPaths paths)
+    /// <param name="settings">The profile's settings.</param>
+    /// <param name="paths">The profile's folders.</param>
+    /// <param name="network">Stands in for the network under test; null for the real one.</param>
+    public ShellViewModel(SettingsStore settings, AppPaths paths, HttpMessageHandler? network = null)
     {
         _settings = settings;
+        _network = network;
         Paths = paths;
         Identity = new PlexClientIdentity(settings.Current.ClientIdentifier, BuildInfo.Version, Environment.MachineName);
-        _plexTv = Identity.CreateHttpClient();
+        _plexTv = CreateHttpClient();
         Account = new PlexAccountClient(_plexTv);
         Rail = new LibraryRailViewModel(this);
         Router.PropertyChanged += OnRouterChanged;
@@ -46,7 +52,13 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public PlexAccountClient Account { get; }
 
-    public Keyring Keyring { get; } = new();
+    public ISecretStore Keyring { get; init; } = new Keyring();
+
+    /// <summary>Opens a web page in the desktop's browser; replaced under test so no browser opens.</summary>
+    public Action<string> OpenUrl { get; init; } = OpenInBrowser;
+
+    /// <summary>An HTTP client carrying this installation's identity, over the shell's network.</summary>
+    public HttpClient CreateHttpClient() => Identity.CreateHttpClient(_network, disposeHandler: _network is null);
 
     /// <summary>The servers the signed-in account can reach, from the last look.</summary>
     public IReadOnlyList<PlexResource> Servers { get; private set; } = [];
@@ -175,7 +187,7 @@ public sealed partial class ShellViewModel : ObservableObject
         var last = Servers.FirstOrDefault(s => s.ClientIdentifier == _settings.Current.LastServerId);
         if (last is not null || Servers.Count == 1)
         {
-            await ConnectAsync(last ?? Servers[0], cancellation);
+            await ConnectAsync(last ?? Servers[0]);
         }
         else
         {
@@ -186,12 +198,22 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     /// <summary>Finds the best way to reach <paramref name="server"/> and opens its library.</summary>
-    public async Task ConnectAsync(PlexResource server, CancellationToken cancellation)
+    /// <remarks>
+    /// Connecting owns its cancellation rather than borrowing the caller's. The first thing it does
+    /// is show the "Connecting" page, which leaves whichever page asked, and leaving a page cancels
+    /// that page's work: a borrowed token was cancelled by the very navigation that announced the
+    /// connection, and every address probe died unasked. A newer connection cancels an older one.
+    /// </remarks>
+    public async Task ConnectAsync(PlexResource server)
     {
         ArgumentNullException.ThrowIfNull(server);
+        _connecting?.Cancel();
+        var connecting = _connecting = new CancellationTokenSource();
+
         Router.Reset(new StatusPageViewModel($"Connecting to {server.Name}", "Finding the fastest way to reach it…"));
 
-        var connection = await ConnectionPicker.PickAsync(_plexTv, server, cancellation);
+        var connection = await ConnectionPicker.PickAsync(_plexTv, server, connecting.Token);
+        if (connecting.IsCancellationRequested) return;
         if (connection is null)
         {
             Router.Reset(new ServersPageViewModel(this, Servers, $"{server.Name} did not answer at any of its addresses. Is it running?"));
@@ -200,7 +222,21 @@ public sealed partial class ShellViewModel : ObservableObject
 
         _settings.Current.LastServerId = server.ClientIdentifier;
         _settings.Save();
-        Open(ServerSession.CreateRemote(Identity, server, connection, Paths));
+        Open(ServerSession.CreateRemote(Identity, server, connection, Paths, _network));
+    }
+
+    private static void OpenInBrowser(string url)
+    {
+        try
+        {
+            var start = new System.Diagnostics.ProcessStartInfo("xdg-open") { UseShellExecute = false };
+            start.ArgumentList.Add(url);
+            using var _ = System.Diagnostics.Process.Start(start);
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Log.Warn("The browser could not be opened.", ex);
+        }
     }
 
     private void Open(ServerSession session)

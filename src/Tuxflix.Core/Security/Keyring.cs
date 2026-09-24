@@ -13,7 +13,7 @@ namespace Tuxflix.Core.Security;
 /// session only, and the interface says so. Every call is bounded, because a keyring that is
 /// locked or gone mid-session leaves <c>secret-tool</c> waiting for a prompt that never comes.
 /// </remarks>
-public sealed class Keyring
+public sealed class Keyring : ISecretStore
 {
     private const string Tool = "secret-tool";
     private const string Service = "tuxflix";

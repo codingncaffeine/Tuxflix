@@ -43,14 +43,14 @@ public sealed class ServerSession : IDisposable
     }
 
     /// <summary>A real server, over the connection the picker chose, with its artwork cached on disk.</summary>
-    public static ServerSession CreateRemote(PlexClientIdentity identity, PlexResource server, ServerConnection connection, AppPaths paths)
+    public static ServerSession CreateRemote(PlexClientIdentity identity, PlexResource server, ServerConnection connection, AppPaths paths, HttpMessageHandler? network = null)
     {
         ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(server);
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(paths);
 
-        var http = identity.CreateHttpClient();
+        var http = identity.CreateHttpClient(network, disposeHandler: network is null);
         var client = new PlexServerClient(http, connection.Uri, server.AccessToken, server.Name);
         var cache = Path.Combine(paths.ImageCache, Sanitise(server.ClientIdentifier));
         return new ServerSession(http, client, connection.Describe(), cache, server.ClientIdentifier);

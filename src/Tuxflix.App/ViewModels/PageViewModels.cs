@@ -116,6 +116,22 @@ public sealed partial class ItemPageViewModel(ShellViewModel shell, ServerSessio
 
     public string PlayLabel => HasProgress ? "RESUME" : "PLAY";
 
+    /// <summary>A line under the play bar saying what a press did, when it could not play.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPlayNotice))]
+    public partial string? PlayNotice { get; private set; }
+
+    public bool HasPlayNotice => PlayNotice is not null;
+
+    [RelayCommand]
+    private async Task PlayAsync()
+    {
+        // Until the player exists a press must still answer, never do nothing at all.
+        PlayNotice = "Playback arrives with the player, which is being built next.";
+        await Task.Delay(TimeSpan.FromSeconds(6));
+        PlayNotice = null;
+    }
+
     public string RemainingText => Format.Remaining(Item);
 
     public string Runtime => Item.Type == "show" && Item.LeafCount is { } episodes

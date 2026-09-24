@@ -28,7 +28,7 @@ public sealed record PlexClientIdentity(string ClientIdentifier, string Version,
     }
 
     /// <summary>An HTTP client carrying this identity on every request.</summary>
-    public HttpClient CreateHttpClient(HttpMessageHandler? handler = null)
+    public HttpClient CreateHttpClient(HttpMessageHandler? handler = null, bool disposeHandler = true)
     {
         var client = handler is null
             ? new HttpClient(new SocketsHttpHandler
@@ -36,7 +36,7 @@ public sealed record PlexClientIdentity(string ClientIdentifier, string Version,
                 PooledConnectionLifetime = TimeSpan.FromMinutes(5),
                 AutomaticDecompression = System.Net.DecompressionMethods.All,
             })
-            : new HttpClient(handler, disposeHandler: true);
+            : new HttpClient(handler, disposeHandler);
         client.Timeout = TimeSpan.FromSeconds(30);
         Apply(client.DefaultRequestHeaders);
         return client;
