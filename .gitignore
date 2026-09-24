@@ -1,0 +1,17 @@
+# Local-only working folders (plans, probes, captures) — never committed
+/local-notes/
+/scratch/
+/snapshots/
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+.idea/
+out/
+TestResults/
+
+# Secrets
+Secrets.cs
+*.secrets.json
