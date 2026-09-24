@@ -61,6 +61,7 @@ public sealed class ClassicPlayerWindow : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        Platform.DesktopIdentity.Apply(this);
         _view.Focus();
         _ = RefreshSkinsAsync();
     }

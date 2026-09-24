@@ -29,6 +29,10 @@ src/Tuxflix.App/bin/Release/net10.0/tuxflix --demo
 
 `--portable DIR` keeps settings, cache and logs in `DIR` instead of the XDG folders.
 
+`tools/install-desktop-entry.sh` adds a desktop entry and icons for the build to `~/.local/share`,
+so the taskbar, the window switcher and the application menu show Tuxflix's name and icon;
+`--remove` takes them out again.
+
 ## Licence
 
 Tuxflix is free software: you can redistribute it and modify it under the terms of the

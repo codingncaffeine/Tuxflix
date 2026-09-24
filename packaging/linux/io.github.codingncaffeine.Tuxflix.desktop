@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Tuxflix
+GenericName=Plex Client
+Comment=Watch and listen to your Plex library
+Exec=tuxflix
+TryExec=tuxflix
+Icon=io.github.codingncaffeine.Tuxflix
+Terminal=false
+Categories=AudioVideo;Video;Audio;Player;TV;
+Keywords=Plex;Movies;TV;Shows;Music;Media;
+StartupNotify=true
+StartupWMClass=tuxflix
+SingleMainWindow=true

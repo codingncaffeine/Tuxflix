@@ -55,6 +55,7 @@ public partial class MainWindow : Window
         AddHandler(PointerPressedEvent, OnMouseButtons, RoutingStrategies.Tunnel);
         KeyDown += OnKeyDown;
         Closing += (_, _) => RememberPlacement();
+        Opened += (_, _) => Platform.DesktopIdentity.Apply(this);
         shell.CompactPlayerRequested += () => _ = ShowClassicAsync();
     }
 
