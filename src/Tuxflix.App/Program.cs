@@ -36,8 +36,9 @@ internal static class Program
         Log.Initialize(BuildInfo.Stamp, paths.Logs);
         if (paths.Portable) Log.Info($"Portable profile at {Path.GetDirectoryName(paths.Config)}");
 
-        using var instance = new SingleInstance(paths.InstanceSocket, paths.InstanceLock);
-        if (instance.TryHandOff(args))
+        // The probe is a tool run, not a session: it never hands off to, or waits for, the app.
+        using var instance = options.ProbeVideo ? null : new SingleInstance(paths.InstanceSocket, paths.InstanceLock);
+        if (instance?.TryHandOff(args) == true)
         {
             Log.Info("Another Tuxflix is running on this profile; handed the launch to it.");
             return 0;
@@ -47,7 +48,8 @@ internal static class Program
 
         try
         {
-            return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            var code = BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            return options.ProbeVideo ? Player.VideoProbe.ExitCode : code;
         }
         catch (Exception ex)
         {
@@ -67,7 +69,7 @@ internal static class Program
 }
 
 /// <summary>What the command line asked for.</summary>
-internal sealed record LaunchOptions(bool Demo, string? PortableRoot)
+internal sealed record LaunchOptions(bool Demo, string? PortableRoot, bool ProbeVideo = false)
 {
     public static LaunchOptions Parse(IReadOnlyList<string> args)
     {
@@ -86,7 +88,7 @@ internal sealed record LaunchOptions(bool Demo, string? PortableRoot)
             }
         }
 
-        return new LaunchOptions(demo, portable);
+        return new LaunchOptions(demo, portable, args.Contains(Player.VideoProbe.Switch));
     }
 }
 

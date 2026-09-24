@@ -22,7 +22,12 @@ public sealed class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Launch is { } launch)
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime probe && Launch is { Options.ProbeVideo: true })
+        {
+            probe.MainWindow = Player.VideoProbe.Create();
+            probe.MainWindow.Opened += (_, _) => WindowingBackend.WindowOpened(probe.MainWindow);
+        }
+        else if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Launch is { } launch)
         {
             var settings = SettingsStore.Load(launch.Paths.SettingsFile);
             var shell = new ShellViewModel(settings, launch.Paths);

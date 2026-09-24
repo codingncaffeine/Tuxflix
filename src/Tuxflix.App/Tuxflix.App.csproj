@@ -6,6 +6,8 @@
     <RootNamespace>Tuxflix.App</RootNamespace>
     <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- The video view hands libmpv function pointers and framebuffer structs. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!-- The build time rides in the informational version, so the log and the version switch can say
@@ -37,6 +39,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Tuxflix.Core\Tuxflix.Core.csproj" />
+    <ProjectReference Include="..\Tuxflix.Player\Tuxflix.Player.csproj" />
   </ItemGroup>
 
 </Project>

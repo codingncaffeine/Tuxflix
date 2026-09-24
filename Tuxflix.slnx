@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Tuxflix.Core/Tuxflix.Core.csproj" />
+    <Project Path="src/Tuxflix.Player/Tuxflix.Player.csproj" />
     <Project Path="src/Tuxflix.App/Tuxflix.App.csproj" />
   </Folder>
   <Folder Name="/tools/">

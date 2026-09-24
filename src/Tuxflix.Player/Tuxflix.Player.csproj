@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Playback: a thin binding to the system's libmpv (loaded at run time, never bundled) and a
+       player built on it. No Avalonia here; the video surface lives in the application. -->
+  <PropertyGroup>
+    <RootNamespace>Tuxflix.Player</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tuxflix.Tests" />
+    <InternalsVisibleTo Include="tuxflix" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tuxflix.Core\Tuxflix.Core.csproj" />
+  </ItemGroup>
+
+</Project>

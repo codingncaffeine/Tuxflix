@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Tuxflix.Core\Tuxflix.Core.csproj" />
+    <ProjectReference Include="..\..\src\Tuxflix.Player\Tuxflix.Player.csproj" />
   </ItemGroup>
 
 </Project>
