@@ -31,7 +31,9 @@ drawn in code, shows the interface without a server.
 
 Installed from a package, Tuxflix runs inside a hardened systemd user unit (see
 `packaging/tuxflix-launcher.sh`): its own folders and your media folders are writable, everything
-else read-only; `TUXFLIX_NO_SANDBOX=1` starts it without.
+else read-only; `TUXFLIX_NO_SANDBOX=1` starts it without. The unit limits what the application can
+damage, but it does not contain one that has been taken over: the session bus it needs for the
+keyring, the media controls and the desktop portals also reaches the rest of the desktop.
 
 ## Building
 
