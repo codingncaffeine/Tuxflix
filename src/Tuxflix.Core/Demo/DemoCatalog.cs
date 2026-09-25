@@ -11,7 +11,7 @@ namespace Tuxflix.Core.Demo;
 /// Deterministic: the same catalogue, watch states and artwork every run, measured from the
 /// <c>now</c> it is created with, so tests can pin exact values.
 /// </remarks>
-public sealed class DemoCatalog
+public sealed partial class DemoCatalog
 {
     public const string MoviesSectionKey = "1";
     public const string ShowsSectionKey = "2";

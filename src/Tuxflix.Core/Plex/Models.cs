@@ -13,7 +13,7 @@ public sealed class PlexEnvelope
     public MediaContainer? MediaContainer { get; init; }
 }
 
-public sealed class MediaContainer
+public sealed partial class MediaContainer
 {
     [JsonPropertyName("size")]
     public int Size { get; init; }
@@ -121,7 +121,7 @@ public sealed class TranscodeSessionInfo
 }
 
 /// <summary>A library section, or any other directory a listing returns.</summary>
-public sealed class LibraryDirectory
+public sealed partial class LibraryDirectory
 {
     [JsonPropertyName("key")]
     public string Key { get; init; } = string.Empty;
@@ -216,7 +216,7 @@ public sealed class Chapter
 }
 
 /// <summary>A tag a search or a listing returns: a person, a genre, a place.</summary>
-public sealed class TagEntry
+public sealed partial class TagEntry
 {
     [JsonPropertyName("id")]
     public long? Id { get; init; }
@@ -246,7 +246,7 @@ public sealed class TagEntry
     public int? Count { get; init; }
 }
 
-public sealed class Hub
+public sealed partial class Hub
 {
     [JsonPropertyName("hubKey")]
     public string? HubKey { get; init; }
@@ -287,7 +287,7 @@ public sealed class Hub
 }
 
 /// <summary>A movie, show, season, episode, or any other library item.</summary>
-public sealed class MetadataItem
+public sealed partial class MetadataItem
 {
     [JsonPropertyName("ratingKey")]
     public string RatingKey { get; init; } = string.Empty;
@@ -481,7 +481,7 @@ public sealed class MetadataItem
     public int UnwatchedLeaves => LeafCount is { } leaves ? Math.Max(0, leaves - (ViewedLeafCount ?? 0)) : 0;
 }
 
-public sealed class Media
+public sealed partial class Media
 {
     [JsonPropertyName("id")]
     public long Id { get; init; }
@@ -534,7 +534,7 @@ public sealed class Media
     public List<MediaPart>? Part { get; init; }
 }
 
-public sealed class MediaPart
+public sealed partial class MediaPart
 {
     [JsonPropertyName("id")]
     public long Id { get; init; }
@@ -566,7 +566,7 @@ public sealed class MediaPart
     public List<MediaStream>? Stream { get; init; }
 }
 
-public sealed class MediaStream
+public sealed partial class MediaStream
 {
     [JsonPropertyName("id")]
     public long Id { get; init; }

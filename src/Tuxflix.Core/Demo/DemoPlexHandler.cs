@@ -38,8 +38,25 @@ public interface IDemoArtRenderer
 /// It sits under the same <see cref="PlexServerClient"/> a real server does, so the demo walks
 /// the real request, parsing and paging code rather than a parallel path that could drift.
 /// </remarks>
-public sealed class DemoPlexHandler(DemoCatalog catalog, IDemoArtRenderer? art) : HttpMessageHandler
+public sealed partial class DemoPlexHandler(DemoCatalog catalog, IDemoArtRenderer? art) : HttpMessageHandler
 {
+    /// <summary>An answer to a request the core routes do not know, or null to let the next one try.</summary>
+    private delegate HttpResponseMessage? Route(DemoPlexHandler handler, string[] segments, System.Collections.Specialized.NameValueCollection query, HttpRequestMessage request);
+
+    // Routes beyond the core ones: a feature adds its own in a file of its own, as
+    // `private static readonly bool Registered = Add((handler, segments, query, request) => ...);`.
+    private static List<Route>? _routes;
+
+    private static bool Add(Route route)
+    {
+        (_routes ??= []).Add(route);
+        return true;
+    }
+
+    private DemoCatalog Catalog => catalog;
+
+    private IDemoArtRenderer? Art => art;
+
     public static readonly Uri BaseUri = new("http://demo.tuxflix.invalid:32400/");
 
     // Answered on the thread pool, as a network reply would be: drawing artwork on the caller's
@@ -80,10 +97,20 @@ public sealed class DemoPlexHandler(DemoCatalog catalog, IDemoArtRenderer? art) 
             ["services", "ultrablur", "colors"] => query["url"] is { } url && catalog.UltraBlurFor(url) is { } colours
                 ? Json(new MediaContainer { Size = 1, UltraBlurColors = [colours] })
                 : NotFound(),
-            _ => NotFound(),
+            _ => More(segments, query, request) ?? NotFound(),
         };
 
         return response;
+    }
+
+    private HttpResponseMessage? More(string[] segments, System.Collections.Specialized.NameValueCollection query, HttpRequestMessage request)
+    {
+        foreach (var route in _routes ?? [])
+        {
+            if (route(this, segments, query, request) is { } answer) return answer;
+        }
+
+        return null;
     }
 
     private static readonly LibraryDirectory[] Sorts =

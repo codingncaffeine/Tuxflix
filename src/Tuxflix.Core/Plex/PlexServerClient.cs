@@ -15,7 +15,7 @@ public sealed class PlexUnauthorizedException(string message) : Exception(messag
 /// line that prints a URL. Paths follow the documented defaults; every list request can page
 /// with <c>X-Plex-Container-Start</c> and <c>X-Plex-Container-Size</c>.
 /// </remarks>
-public sealed class PlexServerClient
+public sealed partial class PlexServerClient
 {
     private readonly HttpClient _http;
 
