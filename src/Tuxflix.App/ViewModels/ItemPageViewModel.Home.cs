@@ -109,7 +109,7 @@ public sealed partial class ItemPageViewModel
         if (!HasTheme || !IsThemeMusicOn || Item.Theme is not { } theme) return;
         if (shell.Music is { HasQueue: true, IsPaused: false }) return;
         if (session.IsDemo) shell.Themes.Play(DemoTheme, [], shell.Silent);
-        else shell.Themes.Play(session.Client.MediaUri(theme).AbsoluteUri, session.Client.MediaHeaders(shell.Identity), shell.Silent);
+        else if (session.Client.MediaUri(theme) is { } address) shell.Themes.Play(address.AbsoluteUri, session.Client.MediaHeaders(shell.Identity), shell.Silent);
     }
 
     private async Task LoadShelvesAsync(MetadataItem item, CancellationToken cancellation) =>

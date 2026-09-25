@@ -989,7 +989,7 @@ static void StreamCheck(ShellViewModel shell)
     player.Changed += change => { if (change is { Name: "time-pos", Number: { } s }) positions.Add(s); };
 
     var start = (full.ViewOffset ?? 0) / 1000.0;
-    player.Load(session.Client.MediaUri(part).ToString(), start);
+    player.Load((session.Client.MediaUri(part) ?? throw new InvalidOperationException("The server named the file away from itself.")).ToString(), start);
     if (!loaded.Wait(TimeSpan.FromSeconds(20))) throw new InvalidOperationException("The file did not load within 20 seconds.");
     if (failure is not null) throw new InvalidOperationException($"The file did not open: {failure}");
     Thread.Sleep(TimeSpan.FromSeconds(4));

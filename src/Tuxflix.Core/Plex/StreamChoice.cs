@@ -55,8 +55,8 @@ public static class StreamChoice
     }
 
     /// <summary>The server's stream for a player track, or null if the server does not list it.</summary>
-    /// <param name="sourceOf">The address the player loads a subtitle file from.</param>
-    public static MediaStream? StreamFor(PlayerTrack track, MediaPart part, IReadOnlyList<PlayerTrack> tracks, Func<MediaStream, string> sourceOf) =>
+    /// <param name="sourceOf">The address the player loads a subtitle file from; null for one it is never given.</param>
+    public static MediaStream? StreamFor(PlayerTrack track, MediaPart part, IReadOnlyList<PlayerTrack> tracks, Func<MediaStream, string?> sourceOf) =>
         track.Source is { } source
             ? ExternalSubtitles(part).FirstOrDefault(s => sourceOf(s) == source)
             : part.Stream?.FirstOrDefault(s => TypeName(s.StreamType) == track.Type && TrackFor(s, part, tracks) == track);

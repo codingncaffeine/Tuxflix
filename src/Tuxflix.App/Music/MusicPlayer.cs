@@ -672,7 +672,7 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
 
     private string Url(MetadataItem track) =>
         _session.IsDemo ? DemoTune.Address(track)
-        : track.Media?.FirstOrDefault()?.Part?.FirstOrDefault()?.Key is { } key ? _session.Client.MediaUri(key).ToString() : "about:blank";
+        : track.Media?.FirstOrDefault()?.Part?.FirstOrDefault()?.Key is { } key ? _session.Client.MediaUri(key)?.ToString() ?? "about:blank" : "about:blank";
 
     /// <summary>mpv's per-file options for a track: its title for the desktop, and its levelling gain.</summary>
     private string Options(MetadataItem track)

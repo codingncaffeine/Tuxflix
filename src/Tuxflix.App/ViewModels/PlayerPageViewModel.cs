@@ -583,11 +583,16 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         });
     }
 
-    private void LoadSubtitle(MpvPlayer player, MediaStream external) =>
-        player.PostCommand("sub-add", SourceOf(external), "select", external.ExtendedDisplayTitle ?? external.DisplayTitle ?? "Subtitles");
+    private void LoadSubtitle(MpvPlayer player, MediaStream external)
+    {
+        if (SourceOf(external) is { } source) player.PostCommand("sub-add", source, "select", external.ExtendedDisplayTitle ?? external.DisplayTitle ?? "Subtitles");
+    }
 
-    /// <summary>Where the player fetches a subtitle file kept beside the media; the token goes in a header.</summary>
-    private string SourceOf(MediaStream stream) => session.Client.MediaUri(stream.Key!).ToString();
+    /// <summary>
+    /// Where the player fetches a subtitle file kept beside the media; the token goes in a header.
+    /// Null for one the server names away from itself, which the player is never given.
+    /// </summary>
+    private string? SourceOf(MediaStream stream) => session.Client.MediaUri(stream.Key!)?.ToString();
 
     private static string? Language(string? code) =>
         code is { Length: > 0 } && CultureInfo.GetCultures(CultureTypes.NeutralCultures)

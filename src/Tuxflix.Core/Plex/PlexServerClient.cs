@@ -62,11 +62,17 @@ public sealed partial class PlexServerClient
         }
     }
 
-    /// <summary>The address of a media part, for the player; the token travels in a header.</summary>
-    public Uri MediaUri(string partKey)
+    /// <summary>
+    /// The address of a media part, or of a subtitle or theme stream, for the player; the token
+    /// travels in a header. Null when the key leads away from the server: the player is never
+    /// handed it (see <see cref="OnServer"/>).
+    /// </summary>
+    public Uri? MediaUri(string partKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(partKey);
-        return Resolve(partKey);
+        var uri = OnServer(partKey);
+        if (uri is null) Diagnostics.Log.Warn($"{Name} named media away from the server ({Describe(partKey)}); it is not played.");
+        return uri;
     }
 
     /// <summary>
@@ -175,6 +181,8 @@ public sealed partial class PlexServerClient
 
     public async Task<byte[]> GetBytesAsync(Uri uri, CancellationToken cancellation)
     {
+        ArgumentNullException.ThrowIfNull(uri);
+        if (!IsOnServer(uri)) throw new HttpRequestException($"{Name} was asked for an address away from the server ({Describe(uri.GetLeftPart(UriPartial.Path))}); the sign-in is not sent there.");
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
         if (Token is not null) request.Headers.TryAddWithoutValidation("X-Plex-Token", Token);
         using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation).ConfigureAwait(false);
@@ -311,7 +319,22 @@ public sealed partial class PlexServerClient
         return (await GetAsync(path, cancellation).ConfigureAwait(false)).Metadata ?? [];
     }
 
-    private Uri Resolve(string pathAndQuery) => new(BaseUri, pathAndQuery);
+    /// <summary>
+    /// A path from the server's answers made absolute on this server; null when it would lead
+    /// anywhere else. The server names its own paths (<c>/library/parts/…</c>). An absolute address
+    /// elsewhere, or a scheme-relative one (<c>//host/…</c>), would carry this server's token to
+    /// another host with the request; another scheme (<c>file:</c>, <c>lavfi:</c>) would reach the
+    /// player as a local file or a filter graph. The same host by another scheme or port is refused
+    /// too: plain http to a server reached securely would give the token away on the wire.
+    /// </summary>
+    private Uri? OnServer(string pathAndQuery) =>
+        Uri.TryCreate(BaseUri, pathAndQuery, out var uri) && IsOnServer(uri) ? uri : null;
+
+    private bool IsOnServer(Uri uri) =>
+        uri.IsAbsoluteUri && Uri.Compare(uri, BaseUri, UriComponents.SchemeAndServer, UriFormat.UriEscaped, StringComparison.OrdinalIgnoreCase) == 0;
+
+    private Uri Resolve(string pathAndQuery) =>
+        OnServer(pathAndQuery) ?? throw new HttpRequestException($"{Name} named an address away from the server ({Describe(pathAndQuery)}); it was not followed.");
 
     // The path only: a query string can carry things that do not belong in a message.
     private static string Describe(string pathAndQuery) => pathAndQuery.Split('?')[0];

@@ -114,7 +114,8 @@ public sealed partial class PlayerPageViewModel
         OnPropertyChanged(nameof(IsConverting));
         StreamSummary = refusal is null || Quality.IsOriginal ? "The original file" : "The original file: the server could not convert it";
         StreamDetail = refusal is not null && !Quality.IsOriginal ? refusal : _item.Media?.FirstOrDefault() is { } original ? CodecNames.Describe(original) : string.Empty;
-        return session.Client.MediaUri(part.Key!).ToString();
+        return session.Client.MediaUri(part.Key!)?.ToString()
+               ?? throw new HttpRequestException("The server named a file away from itself; it is not played.");
     }
 
     /// <summary>Asks again for the current quality and tracks, and carries on from the same place.</summary>
