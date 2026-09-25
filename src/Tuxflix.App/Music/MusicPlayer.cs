@@ -602,6 +602,7 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
             ["http-header-fields"] = string.Join(",", _session.Client.MediaHeaders(_shell.Identity).Select(h => $"{h.Name}: {h.Value}")),
         };
         if (_shell.Silent) options["mute"] = "yes";
+        if (Tuxflix.App.Player.ProbeSwitches.AudioOutput is { } output) options["ao"] = output;
 
         var player = new SharedPlayer(await Task.Run(() => new MpvPlayer(options)));
         player.Player.Changed += change => Dispatcher.UIThread.Post(() => Apply(change));

@@ -31,6 +31,42 @@ public sealed class FlexibleBooleanConverter : JsonConverter<bool>
     }
 }
 
+/// <summary>
+/// Reads a value the server sends as one object on some endpoints and as a list of one on others
+/// (an item's UltraBlur colours: an object in its metadata, a list in a playback decision).
+/// </summary>
+public sealed class ObjectOrFirstConverter<T> : JsonConverter<T>
+    where T : class
+{
+    public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var info = (System.Text.Json.Serialization.Metadata.JsonTypeInfo<T>)options.GetTypeInfo(typeof(T));
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+            case JsonTokenType.StartArray:
+                T? first = null;
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                {
+                    var value = JsonSerializer.Deserialize(ref reader, info);
+                    first ??= value;
+                }
+
+                return first;
+            default:
+                return JsonSerializer.Deserialize(ref reader, info);
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        JsonSerializer.Serialize(writer, value, (System.Text.Json.Serialization.Metadata.JsonTypeInfo<T>)options.GetTypeInfo(typeof(T)));
+    }
+}
+
 [JsonSourceGenerationOptions(
     NumberHandling = JsonNumberHandling.AllowReadingFromString,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,

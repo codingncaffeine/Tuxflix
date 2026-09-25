@@ -57,6 +57,67 @@ public sealed class MediaContainer
     /// <summary>What <c>/services/ultrablur/colors</c> answers with.</summary>
     [JsonPropertyName("UltraBlurColors")]
     public List<UltraBlurColors>? UltraBlurColors { get; init; }
+
+    // A playback decision's verdicts: 1000 and 1001 say yes, 2000 and above say no.
+    [JsonPropertyName("generalDecisionCode")]
+    public int? GeneralDecisionCode { get; init; }
+
+    [JsonPropertyName("generalDecisionText")]
+    public string? GeneralDecisionText { get; init; }
+
+    [JsonPropertyName("directPlayDecisionCode")]
+    public int? DirectPlayDecisionCode { get; init; }
+
+    [JsonPropertyName("directPlayDecisionText")]
+    public string? DirectPlayDecisionText { get; init; }
+
+    [JsonPropertyName("transcodeDecisionCode")]
+    public int? TranscodeDecisionCode { get; init; }
+
+    [JsonPropertyName("transcodeDecisionText")]
+    public string? TranscodeDecisionText { get; init; }
+
+    [JsonPropertyName("mdeDecisionCode")]
+    public int? MdeDecisionCode { get; init; }
+
+    [JsonPropertyName("mdeDecisionText")]
+    public string? MdeDecisionText { get; init; }
+
+    [JsonPropertyName("TranscodeSession")]
+    public List<TranscodeSessionInfo>? TranscodeSession { get; init; }
+}
+
+/// <summary>A conversion the server is running (<c>/transcode/sessions</c>).</summary>
+public sealed class TranscodeSessionInfo
+{
+    /// <summary>The <c>session</c> the player asked with.</summary>
+    [JsonPropertyName("key")]
+    public string? Key { get; init; }
+
+    /// <summary>Whether this is the conversion started with <paramref name="session"/> (a path form ending in it counts too).</summary>
+    public bool Is(string session) => Key is { } key && (key == session || key.EndsWith("/" + session, StringComparison.Ordinal));
+
+    [JsonPropertyName("videoDecision")]
+    public string? VideoDecision { get; init; }
+
+    [JsonPropertyName("audioDecision")]
+    public string? AudioDecision { get; init; }
+
+    [JsonPropertyName("videoCodec")]
+    public string? VideoCodec { get; init; }
+
+    [JsonPropertyName("width")]
+    public int? Width { get; init; }
+
+    [JsonPropertyName("height")]
+    public int? Height { get; init; }
+
+    /// <summary>How many times faster than real time it converts.</summary>
+    [JsonPropertyName("speed")]
+    public double? Speed { get; init; }
+
+    [JsonPropertyName("transcodeHwEncoding")]
+    public string? HardwareEncoding { get; init; }
 }
 
 /// <summary>A library section, or any other directory a listing returns.</summary>
@@ -377,7 +438,9 @@ public sealed class MetadataItem
     [JsonPropertyName("Image")]
     public List<ItemImage>? Image { get; init; }
 
+    /// <summary>An object in an item's metadata, a list of one in a playback decision.</summary>
     [JsonPropertyName("UltraBlurColors")]
+    [JsonConverter(typeof(ObjectOrFirstConverter<UltraBlurColors>))]
     public UltraBlurColors? UltraBlurColors { get; init; }
 
     /// <summary>Where the intro and the credits are, from the server's analysis.</summary>
@@ -459,6 +522,14 @@ public sealed class Media
     [JsonPropertyName("videoProfile")]
     public string? VideoProfile { get; init; }
 
+    /// <summary>In a playback decision: the version the server chose.</summary>
+    [JsonPropertyName("selected")]
+    public bool Selected { get; init; }
+
+    /// <summary>In a playback decision: <c>hls</c> when the server converts.</summary>
+    [JsonPropertyName("protocol")]
+    public string? Protocol { get; init; }
+
     [JsonPropertyName("Part")]
     public List<MediaPart>? Part { get; init; }
 }
@@ -482,6 +553,10 @@ public sealed class MediaPart
 
     [JsonPropertyName("container")]
     public string? Container { get; init; }
+
+    /// <summary>In a playback decision: <c>directplay</c>, <c>transcode</c> or <c>copy</c>.</summary>
+    [JsonPropertyName("decision")]
+    public string? Decision { get; init; }
 
     [JsonPropertyName("Stream")]
     public List<MediaStream>? Stream { get; init; }
@@ -556,6 +631,16 @@ public sealed class MediaStream
     /// <summary>Where a subtitle file kept beside the media is served (<c>/library/streams/…</c>).</summary>
     [JsonPropertyName("key")]
     public string? Key { get; init; }
+
+    /// <summary>In a playback decision: <c>copy</c>, <c>transcode</c> or <c>burn</c>.</summary>
+    [JsonPropertyName("decision")]
+    public string? Decision { get; init; }
+
+    [JsonPropertyName("width")]
+    public int? Width { get; init; }
+
+    [JsonPropertyName("height")]
+    public int? Height { get; init; }
 
     /// <summary>A subtitle kept in a file of its own beside the media, not inside it.</summary>
     [JsonIgnore]

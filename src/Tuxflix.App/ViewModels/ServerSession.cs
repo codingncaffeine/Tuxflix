@@ -11,13 +11,14 @@ public sealed class ServerSession : IDisposable
 {
     private readonly HttpClient _http;
 
-    private ServerSession(HttpClient http, PlexServerClient client, string detail, string? diskCache, string? machineIdentifier)
+    private ServerSession(HttpClient http, PlexServerClient client, string detail, string? diskCache, string? machineIdentifier, bool isRemote = false)
     {
         _http = http;
         Client = client;
         Images = new ImageLoader(client, diskCache);
         Detail = detail;
         MachineIdentifier = machineIdentifier;
+        IsRemote = isRemote;
     }
 
     public PlexServerClient Client { get; }
@@ -30,6 +31,9 @@ public sealed class ServerSession : IDisposable
     public string Detail { get; }
 
     public string? MachineIdentifier { get; }
+
+    /// <summary>Reached over the internet (a public address or Plex's relay) rather than the home network.</summary>
+    public bool IsRemote { get; }
 
     public bool IsDemo => Client.IsDemo;
 
@@ -53,7 +57,7 @@ public sealed class ServerSession : IDisposable
         var http = identity.CreateHttpClient(network, disposeHandler: network is null);
         var client = new PlexServerClient(http, connection.Uri, server.AccessToken, server.Name);
         var cache = Path.Combine(paths.ImageCache, Sanitise(server.ClientIdentifier));
-        return new ServerSession(http, client, connection.Describe(), cache, server.ClientIdentifier);
+        return new ServerSession(http, client, connection.Describe(), cache, server.ClientIdentifier, isRemote: connection.Kind != ConnectionKind.Local);
     }
 
     public void Dispose() => _http.Dispose();

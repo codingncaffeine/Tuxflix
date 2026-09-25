@@ -55,7 +55,8 @@ public sealed unsafe class MpvPlayer : IDisposable
         }
 
         Check(LibMpv.mpv_initialize(_handle), "start");
-        LibMpv.mpv_request_log_messages(_handle, "info");
+        // TUXFLIX_MPV_LOG=v (or debug) for a diagnosis; info otherwise.
+        LibMpv.mpv_request_log_messages(_handle, Environment.GetEnvironmentVariable("TUXFLIX_MPV_LOG") is { Length: > 0 } level ? level : "info");
 
         Observe("time-pos", MpvFormat.Double);
         Observe("duration", MpvFormat.Double);

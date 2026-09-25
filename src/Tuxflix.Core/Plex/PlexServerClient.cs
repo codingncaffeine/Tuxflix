@@ -66,6 +66,44 @@ public sealed class PlexServerClient
         return Resolve(partKey);
     }
 
+    /// <summary>
+    /// Asks the server how an item should play. A conversion the server will not deliver in fMP4
+    /// is asked again for MPEG-TS; a server that honours neither is a refusal.
+    /// </summary>
+    public async Task<(PlaybackDecision Decision, TranscodeRequest Request)> DecideAsync(TranscodeRequest request, PlexClientIdentity identity, CancellationToken cancellation)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var container = await GetAsync(TranscodeRequest.DecisionPath + "?" + request.Query(identity), cancellation).ConfigureAwait(false);
+        var decision = PlaybackDecision.From(container, request.Container);
+        if (decision.WrongContainer && !request.TransportStream)
+        {
+            var fallback = request with { TransportStream = true };
+            container = await GetAsync(TranscodeRequest.DecisionPath + "?" + fallback.Query(identity), cancellation).ConfigureAwait(false);
+            return (PlaybackDecision.From(container, fallback.Container), fallback);
+        }
+
+        return (decision, request);
+    }
+
+    /// <summary>Where the player reads a conversion: the HLS start, with the same parameters as its decision (escapes kept).</summary>
+    public string TranscodeAddress(TranscodeRequest request, PlexClientIdentity identity)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Resolve(TranscodeRequest.StartPath + "?" + request.Query(identity)).AbsoluteUri;
+    }
+
+    /// <summary>Keeps a paused conversion alive: the server stops a transcoder nobody reads from.</summary>
+    public Task PingTranscodeAsync(string session, CancellationToken cancellation) =>
+        SendAsync(HttpMethod.Get, "/video/:/transcode/universal/ping?session=" + Uri.EscapeDataString(session), cancellation);
+
+    /// <summary>Ends a conversion this player started.</summary>
+    public Task StopTranscodeAsync(string session, CancellationToken cancellation) =>
+        SendAsync(HttpMethod.Get, "/video/:/transcode/universal/stop?session=" + Uri.EscapeDataString(session), cancellation);
+
+    /// <summary>The conversions the server is running now (the player probe checks its own starts and stops).</summary>
+    public async Task<IReadOnlyList<TranscodeSessionInfo>> GetTranscodeSessionsAsync(CancellationToken cancellation) =>
+        (await GetAsync("/transcode/sessions", cancellation).ConfigureAwait(false)).TranscodeSession ?? [];
+
     /// <summary>The headers a player sends with every request for media, token included.</summary>
     public IReadOnlyList<(string Name, string Value)> MediaHeaders(PlexClientIdentity identity)
     {
@@ -84,12 +122,13 @@ public sealed class PlexServerClient
     /// Tells the server where playback is, so the place is kept and other clients show it.
     /// </summary>
     /// <param name="state">playing, paused, buffering or stopped.</param>
-    public async Task ReportTimelineAsync(string ratingKey, string state, long time, long duration, CancellationToken cancellation)
+    /// <param name="sessionIdentifier">The playback's <c>X-Plex-Session-Identifier</c>, the one its conversion carries: the server then ties the two together.</param>
+    public async Task ReportTimelineAsync(string ratingKey, string state, long time, long duration, CancellationToken cancellation, string? sessionIdentifier = null)
     {
         var query = string.Create(
             CultureInfo.InvariantCulture,
             $"/:/timeline?ratingKey={Uri.EscapeDataString(ratingKey)}&key={Uri.EscapeDataString("/library/metadata/" + ratingKey)}&state={state}&time={time}&duration={duration}&context=library");
-        await SendAsync(HttpMethod.Post, query, cancellation).ConfigureAwait(false);
+        await SendAsync(HttpMethod.Post, query, cancellation, sessionIdentifier is null ? null : ("X-Plex-Session-Identifier", sessionIdentifier)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -109,11 +148,12 @@ public sealed class PlexServerClient
     public async Task ScrobbleAsync(string ratingKey, CancellationToken cancellation) =>
         await SendAsync(HttpMethod.Put, $"/:/scrobble?identifier=com.plexapp.plugins.library&key={Uri.EscapeDataString(ratingKey)}", cancellation).ConfigureAwait(false);
 
-    private async Task SendAsync(HttpMethod method, string pathAndQuery, CancellationToken cancellation)
+    private async Task SendAsync(HttpMethod method, string pathAndQuery, CancellationToken cancellation, (string Name, string Value)? header = null)
     {
         if (IsDemo) return;
         using var request = new HttpRequestMessage(method, Resolve(pathAndQuery));
         if (Token is not null) request.Headers.TryAddWithoutValidation("X-Plex-Token", Token);
+        if (header is { } extra) request.Headers.TryAddWithoutValidation(extra.Name, extra.Value);
         using var response = await _http.SendAsync(request, cancellation).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {

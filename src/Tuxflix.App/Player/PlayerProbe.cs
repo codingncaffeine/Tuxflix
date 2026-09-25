@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
@@ -112,6 +113,13 @@ internal static class PlayerProbe
                 markersRight = await CheckMarkersAsync(shell, page, window);
             }
 
+            var qualityRight = true;
+            string? runningConversion = null;
+            if (int.TryParse(Environment.GetEnvironmentVariable("TUXFLIX_PROBE_QUALITY"), CultureInfo.InvariantCulture, out var kbps) && page is not null && view is not null)
+            {
+                (qualityRight, runningConversion) = await CheckQualityAsync(session, page, view, StreamQuality.FromKbps(kbps));
+            }
+
             var menuRight = true;
             if (Environment.GetEnvironmentVariable("TUXFLIX_PROBE_MENU") == "1" && page?.Player is { } menuPlayer)
             {
@@ -130,11 +138,13 @@ internal static class PlayerProbe
             var destroyed = shared?.IsDisposed == true && leaving?.IsDisposed != false;
             Log.Info($"Probe: left the player; player destroyed {destroyed}; the UI thread answered after {left.Elapsed.TotalMilliseconds:0} ms.");
 
+            if (runningConversion is not null) qualityRight &= await ConversionEndedAsync(session, runningConversion);
+
             var after = await ResumePointAsync(session, item);
             var kept = after == before;
             Log.Info($"Probe: the server's resume point is {after / 1000.0:0.0} s, {(kept ? "unchanged" : "MOVED")}.");
 
-            ExitCode = frames > 10 && sounded && answered && destroyed && kept && noDrops && markersRight && menuRight && shell.Router.Current is not PlayerPageViewModel ? 0 : 1;
+            ExitCode = frames > 10 && sounded && answered && destroyed && kept && noDrops && markersRight && menuRight && qualityRight && shell.Router.Current is not PlayerPageViewModel ? 0 : 1;
             Log.Info(ExitCode == 0 ? "Probe: playback opens, draws and closes cleanly." : "Probe: FAILED.");
         }
         catch (Exception ex)
@@ -322,6 +332,87 @@ internal static class PlayerProbe
         return missed.Count == 0;
     }
 
+    /// <summary>
+    /// A conversion from the real server: asked for at a lower quality, it arrives as HLS no taller
+    /// than the quality allows, carries on from the same place (two minutes in, so a start from
+    /// the beginning cannot pass), and shows in the server's list of conversions; back at the
+    /// original, the file plays again and the conversion is gone from the list.
+    /// </summary>
+    private static async Task<(bool Right, string? Running)> CheckQualityAsync(ServerSession session, PlayerPageViewModel page, MpvVideoView view, StreamQuality quality)
+    {
+        page.SeekTo(120);
+        await WithinAsync(() => page.Position is >= 120 and < 130, TimeSpan.FromSeconds(15));
+        var from = page.Position;
+        var framesBefore = view.FramesDrawn;
+        page.SetQuality(quality);
+        var converting = await WithinAsync(() => page.IsConverting, TimeSpan.FromSeconds(15));
+        var carried = await WithinAsync(() => page.Position > from + 3, TimeSpan.FromSeconds(30)) && page.Position < from + 40;
+        var at = page.Position;
+        var shared = page.Player;
+        var (path, format, height, picture) = shared is null
+            ? (null, null, null, null)
+            : await Task.Run(() => (shared.Player.GetString("path"), shared.Player.GetString("file-format"), shared.Player.GetNumber("video-params/h"),
+                $"{shared.Player.GetString("video-codec")}, {shared.Player.GetString("video-params/pixelformat")} ({shared.Player.GetString("video-params/gamma")}), decoded by {shared.Player.GetString("hwdec-current")}"));
+        if (Environment.GetEnvironmentVariable("TUXFLIX_PROBE_FRAME") is { Length: > 0 } frame)
+        {
+            await KeepFrameAsync(view, Path.ChangeExtension(frame, null) + "-converted.png");
+        }
+
+        var sessions = await Task.Run(() => session.Client.GetTranscodeSessionsAsync(CancellationToken.None));
+        var key = page.TranscodeSession;
+        var ours = key is null ? null : sessions.FirstOrDefault(s => s.Is(key));
+        var drew = view.FramesDrawn > framesBefore + 30;
+        var hls = path?.Contains("/video/:/transcode/universal/start.m3u8?", StringComparison.Ordinal) == true;
+        var sized = height is { } lines && lines <= quality.Height;
+        Log.Info($"Probe: at {quality.Label} the server {(converting ? "converts" : "DOES NOT CONVERT")} ({page.StreamSummary}); mpv reads {(hls ? "the HLS start" : "SOMETHING ELSE")} as {format ?? "?"}, "
+                 + $"{height ?? 0:0} lines{(sized ? string.Empty : " (TOO TALL)")}, {picture}; playback {(carried ? "carried on" : "DID NOT CARRY ON")} from {from:0.0} s to {at:0.0} s, {view.FramesDrawn - framesBefore} frames drawn; "
+                 + $"the server lists the conversion {(ours is null ? "NOT AT ALL" : $"({ours.VideoDecision} video, {ours.VideoCodec} {ours.Width}x{ours.Height}, {ours.Speed:0.0}x, hardware encoding {ours.HardwareEncoding ?? "none"})")}.");
+
+        page.SetQuality(StreamQuality.Original);
+        var direct = await WithinAsync(() => !page.IsConverting, TimeSpan.FromSeconds(15));
+        var resumed = await WithinAsync(() => page.Position > at + 2, TimeSpan.FromSeconds(30)) && page.Position < at + 40;
+        var clock = Stopwatch.StartNew();
+        var stopped = false;
+        while (!stopped && clock.Elapsed < TimeSpan.FromSeconds(15))
+        {
+            var now = await Task.Run(() => session.Client.GetTranscodeSessionsAsync(CancellationToken.None));
+            stopped = key is null || !now.Any(s => s.Is(key));
+            if (!stopped) await Task.Delay(500);
+        }
+
+        var backPath = page.Player is { } again ? await Task.Run(() => again.Player.GetString("path")) : null;
+        Log.Info($"Probe: back at the original the file {(direct && resumed ? "plays again" : "DOES NOT PLAY")} ({(backPath?.Contains("/library/parts/", StringComparison.Ordinal) == true ? "the part itself" : "SOMETHING ELSE")}, at {page.Position:0.0} s); "
+                 + $"the server's conversion {(stopped ? $"was gone after {clock.Elapsed.TotalSeconds:0.0} s" : "IS STILL RUNNING")}.");
+
+        // Converting once more, for the way out: leaving the player must end it on the server.
+        page.SetQuality(quality);
+        var again2 = await WithinAsync(() => page.IsConverting && page.Position > at + 4, TimeSpan.FromSeconds(30));
+        var running = page.TranscodeSession;
+        var listed = again2 && running is not null && (await Task.Run(() => session.Client.GetTranscodeSessionsAsync(CancellationToken.None))).Any(s => s.Is(running));
+        Log.Info($"Probe: converting again {(listed ? "shows in the server's list" : "DOES NOT SHOW")}{(running != key ? " under a session of its own" : " UNDER THE SAME SESSION")}.");
+        return (converting && hls && sized && carried && drew && ours is not null && direct && resumed && stopped && listed && running != key, running);
+    }
+
+    /// <summary>After the player was left while converting: the conversion is gone from the server's list.</summary>
+    private static async Task<bool> ConversionEndedAsync(ServerSession session, string key)
+    {
+        var clock = Stopwatch.StartNew();
+        while (clock.Elapsed < TimeSpan.FromSeconds(15))
+        {
+            var sessions = await Task.Run(() => session.Client.GetTranscodeSessionsAsync(CancellationToken.None));
+            if (!sessions.Any(s => s.Is(key)))
+            {
+                Log.Info($"Probe: leaving the player ended its conversion on the server within {clock.Elapsed.TotalSeconds:0.0} s.");
+                return true;
+            }
+
+            await Task.Delay(500);
+        }
+
+        Log.Info("Probe: leaving the player DID NOT END its conversion on the server.");
+        return false;
+    }
+
     private static async Task<bool> WithinAsync(Func<bool> condition, TimeSpan limit)
     {
         var clock = Stopwatch.StartNew();
@@ -338,11 +429,13 @@ internal static class PlayerProbe
         if (view.OpenSettings() is not { } menu) return;
         await Task.Delay(TimeSpan.FromSeconds(3.5));
         if (menu.Items[0] is Control first && TopLevel.GetTopLevel(first) is { } popup) Snapshot(popup, Path.Combine(folder, "menu.png"));
-        if (menu.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header is "Subtitles") is { } subtitles)
+        foreach (var (name, file) in new[] { ("Subtitles", "menu-subtitles.png"), ("Quality", "menu-quality.png") })
         {
-            subtitles.IsSubMenuOpen = true;
+            if (menu.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header is string header && header.StartsWith(name, StringComparison.Ordinal)) is not { } submenu) continue;
+            submenu.IsSubMenuOpen = true;
             await Task.Delay(400);
-            if (subtitles.Items[0] is Control inner && TopLevel.GetTopLevel(inner) is { } sub) Snapshot(sub, Path.Combine(folder, "menu-subtitles.png"));
+            if (submenu.Items[0] is Control inner && TopLevel.GetTopLevel(inner) is { } sub) Snapshot(sub, Path.Combine(folder, file));
+            submenu.IsSubMenuOpen = false;
         }
 
         var up = view.FindControl<Panel>("Overlay") is { } overlay && !overlay.Classes.Contains("hidden");

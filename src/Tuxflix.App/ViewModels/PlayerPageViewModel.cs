@@ -125,9 +125,16 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         _part = part;
 
         // The demo has no files; it plays a moving test pattern instead.
-        _source = session.IsDemo
-            ? "av://lavfi:testsrc2=size=1280x720:rate=30"
-            : session.Client.MediaUri(part.Key).ToString();
+        if (session.IsDemo)
+        {
+            _source = "av://lavfi:testsrc2=size=1280x720:rate=30";
+            StreamSummary = "The built-in test pattern";
+        }
+        else
+        {
+            _source = await RouteAsync(part, cancellation);
+        }
+
         // A generated pattern cannot seek: resuming it would decode every frame up to the offset.
         _start = !session.IsDemo && resume && _item.ViewOffset is > 0 ? _item.ViewOffset.Value / 1000.0 : 0;
         Duration = (_item.Duration ?? 0) / 1000.0;
@@ -146,7 +153,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         shared.Player.Ended += (reason, error) => Dispatcher.UIThread.Post(() => OnEnded(reason, error));
         shared.Player.FileLoaded += () => _ = Task.Run(() => ChooseTracks(shared));
         Player = shared;
-        Log.Info($"Playing {(session.IsDemo ? "the demo pattern" : "directly from the server")}{(_start > 0 ? $", resuming at {Clock(_start)}" : string.Empty)}.");
+        Log.Info($"Playing {(session.IsDemo ? "the demo pattern" : IsConverting ? "the server's conversion" : "directly from the server")}{(_start > 0 ? $", resuming at {Clock(_start)}" : string.Empty)}.");
     }
 
     /// <summary>The video surface can take frames now; start the file.</summary>
@@ -157,7 +164,11 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         Player.Player.Load(_source, _start);
 
         _reporter = new DispatcherTimer { Interval = ReportEvery };
-        _reporter.Tick += (_, _) => Report(IsPaused ? "paused" : "playing", force: true);
+        _reporter.Tick += (_, _) =>
+        {
+            Report(IsPaused ? "paused" : "playing", force: true);
+            KeepConversionAlive();
+        };
         _reporter.Start();
         KeepAwake(true);
     }
@@ -166,6 +177,8 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
     {
         base.Deactivate();
         StopSmart();
+        if (_conversion is { } conversion) StopConversion(conversion.Session);
+        RetireReplacedConversion();
         _reporter?.Stop();
         KeepAwake(false);
         if (Player is { } shared)
@@ -220,7 +233,10 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         var options = new Dictionary<string, string>
         {
             ["vo"] = "libmpv",
-            ["hwdec"] = "auto-safe",
+            // NVDEC and VA-API first, drawn in place or copied back, then mpv's own safe list: left to
+            // itself mpv picks vulkan-copy where the others cannot share with the window, and its
+            // decoder stalled on the fourth stream opened in one player (no frame ever reached the output).
+            ["hwdec"] = Tuxflix.App.Player.ProbeSwitches.HardwareDecoding ?? "nvdec,vaapi,nvdec-copy,vaapi-copy,auto-safe",
             ["idle"] = "yes",
             ["keep-open"] = "no",
             ["config"] = "no",
@@ -246,6 +262,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         // mpv's own mute, applied to the samples: the desktop's volume for the stream is left alone,
         // and the volume can still be changed without a sound.
         if (shell.Silent) options["mute"] = "yes";
+        if (Tuxflix.App.Player.ProbeSwitches.AudioOutput is { } output) options["ao"] = output;
 
         // The server's subtitle selection is applied once the file is open; until then none shows,
         // so a subtitle the file marks as its default cannot flash up first.
@@ -288,10 +305,11 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
             case "track-list/count" when Player is { } shared:
                 _ = Task.Run(() => ListTracksFor(shared));
                 break;
-            case "aid" when change.Text is { } aid:
+            // A conversion's menus list the file's streams, not mpv's tracks: they mark themselves.
+            case "aid" when change.Text is { } aid && !IsConverting:
                 MarkSelected(AudioTracks, aid);
                 break;
-            case "sid" when change.Text is { } sid:
+            case "sid" when change.Text is { } sid && !IsConverting:
                 MarkSelected(SubtitleTracks, sid);
                 break;
         }
@@ -343,6 +361,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
     {
         if (!_loaded || !shell.ReportsPlayback || (!force && state == _reported)) return;
         _reported = state;
+        var sessionIdentifier = _sessionIdentifier;
         var ratingKey = _item.RatingKey;
         var time = (long)(Position * 1000);
         var duration = (long)(Duration * 1000);
@@ -350,7 +369,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         {
             try
             {
-                await session.Client.ReportTimelineAsync(ratingKey, state, time, duration, CancellationToken.None);
+                await session.Client.ReportTimelineAsync(ratingKey, state, time, duration, CancellationToken.None, sessionIdentifier);
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or PlexUnauthorizedException)
             {
@@ -369,7 +388,14 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         if (!shared.Acquire()) return;
         try
         {
-            if (_part is { } part && StreamChoice.IsKnown(part))
+            RetireReplacedConversion();
+
+            // A conversion already carries the chosen audio and burned subtitle; only a file beside the media loads here.
+            if (IsConverting)
+            {
+                if (ExternalSubtitle() is { } beside) LoadSubtitle(shared.Player, beside);
+            }
+            else if (_part is { } part && StreamChoice.IsKnown(part))
             {
                 var tracks = ListTracks(shared.Player).ConvertAll(t => t.Track);
                 if (StreamChoice.Selected(part, StreamChoice.Audio) is { } audio && StreamChoice.TrackFor(audio, part, tracks) is { } audioTrack)
@@ -420,6 +446,12 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
     private void ShowTracks(List<(PlayerTrack Track, string Label, bool Selected)> listed, string? subtitles)
     {
         var tracks = listed.ConvertAll(t => t.Track);
+        if (IsConverting)
+        {
+            ShowConvertedTracks(tracks, subtitles);
+            return;
+        }
+
         AudioTracks.Clear();
         SubtitleTracks.Clear();
         SubtitleTracks.Add(new TrackOption(this, "sid", "no", "Off", subtitles is null or "no", stream: null));
@@ -473,6 +505,16 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
     internal void Select(TrackOption option)
     {
         if (Player is not { } shared) return;
+        if (IsConverting)
+        {
+            _ = SelectConvertedAsync(option);
+            return;
+        }
+
+        // Kept for a conversion asked for later in this playback.
+        if (option.Property == "aid") _audioStreamId = option.Stream?.Id ?? _audioStreamId;
+        else _subtitleStreamId = option.Id == "no" ? 0 : option.Stream?.Id ?? _subtitleStreamId;
+
         if (option.Id.Length == 0 && option.Stream is { IsExternal: true } external)
         {
             // A file beside the media: it arrives in the next track list, already chosen.

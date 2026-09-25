@@ -153,6 +153,14 @@ public partial class PlayerPage : UserControl
     {
         var menu = new MenuFlyout { Placement = PlacementMode.TopEdgeAlignedRight };
 
+        menu.Items.Add(Submenu($"Quality ({model.Quality.Label})",
+        [
+            Label(model.StreamSummary),
+            .. model.StreamDetail.Length > 0 ? [Label(model.StreamDetail)] : Array.Empty<Control>(),
+            new Separator(),
+            .. model.Qualities.Select(q => Radio(q.Label, q == model.Quality, () => model.SetQuality(q))),
+        ]));
+
         menu.Items.Add(Submenu("Speed", [.. new[] { 0.5, 0.75, 1, 1.25, 1.5, 2 }.Select(v =>
             Radio(v == 1 ? "Normal" : string.Create(CultureInfo.InvariantCulture, $"{v:0.##}×"), Math.Abs(model.Speed - v) < 0.01, () => model.Speed = v))]));
 
