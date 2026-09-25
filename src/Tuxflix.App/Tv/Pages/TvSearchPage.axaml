@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:tv="using:Tuxflix.App.Tv"
+             xmlns:pages="using:Tuxflix.App.Tv.Pages"
+             x:Class="Tuxflix.App.Tv.Pages.TvSearchPage"
+             x:DataType="vm:SearchPageViewModel">
+
+    <!-- Search for a room, as Plex's and Netflix's TV apps lay it out: the keyboard on the left, what
+         it finds on the right, searching as each letter is typed. -->
+    <Grid ColumnDefinitions="660,*" Margin="0,128,0,0">
+        <StackPanel Margin="96,6,24,0" Spacing="22">
+            <TextBlock Classes="tv-kicker" Text="SEARCH EVERY LIBRARY" />
+            <Border CornerRadius="14" Padding="24,14" Background="{DynamicResource Brush.Fill.Input}"
+                    BorderBrush="{DynamicResource Brush.Line.Strong}" BorderThickness="1">
+                <Panel>
+                    <TextBlock Name="Placeholder" Text="Type a title or a name" FontSize="28" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                    <TextBlock Name="Query" FontSize="30" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                </Panel>
+            </Border>
+            <tv:OnScreenKeyboard Name="Keyboard" />
+        </StackPanel>
+
+        <Panel Grid.Column="1">
+            <ScrollViewer tv:TvFocus.PinsRows="True" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+                <ItemsControl ItemsSource="{Binding Shelves}" Margin="0,4,0,500">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Spacing="6" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShelfViewModel">
+                            <pages:TvShelf Inset="24" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSearching}" VerticalAlignment="Top" Margin="24,0,96,0"
+                         Height="3" MinHeight="3" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+
+            <StackPanel IsVisible="{Binding IsBlank}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18" Margin="0,0,96,120">
+                <PathIcon Data="{StaticResource Icon.MagnifyingGlass}" Width="64" Height="64" Foreground="{DynamicResource Brush.Text.Disabled}" />
+                <TextBlock Classes="tv-body" Text="Films, series, episodes, music and people appear as you type." TextAlignment="Center" MaxWidth="620" />
+            </StackPanel>
+
+            <StackPanel IsVisible="{Binding IsNothing}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18" Margin="0,0,96,120">
+                <PathIcon Data="{StaticResource Icon.MagnifyingGlass}" Width="64" Height="64" Foreground="{DynamicResource Brush.Text.Disabled}" />
+                <TextBlock Classes="tv-body" Text="Nothing in your libraries matches that." TextAlignment="Center" />
+            </StackPanel>
+
+            <TextBlock Classes="tv-body" IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" TextAlignment="Center"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="700" />
+        </Panel>
+    </Grid>
+</UserControl>

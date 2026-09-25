@@ -212,6 +212,14 @@
                 </Border>
             </StackPanel>
 
+            <!-- ===== TV and controller ===== -->
+            <StackPanel Spacing="10">
+                <TextBlock Text="TV and controller" FontSize="17" FontWeight="SemiBold" />
+                <Border Classes="section">
+                    <sections:TvSettingsView DataContext="{Binding Tv}" />
+                </Border>
+            </StackPanel>
+
             <!-- ===== About ===== -->
             <StackPanel Spacing="10">
                 <TextBlock Text="About Tuxflix" FontSize="17" FontWeight="SemiBold" />

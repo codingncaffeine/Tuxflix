@@ -1,0 +1,108 @@
+<!--
+    The TV interface's look: the desktop's tokens (navy surfaces, the orange accent, Inter) set for
+    a room. Type is large, every control that can take focus shows it with a solid accent ring or
+    fill that reads from across the room, and a focused tile grows, as Plex's and Steam's TV
+    interfaces do. Everything here applies inside the TV shell only; the control themes it puts on
+    are in TvThemes.axaml.
+-->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== Type for a room ===== -->
+    <Style Selector="TextBlock.tv-kicker">
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="2.4" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+    </Style>
+
+    <Style Selector="TextBlock.tv-title">
+        <Setter Property="FontSize" Value="60" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="-0.8" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="MaxLines" Value="2" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <Style Selector="TextBlock.tv-heading">
+        <Setter Property="FontSize" Value="42" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="-0.4" />
+    </Style>
+
+    <Style Selector="TextBlock.tv-meta">
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+    </Style>
+
+    <Style Selector="TextBlock.tv-body">
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="LineHeight" Value="33" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="TextTrimming" Value="WordEllipsis" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+    </Style>
+
+    <Style Selector="TextBlock.tv-shelf">
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="2.4" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    </Style>
+
+    <Style Selector="TextBlock.tv-count">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}" />
+    </Style>
+
+    <!-- Lists scroll by the D-pad; a bar at their edge says nothing a room needs. -->
+    <Style Selector="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility" Value="Hidden" />
+    </Style>
+
+    <!-- ===== Every other focusable control: the room's ring ===== -->
+    <Style Selector="Button, TextBox, Slider, ListBoxItem, ComboBox">
+        <Setter Property="FocusAdorner" Value="{StaticResource Tv.Focus.Ring}" />
+    </Style>
+
+    <!-- ===== A tile shows focus with the frame the TV shell moves onto it (above the artwork,
+         whatever the row clips); its own ring and hover lift stay the desktop's. ===== -->
+    <Style Selector="Button.tile">
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+    </Style>
+
+    <!-- ===== The legend of buttons at the foot of the screen ===== -->
+    <Style Selector="Border.pad-glyph">
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="CornerRadius" Value="17" />
+        <Setter Property="BoxShadow" Value="0 3 10 0 #8C020510" />
+    </Style>
+
+    <Style Selector="Border.pad-glyph > TextBlock">
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.legend">
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="1.8" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Border.keycap.tv">
+        <Setter Property="Padding" Value="10,3,10,4" />
+    </Style>
+
+    <Style Selector="Border.keycap.tv > TextBlock">
+        <Setter Property="FontSize" Value="15" />
+    </Style>
+</Styles>

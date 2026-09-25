@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="using:Tuxflix.App.Views.Settings"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Settings.TvSettingsView"
+             x:DataType="settings:TvSettingsViewModel">
+
+    <!-- The TV interface's section of the settings page: start in it, open it now, and the
+         controller's buttons. Rows in the settings page's own style. -->
+    <StackPanel>
+        <Grid Classes="row" ColumnDefinitions="*,Auto">
+            <StackPanel>
+                <TextBlock Classes="name" Text="Start in the TV interface" />
+                <TextBlock Classes="about" Text="Full screen, for a remote or a controller; tuxflix --tv does it for one start." />
+            </StackPanel>
+            <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartsInTv}" ui:Tip.Text="Open in the TV interface at every start" />
+        </Grid>
+        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+        <Grid Classes="row" ColumnDefinitions="*,Auto">
+            <StackPanel>
+                <TextBlock Classes="name" Text="The TV interface" />
+                <TextBlock Classes="about" Text="Open it now; Desktop interface in its menu comes back to this one." />
+            </StackPanel>
+            <Button Grid.Column="1" Theme="{StaticResource GhostButton}" Padding="12,6" FontSize="11" VerticalAlignment="Center"
+                    Command="{Binding OpenTvCommand}" ui:Tip.Text="Full screen, for a remote or a controller">
+                <TextBlock Text="OPEN" />
+            </Button>
+        </Grid>
+        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+        <Grid Classes="row" ColumnDefinitions="*,Auto">
+            <StackPanel>
+                <TextBlock Classes="name" Text="Controller buttons" />
+                <TextBlock Classes="about" Text="{Binding ControllerStatus}" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1" Theme="{StaticResource GhostButton}" Padding="12,6" FontSize="11" VerticalAlignment="Center"
+                    Command="{Binding EditButtonsCommand}" ui:Tip.Text="What each button does, changed in the TV interface with the controller in hand">
+                <TextBlock Text="CHANGE" />
+            </Button>
+        </Grid>
+    </StackPanel>
+</UserControl>

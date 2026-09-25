@@ -7,6 +7,8 @@
 // movie-more (a film's page scrolled to its extras, critics and related shelves), library.
 // The viewer's own: movie-rated, home-tile-menu (a tile's menu), playlist-edit, playlist-rename, activity.
 // Downloads: downloads, downloads-options, movie-download (a film part-way down), series-download, offline (a start with no server in reach).
+// The TV interface (at 1920x1080): tv-home, tv-home-down, tv-movie, tv-series, tv-library, tv-search,
+// tv-controller, tv-menu, tv-player.
 // With --real also: artist, album, nowplaying, nowplaying-lyrics (MUSIC_ALBUM_TITLE picks the artist's album by
 // title), and classic (the compact player over a playing album;
 // CLASSIC_SKIN=path.wsz wears that skin, otherwise the base skin, fetched as the app fetches it;
@@ -106,6 +108,7 @@ void Capture(string pose)
         ReportsPlayback = false,
         Silent = true,
         NotificationSources = real ? null : s => demoNews = new Tuxflix.Core.Demo.DemoNotificationSource(s.Demo!),
+        IsTv = pose.StartsWith("tv-", StringComparison.Ordinal),
     };
     var window = new MainWindow(shell, settings) { Width = width, Height = height };
     window.Show();
@@ -543,6 +546,63 @@ void Capture(string pose)
     }
 
     Settle(shell);
+
+    // The TV interface (1920x1080 is its size): home with focus on a shelf, a film, a series, a
+    // library, search with its keyboard, the controller's buttons, the menu, and the player.
+    if (pose.StartsWith("tv-", StringComparison.Ordinal))
+    {
+        var tv = window.Tv ?? throw new InvalidOperationException("No TV controller.");
+        void Act(Tuxflix.App.Tv.TvAction action)
+        {
+            tv.Handle(new Tuxflix.App.Tv.TvInput(action, Tuxflix.App.Tv.TvPhase.Press));
+            Pump(TimeSpan.FromMilliseconds(120));
+        }
+
+        var catalog = Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now);
+        switch (pose)
+        {
+            case "tv-home-down":
+                Act(Tuxflix.App.Tv.TvAction.Right);
+                Act(Tuxflix.App.Tv.TvAction.Down);
+                Act(Tuxflix.App.Tv.TvAction.Right);
+                Act(Tuxflix.App.Tv.TvAction.Right);
+                break;
+            case "tv-movie":
+                shell.OpenItem(catalog.Movies[2]);
+                break;
+            case "tv-series":
+                shell.OpenItem(catalog.Shows[0]);
+                break;
+            case "tv-library":
+                var session = shell.Session ?? throw new InvalidOperationException("No server is open.");
+                shell.OpenSection(Result(session.Client.GetSectionsAsync(CancellationToken.None)).First(s => s.Type == "movie"));
+                Idle(shell);
+                Act(Tuxflix.App.Tv.TvAction.Right);
+                break;
+            case "tv-search":
+                Act(Tuxflix.App.Tv.TvAction.Search);
+                shell.SearchText = Environment.GetEnvironmentVariable("CAPTURE_QUERY") ?? "the";
+                shell.SearchNowCommand.Execute(null);
+                Pump(TimeSpan.FromMilliseconds(400));
+                Idle(shell);
+                break;
+            case "tv-controller":
+                shell.ShowControllerCommand.Execute(null);
+                break;
+            case "tv-menu":
+                Act(Tuxflix.App.Tv.TvAction.Menu);
+                Act(Tuxflix.App.Tv.TvAction.Down);
+                break;
+            case "tv-player":
+                shell.Play(catalog.Movies[0], resume: false);
+                Settle(shell);
+                Act(Tuxflix.App.Tv.TvAction.Up);
+                break;
+        }
+
+        Settle(shell);
+        Pump(TimeSpan.FromMilliseconds(500));
+    }
 
     if (pose == "home-hover")
     {

@@ -1,0 +1,170 @@
+<!--
+    The TV interface's control themes and brushes: in the application's resources so any view can
+    name them, though only the TV interface uses them. The TV styles (TvStyles.axaml) put them on.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- A focus ring for a room: solid accent, three pixels, with a glow. -->
+    <FocusAdornerTemplate x:Key="Tv.Focus.Ring">
+        <Border Margin="-5" BorderThickness="3" CornerRadius="12" BorderBrush="{DynamicResource Brush.Accent}"
+                BoxShadow="0 0 22 0 #8CFF9150" />
+    </FocusAdornerTemplate>
+
+    <!-- The artwork behind a TV page darkens towards the text, and into the canvas at its foot. -->
+    <LinearGradientBrush x:Key="Tv.Scrim.Left" StartPoint="0%,0%" EndPoint="100%,0%">
+        <GradientStop Offset="0" Color="#F2070B18" />
+        <GradientStop Offset="0.42" Color="#B3070B18" />
+        <GradientStop Offset="0.75" Color="#33070B18" />
+        <GradientStop Offset="1" Color="#1A070B18" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Tv.Scrim.Bottom" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#00070B18" />
+        <GradientStop Offset="0.38" Color="#1A070B18" />
+        <GradientStop Offset="0.62" Color="#D9070B18" />
+        <GradientStop Offset="1" Color="#FA070B18" />
+    </LinearGradientBrush>
+
+    <!-- ===== A tab in the TV bar: a pill that fills with the accent under focus ===== -->
+    <ControlTheme x:Key="TvTab" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+        <Setter Property="Padding" Value="24,11" />
+        <Setter Property="CornerRadius" Value="26" />
+        <Setter Property="FontSize" Value="21" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LetterSpacing" Value="1.6" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+                <BrushTransition Property="Foreground" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Background="{TemplateBinding Background}"
+                                      CornerRadius="{TemplateBinding CornerRadius}"
+                                      Padding="{TemplateBinding Padding}"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      HorizontalContentAlignment="Center"
+                                      VerticalContentAlignment="Center" />
+                    <Border Name="Underline" Height="3" CornerRadius="2" Margin="24,0" VerticalAlignment="Bottom"
+                            Background="{DynamicResource Brush.Ribbon}" Opacity="0" />
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^.selected">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+        </Style>
+        <Style Selector="^.selected /template/ Border#Underline">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Brush.Fill.Hover}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+        </Style>
+        <Style Selector="^:focus">
+            <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Ink}" />
+        </Style>
+        <Style Selector="^:focus /template/ Border#Underline">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+    </ControlTheme>
+
+    <!-- ===== A TV button: a raised pill that fills with the accent under focus ===== -->
+    <ControlTheme x:Key="TvButton" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource Brush.Raised.Gradient}" />
+        <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Line.Strong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="30,15" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="1.4" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="RenderTransform" Value="scale(1)" />
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <ContentPresenter Name="PART_ContentPresenter"
+                                  Background="{TemplateBinding Background}"
+                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                  BorderThickness="{TemplateBinding BorderThickness}"
+                                  CornerRadius="{TemplateBinding CornerRadius}"
+                                  Padding="{TemplateBinding Padding}"
+                                  Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  Foreground="{TemplateBinding Foreground}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Brush.Raised.Gradient.Hover}" />
+        </Style>
+        <Style Selector="^.play">
+            <Setter Property="Background" Value="{DynamicResource Brush.Play}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="^.selected">
+            <Setter Property="Background" Value="{DynamicResource Brush.Accent.Soft}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent.Edge}" />
+        </Style>
+        <Style Selector="^:focus">
+            <Setter Property="Background" Value="{DynamicResource Brush.Accent}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent.Light}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent.Ink}" />
+            <Setter Property="RenderTransform" Value="scale(1.06)" />
+        </Style>
+        <Style Selector="^.play:focus">
+            <Setter Property="Background" Value="{DynamicResource Brush.Play.Hover}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="^:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+    </ControlTheme>
+
+    <!-- ===== A key of the on-screen keyboard ===== -->
+    <ControlTheme x:Key="TvKey" TargetType="Button" BasedOn="{StaticResource TvButton}">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinWidth" Value="68" />
+        <Setter Property="Height" Value="64" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LetterSpacing" Value="0" />
+        <Setter Property="Background" Value="{DynamicResource Brush.Fill.Input}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Line.Hairline}" />
+    </ControlTheme>
+
+    <!-- ===== A row of a TV list (settings, tracks, the menu) ===== -->
+    <ControlTheme x:Key="TvRow" TargetType="Button" BasedOn="{StaticResource TvButton}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="26,16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LetterSpacing" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Style Selector="^:focus">
+            <Setter Property="RenderTransform" Value="scale(1.02)" />
+        </Style>
+    </ControlTheme>
+</ResourceDictionary>

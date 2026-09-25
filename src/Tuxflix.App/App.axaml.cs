@@ -42,8 +42,22 @@ public sealed class App : Application
                 Keyring = probing ? new ReadOnlySecretStore(new Keyring()) : new Keyring(),
                 ReportsPlayback = !probing,
                 Silent = probing,
+                IsTv = launch.Options.Tv || settings.Current.Tv.StartInTv,
             };
-            var window = new MainWindow(shell, settings);
+
+            // Controllers are read on a thread of their own from the first frame; each action they
+            // make is posted to the UI thread. A probe run reads none.
+            MainWindow? owner = null;
+            if (!probing)
+            {
+                shell.Gamepads = new Tv.GamepadInput(
+                    () => new Tv.Sdl3PadSource(),
+                    Tv.GamepadMap.FromSettings(settings.Current.Tv.Gamepad),
+                    input => Dispatcher.UIThread.Post(() => owner?.Tv?.Handle(input), DispatcherPriority.Input));
+                desktop.Exit += (_, _) => shell.Gamepads.Dispose();
+            }
+
+            var window = owner = new MainWindow(shell, settings);
             desktop.MainWindow = window;
 
             // The desktop's media controls and media keys; a probe run stays off the desktop's bus,
@@ -60,8 +74,13 @@ public sealed class App : Application
 
             if (launch.Instance is { } instance)
             {
-                // A second launch hands its arguments here: bring the window forward.
-                instance.ArgumentsReceived += _ => Dispatcher.UIThread.Post(window.BringForward);
+                // A second launch hands its arguments here: bring the window forward, in the TV
+                // interface when that launch asked for it.
+                instance.ArgumentsReceived += arguments => Dispatcher.UIThread.Post(() =>
+                {
+                    if (arguments.Contains("--tv")) shell.IsTv = true;
+                    window.BringForward();
+                });
             }
 
             // Opened comes again whenever the window is shown after hiding (the compact player hides
@@ -71,6 +90,7 @@ public sealed class App : Application
                 window.Opened -= Started;
                 WindowingBackend.WindowOpened(window);
                 shell.Start(launch.Options.Demo);
+                shell.Gamepads?.Start();
                 if (launch.Options.ProbePlayer) Player.PlayerProbe.Run(shell, window);
                 if (launch.Options.ProbeClassic) Classic.ClassicProbe.Run(shell, window);
                 if (launch.Options.ProbeGrid) Probes.GridProbe.Run(shell, window);

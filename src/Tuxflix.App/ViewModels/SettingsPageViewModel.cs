@@ -62,6 +62,21 @@ public sealed partial class SettingsPageViewModel(ShellViewModel shell) : PageVi
     /// <summary>Photos: the slideshow.</summary>
     public PhotoSettingsViewModel Photos { get; } = new(shell);
 
+    /// <summary>The TV interface and the controller.</summary>
+    public Views.Settings.TvSettingsViewModel Tv { get; } = new(shell);
+
+    protected override Task LoadAsync(CancellationToken cancellation)
+    {
+        Tv.Attach();
+        return Task.CompletedTask;
+    }
+
+    public override void Deactivate()
+    {
+        base.Deactivate();
+        Tv.Detach();
+    }
+
     // ===== How films and episodes play =====
 
     public IReadOnlyList<StreamQuality> QualityChoices => StreamQuality.All;

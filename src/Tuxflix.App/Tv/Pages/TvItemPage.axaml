@@ -1,0 +1,144 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:tv="using:Tuxflix.App.Tv"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Tv.Pages.TvItemPage"
+             x:DataType="vm:ItemPageViewModel">
+
+    <!-- A title for a room: its art full screen, its name and story large, PLAY with focus, then the
+         seasons, the episodes and the cast as rows. -->
+    <Panel>
+        <Panel IsHitTestVisible="False">
+            <ui:RemoteImage Path="{Binding BackdropPath}" DecodeWidth="1920" DecodeHeight="1080" />
+            <Border Background="{StaticResource Tv.Scrim.Left}" />
+            <Border Background="{StaticResource Tv.Scrim.Bottom}" />
+        </Panel>
+
+        <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+            <StackPanel Margin="0,140,0,90" Spacing="28">
+                <StackPanel Spacing="14" Margin="96,0,96,0" MaxWidth="1150" HorizontalAlignment="Left">
+                    <TextBlock Classes="tv-kicker" Text="{Binding Kicker}" />
+                    <ui:RemoteImage Path="{Binding LogoPath}" Format="Png" IsVisible="{Binding HasLogo}"
+                                    DecodeWidth="620" DecodeHeight="200" MaxWidth="620" MaxHeight="170"
+                                    Stretch="Uniform" HorizontalAlignment="Left" Margin="0,2,0,4"
+                                    AutomationProperties.Name="{Binding HeadingTitle}" />
+                    <TextBlock Classes="tv-title" Text="{Binding HeadingTitle}" IsVisible="{Binding ShowTextTitle}" />
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <Border Classes="rating" IsVisible="{Binding HasContentRating}" VerticalAlignment="Center" Padding="8,1,8,2">
+                            <TextBlock Text="{Binding ContentRating}" FontSize="17" />
+                        </Border>
+                        <TextBlock Classes="tv-meta" Text="{Binding Meta}" VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <PathIcon Data="{StaticResource Icon.Star.Fill}" Width="18" Height="18" Foreground="{DynamicResource Brush.Accent}" />
+                            <TextBlock Classes="tv-meta" Text="{Binding AudienceRating}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Classes="tv-meta" Text="{Binding Tagline}" IsVisible="{Binding HasTagline}" FontStyle="Italic" FontWeight="Normal" />
+                    <TextBlock Classes="tv-body" Text="{Binding Summary}" MaxLines="4" MaxWidth="1100" HorizontalAlignment="Left" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="26" Margin="96,6,96,0" tv:TvFocus.IsGroup="True">
+                    <Button Name="PlayButton" Theme="{StaticResource TvButton}" Classes="play" Command="{Binding PlayCommand}"
+                            tv:TvFocus.IsDefault="True" Padding="40,18">
+                        <StackPanel Orientation="Horizontal" Spacing="14">
+                            <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="22" Height="22" />
+                            <TextBlock Text="{Binding PlayLabel}" FontSize="22" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <StackPanel Spacing="10" VerticalAlignment="Center" IsVisible="{Binding HasProgress}">
+                        <TextBlock Classes="tv-meta" Text="{Binding RemainingText}" />
+                        <Border CornerRadius="3" ClipToBounds="True" Width="260">
+                            <ProgressBar Theme="{StaticResource ThinProgress}" Height="6" MinHeight="6" Value="{Binding Progress}" Background="#33FFFFFF" />
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <Border IsVisible="{Binding HasPlayNotice}" Margin="96,0" Padding="22,14" CornerRadius="10" HorizontalAlignment="Left"
+                        Background="{DynamicResource Brush.Accent.Softer}" BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="1">
+                    <TextBlock Classes="tv-meta" Text="{Binding PlayNotice}" Foreground="{DynamicResource Brush.Text.Primary}" />
+                </Border>
+
+                <!-- Seasons, then the chosen season's episodes -->
+                <ItemsControl ItemsSource="{Binding Seasons}" IsVisible="{Binding HasSeasons}" Margin="96,10,96,0" tv:TvFocus.IsGroup="True">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="12" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SeasonTabViewModel">
+                            <Button Theme="{StaticResource TvButton}" Content="{Binding Title}" Classes.selected="{Binding IsSelected}"
+                                    Command="{Binding SelectCommand}" Padding="24,12" FontSize="19" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel Spacing="4" IsVisible="{Binding IsSeries}" tv:TvFocus.IsGroup="True" tv:TvFocus.HoldsEnds="True">
+                    <TextBlock Classes="tv-shelf" Text="EPISODES" Margin="96,0,0,0" />
+                    <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Episodes}" Margin="96,16,96,20">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="26" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EpisodeRowViewModel">
+                                    <Button Classes="tile" Theme="{StaticResource TileButton}" Command="{Binding OpenCommand}"
+                                            AutomationProperties.Name="{Binding Heading}">
+                                        <StackPanel Spacing="10" Width="400">
+                                            <Panel Width="400" Height="225">
+                                                <Border Name="Lift" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Panel}" />
+                                                <Border CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True">
+                                                    <Panel>
+                                                        <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="400" DecodeHeight="225" />
+                                                        <ProgressBar Theme="{StaticResource ThinProgress}" VerticalAlignment="Bottom" Height="6" MinHeight="6"
+                                                                     Value="{Binding Progress}" IsVisible="{Binding HasProgress}" />
+                                                    </Panel>
+                                                </Border>
+                                                <Border Name="Ring" CornerRadius="{StaticResource Radius.Card}" />
+                                                <Border Classes="badge-watched" IsVisible="{Binding IsWatched}" Width="30" Height="30" CornerRadius="15">
+                                                    <PathIcon Data="{StaticResource Icon.Check.Bold}" Width="14" Height="14" Foreground="White" />
+                                                </Border>
+                                            </Panel>
+                                            <TextBlock Text="{Binding Heading}" FontSize="21" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Runtime}" FontSize="18" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+
+                <!-- The cast: each opens everything they are in -->
+                <StackPanel Spacing="4" IsVisible="{Binding HasCast}" tv:TvFocus.IsGroup="True" tv:TvFocus.HoldsEnds="True">
+                    <TextBlock Classes="tv-shelf" Text="CAST" Margin="96,0,0,0" />
+                    <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Cast}" Margin="96,16,96,20">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="30" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CastMemberViewModel">
+                                    <Button Classes="tile" Theme="{StaticResource TileButton}" Command="{Binding OpenCommand}"
+                                            IsEnabled="{Binding CanOpen}" AutomationProperties.Name="{Binding Name}">
+                                        <StackPanel Spacing="10" Width="170">
+                                            <Panel Width="150" Height="150" HorizontalAlignment="Center">
+                                                <Border Name="Lift" CornerRadius="75" Background="{DynamicResource Brush.Panel}" />
+                                                <Border CornerRadius="75" ClipToBounds="True">
+                                                    <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="150" DecodeHeight="150" />
+                                                </Border>
+                                                <Border Name="Ring" CornerRadius="75" />
+                                            </Panel>
+                                            <TextBlock Text="{Binding Name}" FontSize="19" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Role}" FontSize="16" TextAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Panel>
+</UserControl>

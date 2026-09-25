@@ -89,6 +89,7 @@
                                         <MenuItem Header="Sign in with Plex…" Command="{Binding SignInCommand}" IsVisible="{Binding IsSignedOut}" />
                                         <MenuItem Header="Switch server…" Command="{Binding ShowServersCommand}" IsVisible="{Binding IsSignedIn}" />
                                         <MenuItem Header="Open the demo library" Command="{Binding OpenDemoCommand}" />
+                                        <MenuItem Header="TV interface: full screen, for a remote or a controller" Command="{Binding ToggleTvCommand}" />
                                         <Separator />
                                         <MenuItem Header="Settings" Command="{Binding ShowSettingsCommand}" InputGesture="Ctrl+OemComma" />
                                         <Separator />

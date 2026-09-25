@@ -136,7 +136,7 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SignIn() => Router.Navigate(new SignInPageViewModel(this));
+    private void SignIn() => Router.Navigate(new SignInPageViewModel(this) { UseLinkCode = IsTv });
 
     [RelayCommand]
     private void ShowServers() => Router.Navigate(new ServersPageViewModel(this, Servers, message: null));
