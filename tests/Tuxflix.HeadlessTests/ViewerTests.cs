@@ -155,7 +155,21 @@ public sealed class ViewerTests : IDisposable
         var state = Viewer.For(stale);
         Assert.False(state.IsWatched);
 
+        // A record whose request began before the change, answered just after the server took
+        // it (before the change's own read-back arrives): newer than the one held, but out of date.
+        var late = await Fresh(movie.RatingKey);
+        bool? heldAfterLateRecord = null;
+        var answered = false;
+        Viewer.Changed += changed =>
+        {
+            if (changed != state || changed.Pending != 0 || answered) return;
+            answered = true;
+            Viewer.Take(late);
+            heldAfterLateRecord = state.IsWatched;
+        };
+
         Assert.True(await Viewer.SetWatchedAsync(stale, watched: true));
+        Assert.True(heldAfterLateRecord);
         Viewer.Take(stale);
         Assert.True(state.IsWatched);
 
@@ -234,6 +248,19 @@ public sealed class ViewerTests : IDisposable
         await Until(() => tile.IsWatched && tile.State.Pending == 0, "the menu's watched mark");
         Assert.Equal("Mark as unwatched", ViewerMenu.Entries(tile, whole: true, anchor: null)[0].Header);
         Assert.Equal("New playlist…", ViewerMenu.Entries(tile, whole: false, anchor: null)[0].Header);
+    }
+
+    [Fact]
+    public async Task MusicIsOfferedOnlyTheMusicPlaylistsAndNoWatchedMark()
+    {
+        await Session.Client.CreatePlaylistAsync("Road Trip", "audio", Session.MachineIdentifier!, ["777777"], CancellationToken.None);
+        await Viewer.LoadPlaylistsAsync();
+        var album = new AlbumTileViewModel(_shell, new MetadataItem { RatingKey = "4001", Type = "album", Title = "Tidewater Songs" });
+        var menu = ViewerMenu.Entries(album, whole: true, anchor: null);
+        Assert.Equal(["Add to playlist"], menu.Select(e => e.Header));
+        Assert.Equal(["New playlist…", null, "Road Trip"], menu[0].Children!.Select(e => e.Header));
+        Assert.Equal("audio", ViewerState.PlaylistTypeOf(new MetadataItem { Type = "track" }));
+        Assert.Null(ViewerState.PlaylistTypeOf(new MetadataItem { Type = "collection" }));
     }
 
     [Fact]

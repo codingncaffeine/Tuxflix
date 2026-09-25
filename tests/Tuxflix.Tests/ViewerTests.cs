@@ -308,14 +308,18 @@ public sealed class ViewerWriteTests
         items = await Items();
         Assert.Equal([keys[0], keys[1], keys[2], keys[0]], items.Select(i => i.RatingKey));
 
-        // The last entry to just after the first, then the third to the top.
-        await client.MovePlaylistItemAsync(made.RatingKey, items[3].PlaylistItemId!.Value, items[0].PlaylistItemId, none);
-        Assert.Equal([keys[0], keys[0], keys[1], keys[2]], (await Items()).Select(i => i.RatingKey));
-        await client.MovePlaylistItemAsync(made.RatingKey, items[2].PlaylistItemId!.Value, null, none);
+        // The last entry to just after the first, then the third to the top: told apart by the
+        // entries' own ids, as the film stands in the playlist twice.
+        var ids = items.Select(i => i.PlaylistItemId!.Value).ToList();
+        async Task<List<long>> Ids() => [.. (await Items()).Select(i => i.PlaylistItemId!.Value)];
+        await client.MovePlaylistItemAsync(made.RatingKey, ids[3], ids[0], none);
+        Assert.Equal([ids[0], ids[3], ids[1], ids[2]], await Ids());
+        await client.MovePlaylistItemAsync(made.RatingKey, ids[2], null, none);
+        Assert.Equal([ids[2], ids[0], ids[3], ids[1]], await Ids());
         Assert.Equal([keys[2], keys[0], keys[0], keys[1]], (await Items()).Select(i => i.RatingKey));
 
-        await client.RemoveFromPlaylistAsync(made.RatingKey, items[0].PlaylistItemId!.Value, none);
-        Assert.Equal([keys[2], keys[0], keys[1]], (await Items()).Select(i => i.RatingKey));
+        await client.RemoveFromPlaylistAsync(made.RatingKey, ids[0], none);
+        Assert.Equal([ids[2], ids[3], ids[1]], await Ids());
 
         await client.RenamePlaylistAsync(made.RatingKey, "Late Tonight", none);
         Assert.Contains(await client.GetPlaylistsAsync(none), p => p.RatingKey == made.RatingKey && p.Title == "Late Tonight");

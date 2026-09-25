@@ -96,10 +96,11 @@ public sealed partial class ItemPageViewModel : IViewerItem, ILiveRefresh
     /// <summary>The server has a newer word on the item: its play bar, its episodes and its streams.</summary>
     private async Task ReloadAsync()
     {
+        if (shell.Session is not { } session) return;
         try
         {
             var key = Item.RatingKey;
-            if (await Task.Run(() => shell.Session!.Client.GetMetadataAsync(key, CancellationToken.None)) is { } fresh && fresh.RatingKey == Item.RatingKey)
+            if (await Task.Run(() => session.Client.GetMetadataAsync(key, CancellationToken.None)) is { } fresh && fresh.RatingKey == Item.RatingKey)
             {
                 Item = fresh;
             }
@@ -110,7 +111,7 @@ public sealed partial class ItemPageViewModel : IViewerItem, ILiveRefresh
                 SelectedSeason = season;
             }
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or PlexUnauthorizedException or NullReferenceException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or PlexUnauthorizedException)
         {
             Log.Debug($"{Title} could not be read again: {ex.Message}");
         }

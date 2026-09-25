@@ -105,6 +105,7 @@
                                             <MenuItem Header="Play from here" Command="{Binding PlayCommand}" />
                                             <MenuItem Header="Play next" Command="{Binding PlayNextCommand}" />
                                             <MenuItem Header="Add to the queue" Command="{Binding AddToQueueCommand}" />
+                                            <MenuItem Header="Add to playlist" ui:ViewerMenu.Submenu="{Binding}" />
                                         </MenuFlyout>
                                     </Button.ContextFlyout>
                                     <Grid ColumnDefinitions="44,*,Auto" Classes="hover-reveal">

@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Tuxflix.App.ViewModels;
@@ -36,6 +37,7 @@ public static class ViewerMenu
             menu.Opening += (_, _) => Fill(menu, GetFor(control), whole: true);
             control.ContextFlyout = menu;
         });
+        SubmenuProperty.Changed.AddClassHandler<MenuItem>((item, _) => HookSubmenu(item));
         PlaylistsProperty.Changed.AddClassHandler<Button>((button, _) =>
         {
             if (button.Flyout is not null) return;
@@ -43,6 +45,29 @@ public static class ViewerMenu
             menu.Opening += (_, _) => Fill(menu, GetPlaylists(button), whole: false);
             button.Flyout = menu;
         });
+    }
+
+    /// <summary>A menu item of an existing menu that opens the playlists for an item: a track row's "Add to playlist".</summary>
+    public static readonly AttachedProperty<IViewerItem?> SubmenuProperty =
+        AvaloniaProperty.RegisterAttached<MenuItem, IViewerItem?>("Submenu", typeof(ViewerMenu));
+
+    public static IViewerItem? GetSubmenu(MenuItem item) => item?.GetValue(SubmenuProperty);
+
+    public static void SetSubmenu(MenuItem item, IViewerItem? value) => item?.SetValue(SubmenuProperty, value);
+
+    // A placeholder makes the item open as a submenu; the real lines are made as it opens.
+    private static void HookSubmenu(MenuItem item)
+    {
+        if (item.Items.Count > 0) return;
+        item.Items.Add(new MenuItem { Header = "…", IsEnabled = false });
+        item.SubmenuOpened += (_, e) =>
+        {
+            if (!ReferenceEquals(e.Source, item) || GetSubmenu(item) is not { } target) return;
+            var anchor = item.GetLogicalAncestors().OfType<Popup>().FirstOrDefault()?.PlacementTarget;
+            item.Items.Clear();
+            foreach (var entry in Entries(target, whole: false, anchor)) item.Items.Add(Build(entry));
+            target.Shell.Viewer?.PlaylistsEdited();
+        };
     }
 
     public static IViewerItem? GetFor(Control control) => control?.GetValue(ForProperty);
