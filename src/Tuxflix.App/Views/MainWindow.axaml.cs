@@ -53,6 +53,7 @@ public partial class MainWindow : Window
         }
 
         RestorePlacement(settings.Current.Window);
+        Themes.Accents.Apply(Themes.Accents.Find(settings.Current.Accent));
         Rail.Width = Math.Clamp(settings.Current.RailWidth, 220, 440);
         RailResizer.DragDelta += OnRailResize;
 
@@ -282,6 +283,9 @@ public partial class MainWindow : Window
             case Key.K when ctrl:
                 SearchBox.Focus();
                 SearchBox.SelectAll();
+                break;
+            case Key.OemComma when ctrl:
+                _shell.ShowSettingsCommand.Execute(null);
                 break;
             case Key.Q when ctrl:
                 Close();

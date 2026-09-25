@@ -90,6 +90,8 @@
                                         <MenuItem Header="Switch server…" Command="{Binding ShowServersCommand}" IsVisible="{Binding IsSignedIn}" />
                                         <MenuItem Header="Open the demo library" Command="{Binding OpenDemoCommand}" />
                                         <Separator />
+                                        <MenuItem Header="Settings" Command="{Binding ShowSettingsCommand}" InputGesture="Ctrl+OemComma" />
+                                        <Separator />
                                         <MenuItem Header="Sign out" Command="{Binding SignOutCommand}" IsVisible="{Binding IsSignedIn}" />
                                         <MenuItem Header="Quit Tuxflix" Click="OnQuit" InputGesture="Ctrl+Q" />
                                     </MenuFlyout>

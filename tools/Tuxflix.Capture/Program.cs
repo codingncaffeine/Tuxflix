@@ -321,6 +321,9 @@ void Capture(string pose)
         case "discover":
             shell.ShowDiscoverCommand.Execute(null);
             break;
+        case "settings":
+            shell.ShowSettingsCommand.Execute(null);
+            break;
         case "servers":
             // Invented servers on an address that refuses at once, so every row settles quickly.
             shell.Router.Reset(new ServersPageViewModel(
@@ -435,6 +438,8 @@ int Census()
     shell.ShowPlaylistsCommand.Execute(null);
     Idle(shell);
     Look("playlists");
+    shell.ShowSettingsCommand.Execute(null);
+    Look("settings");
 
     // The player with its controls up (the pointer over the picture), then small.
     shell.Play(demo.Movies[0], resume: false);

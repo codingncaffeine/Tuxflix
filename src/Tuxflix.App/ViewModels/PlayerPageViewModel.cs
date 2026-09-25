@@ -124,6 +124,9 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
 
         _part = part;
 
+        // The quality chosen in the settings for this kind of network.
+        Quality = StreamQuality.FromKbps(session.IsRemote ? shell.Settings.Playback.RemoteQualityKbps : shell.Settings.Playback.HomeQualityKbps);
+
         // The demo has no files; it plays a moving test pattern instead.
         if (session.IsDemo)
         {

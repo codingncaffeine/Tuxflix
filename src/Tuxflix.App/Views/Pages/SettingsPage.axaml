@@ -1,0 +1,196 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:themes="using:Tuxflix.App.Themes"
+             xmlns:plex="using:Tuxflix.Core.Plex"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.SettingsPage"
+             x:DataType="vm:SettingsPageViewModel">
+
+    <UserControl.Resources>
+        <!-- The switches wear the chosen accent. -->
+        <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{DynamicResource Color.Accent}" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{DynamicResource Color.Accent.Light}" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{DynamicResource Color.Accent.Dark}" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{DynamicResource Color.Accent.Ink}" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="{DynamicResource Color.Accent.Ink}" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="{DynamicResource Color.Accent.Ink}" />
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="Border.section">
+            <Setter Property="Background" Value="{DynamicResource Brush.Panel}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="20,6" />
+        </Style>
+        <Style Selector="Grid.row">
+            <Setter Property="Margin" Value="0,12" />
+        </Style>
+        <Style Selector="TextBlock.name">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.about">
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,3,24,0" />
+        </Style>
+        <Style Selector="ToggleSwitch">
+            <Setter Property="OnContent" Value="" />
+            <Setter Property="OffContent" Value="" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="MinWidth" Value="200" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Width="760" HorizontalAlignment="Center" Margin="0,40,0,48" Spacing="26">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="label" Text="TUXFLIX" Foreground="{DynamicResource Brush.Accent}" />
+                <TextBlock Text="Settings" FontSize="30" FontWeight="Bold" />
+            </StackPanel>
+
+            <!-- ===== How it looks ===== -->
+            <StackPanel Spacing="10">
+                <TextBlock Text="How it looks" FontSize="17" FontWeight="SemiBold" />
+                <Border Classes="section">
+                    <StackPanel>
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Classes="name" Text="Accent colour" />
+                                <TextBlock Classes="about" Text="Selection, focus and progress. Play keeps its warm colours." />
+                            </StackPanel>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding AccentChoices}" SelectedItem="{Binding Accent}"
+                                      ui:Tip.Text="The colour of selection, focus and progress">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="themes:Accent">
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <Ellipse Width="12" Height="12" VerticalAlignment="Center">
+                                                <Ellipse.Fill><SolidColorBrush Color="{Binding Main}" /></Ellipse.Fill>
+                                            </Ellipse>
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Classes="name" Text="The desktop's own title bar" />
+                                <TextBlock Classes="about" Text="{Binding TitleBarNote}" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding UseSystemTitleBar}" ui:Tip.Text="Use the desktop's title bar instead of Tuxflix's" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ===== How films and episodes play ===== -->
+            <StackPanel Spacing="10">
+                <TextBlock Text="Films and episodes" FontSize="17" FontWeight="SemiBold" />
+                <Border Classes="section">
+                    <StackPanel>
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Classes="name" Text="Quality at home" />
+                                <TextBlock Classes="about" Text="Original plays the file as it is; a lower quality has the server convert it." />
+                            </StackPanel>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding QualityChoices}" SelectedItem="{Binding HomeQuality}"
+                                      ui:Tip.Text="The quality to start at on your own network">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="plex:StreamQuality"><TextBlock Text="{Binding Label}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Classes="name" Text="Quality away from home" />
+                                <TextBlock Classes="about" Text="Over the internet or Plex's relay. The server's own limits still apply." />
+                            </StackPanel>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding QualityChoices}" SelectedItem="{Binding RemoteQuality}"
+                                      ui:Tip.Text="The quality to start at away from home">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="plex:StreamQuality"><TextBlock Text="{Binding Label}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="name" Text="Skip intros by themselves" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoSkipIntro}" ui:Tip.Text="Jump past an intro the server found" />
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="name" Text="Skip credits by themselves" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoSkipCredits}" ui:Tip.Text="Jump past credits the server found" />
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Classes="name" Text="Play the next episode" />
+                                <TextBlock Classes="about" Text="After a short countdown in the final credits." />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoPlayNext}" ui:Tip.Text="Go on to the next episode by itself" />
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="name" Text="Subtitles raised above the bottom" VerticalAlignment="Center" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding SubtitlesRaised}" ui:Tip.Text="Clear of a letterbox or a line burned into the picture" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ===== Sound ===== -->
+            <StackPanel Spacing="10">
+                <TextBlock Text="Sound" FontSize="17" FontWeight="SemiBold" />
+                <Border Classes="section">
+                    <StackPanel>
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Classes="name" Text="Night mode" />
+                                <TextBlock Classes="about" Text="Quiet dialogue up and loud moments down." />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NightMode}" ui:Tip.Text="Even out the loudness for late at night" />
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Classes="name" Text="Stereo only" />
+                                <TextBlock Classes="about" Text="Surround mixed down to two speakers, for headphones." />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding Stereo}" ui:Tip.Text="Mix surround sound down to two speakers" />
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+                        <Grid Classes="row" ColumnDefinitions="*,Auto">
+                            <StackPanel>
+                                <TextBlock Classes="name" Text="Passthrough to an AV receiver" />
+                                <TextBlock Classes="about" Text="Dolby and DTS sent as they are for the receiver to decode; volume and night mode then stay with the receiver." />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding Passthrough}" ui:Tip.Text="Send surround sound to the receiver as it is" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ===== About ===== -->
+            <StackPanel Spacing="10">
+                <TextBlock Text="About Tuxflix" FontSize="17" FontWeight="SemiBold" />
+                <Border Classes="section">
+                    <StackPanel Margin="0,12" Spacing="8">
+                        <TextBlock Classes="name" Text="{Binding Version, StringFormat='Tuxflix {0}'}" />
+                        <TextBlock Classes="about" Text="{Binding Licence}" />
+                        <SelectableTextBlock Text="{Binding LogFolder, StringFormat='Logs: {0}'}" FontSize="12.5"
+                                             Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -23,6 +23,9 @@ public sealed class AppSettings
     /// <summary>The server opened last, by its machine identifier; the next start reconnects to it.</summary>
     public string? LastServerId { get; set; }
 
+    /// <summary>The accent colour's name (<c>orange</c>, <c>sky</c>, <c>violet</c>, <c>coral</c>, <c>mint</c>).</summary>
+    public string Accent { get; set; } = "orange";
+
     /// <summary>Width of the library rail in device-independent pixels.</summary>
     public double RailWidth { get; set; } = 288;
 
@@ -61,6 +64,12 @@ public sealed class PlaybackSettings
 
     /// <summary>Surround mixed down to two speakers, for headphones and TVs that mishandle more.</summary>
     public bool Stereo { get; set; }
+
+    /// <summary>The quality films and episodes start at on the home network, by bitrate; null for the original file.</summary>
+    public int? HomeQualityKbps { get; set; }
+
+    /// <summary>The same away from home (a remote connection or Plex's relay).</summary>
+    public int? RemoteQualityKbps { get; set; }
 }
 
 public sealed class ClassicPlayerSettings

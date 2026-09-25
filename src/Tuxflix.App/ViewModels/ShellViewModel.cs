@@ -435,6 +435,13 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ShowSettings()
+    {
+        if (Router.Current is SettingsPageViewModel) return;
+        Router.Navigate(new SettingsPageViewModel(this));
+    }
+
+    [RelayCommand]
     private void ShowPlaylists()
     {
         if (Session is { } session && Router.Current is not PlaylistsPageViewModel) Router.Navigate(new PlaylistsPageViewModel(this, session));
