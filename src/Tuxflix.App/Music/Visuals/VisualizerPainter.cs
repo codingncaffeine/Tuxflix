@@ -11,8 +11,9 @@ namespace Tuxflix.App.Music;
 /// Every size is a fraction of the canvas, so a frame reads the same small or full screen, and
 /// every mode takes its colours from the palette's ramp, so a palette fits all of them. Nothing
 /// here re-analyses the audio: bars, caps, the waveform and the beat all come from the frame.
+/// The modes live by family in the other parts of this class; each draws its own ground.
 /// </remarks>
-internal sealed class VisualizerPainter : IDisposable
+internal sealed partial class VisualizerPainter : IDisposable
 {
     private const int MaxSparks = 900;
 
@@ -41,6 +42,12 @@ internal sealed class VisualizerPainter : IDisposable
     /// <summary>How many sparks are alive: the particle mode's own measure of what it draws.</summary>
     public int Sparks => _sparkCount;
 
+    /// <summary>The classic skins' frame for the same moment, quicker and in 19 bands, when there is one: the pixel modes draw it.</summary>
+    public AudioFrame? Classic { get; set; }
+
+    /// <summary>The cover playing, when there is one; the renderer owns it.</summary>
+    public SKImage? Cover { get; set; }
+
     public void Paint(SKCanvas canvas, int width, int height, AudioFrame frame, VisualizerMode mode, VisualizerPalette palette, float dt)
     {
         ArgumentNullException.ThrowIfNull(canvas);
@@ -48,24 +55,139 @@ internal sealed class VisualizerPainter : IDisposable
         ArgumentNullException.ThrowIfNull(palette);
         _time += dt;
         var bass = Bass(frame);
-        Background(canvas, width, height, palette, frame.BeatIntensity, bass);
         switch (mode)
         {
+            case VisualizerMode.Spectrum:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
+                Spectrum(canvas, width, height, frame, palette);
+                break;
             case VisualizerMode.Mirror:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
                 Mirror(canvas, width, height, frame, palette);
                 break;
             case VisualizerMode.Radial:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
                 Radial(canvas, width, height, frame, palette, bass);
                 break;
             case VisualizerMode.Scope:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
                 Scope(canvas, width, height, frame, palette);
                 break;
             case VisualizerMode.Particles:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
                 Particles(canvas, width, height, frame, palette, bass, dt);
                 break;
-            default:
-                Spectrum(canvas, width, height, frame, palette);
+            case VisualizerMode.PixelBars:
+                PixelBars(canvas, width, height, Classic ?? frame, palette);
                 break;
+            case VisualizerMode.FlatBars:
+                FlatBars(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.GradientBars:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
+                GradientBars(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.GlowPills:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
+                GlowPills(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.Led:
+                Led(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.DotMatrix:
+                DotMatrix(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.Curve:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
+                Curve(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.Spectrogram:
+                Spectrogram(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.Terrain:
+                Terrain(canvas, width, height, frame, palette, dt);
+                break;
+            case VisualizerMode.DotPlane:
+                DotPlane(canvas, width, height, frame, palette, dt);
+                break;
+            case VisualizerMode.PixelScope:
+                PixelScope(canvas, width, height, Classic ?? frame, palette);
+                break;
+            case VisualizerMode.FilledScope:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
+                FilledScope(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.Envelope:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
+                Envelope(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.DotScope:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
+                DotScope(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.Vectorscope:
+                Vectorscope(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.Superscope:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
+                Superscope(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.ScopeStar:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
+                ScopeStar(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.VuMeters:
+                VuMeters(canvas, width, height, frame, palette, dt);
+                break;
+            case VisualizerMode.Fountain:
+                Background(canvas, width, height, palette, frame.BeatIntensity, bass);
+                Fountain(canvas, width, height, frame, palette, dt);
+                break;
+            case VisualizerMode.Fireworks:
+                Fireworks(canvas, width, height, frame, palette, bass, dt);
+                break;
+            case VisualizerMode.Starfield:
+                Starfield(canvas, width, height, frame, palette, bass, dt);
+                break;
+            case VisualizerMode.Tunnel:
+                Tunnel(canvas, width, height, frame, palette, bass, dt);
+                break;
+            case VisualizerMode.Plasma:
+                Plasma(canvas, width, height, frame, palette, dt);
+                break;
+            case VisualizerMode.Fire:
+                Fire(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.Water:
+                Water(canvas, width, height, frame, palette, bass, dt);
+                break;
+            case VisualizerMode.Blobs:
+                Blobs(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.Ambience:
+                Ambience(canvas, width, height, frame, palette);
+                break;
+            case VisualizerMode.Feedback:
+                Feedback(canvas, width, height, frame, palette, bass, dt);
+                break;
+            case VisualizerMode.Swirl:
+                Swirl(canvas, width, height, frame, palette, bass);
+                break;
+            case VisualizerMode.Kaleidoscope:
+                Kaleidoscope(canvas, width, height, frame, palette, bass, dt);
+                break;
+            case VisualizerMode.BassSpin:
+                BassSpin(canvas, width, height, frame, palette, dt);
+                break;
+            case VisualizerMode.Pulse:
+                Background(canvas, width, height, palette, frame.BeatIntensity * 0.5f, bass * 0.5f);
+                Pulse(canvas, width, height, frame, palette, bass, dt);
+                break;
+            case VisualizerMode.Cover:
+                CoverArt(canvas, width, height, frame, palette, bass, dt);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(mode), mode, "No such visualizer mode.");
         }
     }
 
@@ -79,6 +201,87 @@ internal sealed class VisualizerPainter : IDisposable
         _backdrop?.Dispose();
         _glow?.Dispose();
         _ramp?.Dispose();
+        DisposeBars();
+        DisposeTime();
+        DisposeScopes();
+        DisposeFields();
+        DisposeFeedback();
+        DisposeScenes();
+    }
+
+    // ===== Shared by the modes =====
+
+    // A plain ground in the palette's own dark: the classic players' black, tinted.
+    private static void Flat(SKCanvas canvas, VisualizerPalette palette) => canvas.Clear(palette.Background);
+
+    // The level at a fractional band position, between the two bands either side of it.
+    private static float LevelAt(float[] bands, float position)
+    {
+        if (bands.Length == 0) return 0;
+        position = Math.Clamp(position, 0, bands.Length - 1);
+        var i = Math.Min((int)position, bands.Length - 2);
+        if (i < 0) return bands[0];
+        var f = position - i;
+        return (bands[i] * (1 - f)) + (bands[i + 1] * f);
+    }
+
+    // The bands regrouped into into.Length: the loudest of each group when fewer, between
+    // neighbours when more. A regrouped bar never reads quieter than the bands it stands for.
+    private static void Regroup(float[] bands, float[] into)
+    {
+        var n = bands.Length;
+        var m = into.Length;
+        if (n == 0)
+        {
+            Array.Clear(into);
+            return;
+        }
+
+        if (m >= n)
+        {
+            for (var i = 0; i < m; i++) into[i] = LevelAt(bands, m == 1 ? 0 : i * (n - 1) / (float)(m - 1));
+            return;
+        }
+
+        for (var i = 0; i < m; i++)
+        {
+            var from = i * n / m;
+            var to = Math.Max(from + 1, (i + 1) * n / m);
+            var loudest = 0f;
+            for (var b = from; b < to; b++) loudest = MathF.Max(loudest, bands[b]);
+            into[i] = loudest;
+        }
+    }
+
+    private static SKColor Mix(SKColor a, SKColor b, float t)
+    {
+        t = Math.Clamp(t, 0f, 1f);
+        return new SKColor(
+            (byte)(a.Red + ((b.Red - a.Red) * t)),
+            (byte)(a.Green + ((b.Green - a.Green) * t)),
+            (byte)(a.Blue + ((b.Blue - a.Blue) * t)),
+            (byte)(a.Alpha + ((b.Alpha - a.Alpha) * t)));
+    }
+
+    // Blue, green, red, alpha in memory order: one pixel of a Bgra8888 picture.
+    private static int Pack(SKColor c) => c.Blue | (c.Green << 8) | (c.Red << 16) | (c.Alpha << 24);
+
+    // A fill that runs down through colours: the gradient drawn once into a picture one pixel wide,
+    // and that picture as the fill. Skia shades a large area with a gradient many times more slowly
+    // (4.4 ms against 0.3 for the area under a full curve), for the same colours.
+    private static (SKImage Ramp, SKShader Shader) VerticalRamp(float top, float bottom, SKColor[] colours, float[] positions)
+    {
+        var tall = Math.Max(1, (int)MathF.Ceiling(bottom - top));
+        using var surface = SKSurface.Create(new SKImageInfo(1, tall, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using (var gradient = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint(0, tall), colours, positions, SKShaderTileMode.Clamp))
+        using (var paint = new SKPaint { Shader = gradient })
+        {
+            surface.Canvas.Clear(SKColors.Transparent);
+            surface.Canvas.DrawRect(0, 0, 1, tall, paint);
+        }
+
+        var ramp = surface.Snapshot();
+        return (ramp, ramp.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, new SKSamplingOptions(SKFilterMode.Nearest), SKMatrix.CreateTranslation(0, top)));
     }
 
     // The lowest quarter of the bands, the kick and the bass line: what the pulses follow.

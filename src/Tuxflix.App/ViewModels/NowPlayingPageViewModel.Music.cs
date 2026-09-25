@@ -73,20 +73,24 @@ public sealed partial class NowPlayingPageViewModel
     public override bool IsImmersive => IsVisualizerOn;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModeTitle), nameof(ModeTip), nameof(ModeCaption))]
     public partial VisualizerMode VisualizerMode { get; private set; } = VisualizerMode.Spectrum;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Palette))]
+    [NotifyPropertyChangedFor(nameof(Palette), nameof(PaletteTip), nameof(ModeCaption))]
     public partial string PaletteName { get; private set; } = VisualizerPalettes.AlbumName;
 
     /// <summary>The colours the visualizer wears now: Album follows the cover playing.</summary>
     public VisualizerPalette Palette => VisualizerPalettes.Resolve(PaletteName, Colors);
 
-    public string ModeTip => $"Mode: {VisualizerMode} (click the picture for the next)";
+    public string ModeTitle => VisualizerModes.Title(VisualizerMode);
+
+    /// <summary>Under the mode's name while the controls show: its family and the colours.</summary>
+    public string ModeCaption => $"{VisualizerModes.Info(VisualizerMode).Family}  ·  {PaletteName}";
+
+    public string ModeTip => $"Mode: {ModeTitle} (click the picture for the next)";
 
     public string PaletteTip => $"Colours: {PaletteName}";
-
-    public ObservableCollection<MenuChoice> ModeChoices { get; } = [];
 
     public ObservableCollection<MenuChoice> PaletteChoices { get; } = [];
 
@@ -95,7 +99,7 @@ public sealed partial class NowPlayingPageViewModel
 
     /// <summary>Clicking the picture moves to the next mode, as clicking Winamp's analyser did.</summary>
     [RelayCommand]
-    private void NextVisualizerMode() => ChooseMode((VisualizerMode)(((int)VisualizerMode + 1) % Enum.GetValues<VisualizerMode>().Length));
+    private void NextVisualizerMode() => ChooseMode(VisualizerModes.Next(VisualizerMode));
 
     public void SetVisualizer(bool on)
     {
@@ -109,8 +113,6 @@ public sealed partial class NowPlayingPageViewModel
         VisualizerMode = mode;
         _shell.Settings.Music.VisualizerMode = mode.ToString();
         _shell.SaveSettings();
-        foreach (var choice in ModeChoices) choice.IsChecked = choice.Title == mode.ToString();
-        OnPropertyChanged(nameof(ModeTip));
     }
 
     public void ChoosePalette(string name)
@@ -119,7 +121,6 @@ public sealed partial class NowPlayingPageViewModel
         _shell.Settings.Music.VisualizerPalette = PaletteName;
         _shell.SaveSettings();
         foreach (var choice in PaletteChoices) choice.IsChecked = choice.Title == PaletteName;
-        OnPropertyChanged(nameof(PaletteTip));
     }
 
     partial void OnColorsChanged(UltraBlurColors? value) => OnPropertyChanged(nameof(Palette));
@@ -185,14 +186,9 @@ public sealed partial class NowPlayingPageViewModel
     private void InitialiseExtras()
     {
         var music = _shell.Settings.Music;
-        VisualizerMode = Enum.TryParse<VisualizerMode>(music.VisualizerMode, out var mode) ? mode : VisualizerMode.Spectrum;
+        VisualizerMode = VisualizerModes.Find(music.VisualizerMode) ?? VisualizerMode.Spectrum;
         PaletteName = VisualizerPalettes.Names.Contains(music.VisualizerPalette) ? music.VisualizerPalette : VisualizerPalettes.AlbumName;
         PrefersLyrics = music.ShowLyrics;
-        foreach (var each in Enum.GetValues<VisualizerMode>())
-        {
-            ModeChoices.Add(new MenuChoice(each.ToString(), () => ChooseMode(each), each == VisualizerMode));
-        }
-
         foreach (var name in VisualizerPalettes.Names)
         {
             PaletteChoices.Add(new MenuChoice(name, () => ChoosePalette(name), name == PaletteName));

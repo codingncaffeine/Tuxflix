@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Tuxflix.App.Music;
 using Tuxflix.App.ViewModels;
 
 namespace Tuxflix.App.Views.Pages;
@@ -36,6 +37,7 @@ public partial class NowPlayingPage : UserControl
         Visualizer.PointerPressed += OnVisualizerPressed;
         VisualizerTitleBand.PointerPressed += OnTitleBandPressed;
         FullScreenButton.Click += (_, _) => ToggleFullScreen();
+        if (ModeButton.Flyout is MenuFlyout modes) modes.Opening += (_, _) => FillModeMenu(modes);
 
         // A hand on the lyrics stops them following the music for a few seconds.
         LyricsScroll.AddHandler(PointerWheelChangedEvent, (_, _) => TouchLyrics(), RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -150,6 +152,26 @@ public partial class NowPlayingPage : UserControl
         if (Model?.Music is not { IsScrubbing: true } music) return;
         music.IsScrubbing = false;
         music.SeekTo(value);
+    }
+
+    // The modes in their families, the one showing ticked, made as the menu opens.
+    internal void FillModeMenu(MenuFlyout menu)
+    {
+        menu.Items.Clear();
+        if (Model is not { } model) return;
+        foreach (var family in VisualizerModes.Families)
+        {
+            var submenu = new MenuItem { Header = family };
+            foreach (var info in VisualizerModes.All.Where(m => m.Family == family))
+            {
+                var mode = info.Mode;
+                var item = new MenuItem { Header = info.Title, ToggleType = MenuItemToggleType.Radio, IsChecked = mode == model.VisualizerMode };
+                item.Click += (_, _) => model.ChooseMode(mode);
+                submenu.Items.Add(item);
+            }
+
+            menu.Items.Add(submenu);
+        }
     }
 
     // The band along the top is the title bar the visualizer hides: it moves the window and a double

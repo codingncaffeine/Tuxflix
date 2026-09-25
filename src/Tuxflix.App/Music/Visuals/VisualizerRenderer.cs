@@ -57,7 +57,9 @@ public sealed class FrameTimes
 /// <para>
 /// Drawing is in software, so its cost grows with the area: a frame is drawn at most
 /// <see cref="MaxLongSide"/> pixels on its long side and the view scales it up, which a full-screen
-/// visualizer of bars, rings and sparks does not show.
+/// visualizer of bars, rings and sparks does not show. The modes made pixel by pixel are drawn
+/// smaller still (<see cref="VisualizerModeInfo.Detail"/>): they are soft by nature, and the view
+/// scales them on the graphics card rather than here.
 /// </para>
 /// </remarks>
 public sealed class VisualizerRenderer
@@ -77,6 +79,11 @@ public sealed class VisualizerRenderer
     private volatile bool _stopping;
     private volatile VisualizerPalette _palette = VisualizerPalettes.Fixed[0];
     private volatile int _mode;
+    private CoverSlot? _pendingCover;
+    private bool _finished;
+
+    // A cover handed over and not yet taken; its image may be null (no cover).
+    private sealed record CoverSlot(SKImage? Image);
 
     /// <param name="source">The newest analysis frame; called on the drawing thread.</param>
     /// <param name="present">Called on the drawing thread with each finished frame; the view posts it to the UI thread and calls <see cref="Taken"/> once it shows it.</param>
@@ -90,6 +97,29 @@ public sealed class VisualizerRenderer
 
     /// <summary>The thread the frames are drawn on, once started: never the UI thread.</summary>
     public int? DrawingThreadId { get; private set; }
+
+    /// <summary>The classic skins' frame for the same moment, which the pixel modes draw; called on the drawing thread.</summary>
+    public Func<AudioFrame>? Classic { get; init; }
+
+    /// <summary>
+    /// Hands over the cover playing, or null for none; any thread. The renderer owns it from here
+    /// and disposes it once another replaces it or the drawing ends.
+    /// </summary>
+    public void SetCover(SKImage? cover)
+    {
+        lock (_lock)
+        {
+            if (_finished)
+            {
+                cover?.Dispose();
+                return;
+            }
+
+            // One handed over before it was taken was never drawn.
+            _pendingCover?.Image?.Dispose();
+            _pendingCover = new CoverSlot(cover);
+        }
+    }
 
     public VisualizerMode Mode
     {
@@ -126,11 +156,21 @@ public sealed class VisualizerRenderer
     }
 
     /// <summary>The size a frame is drawn at for a view of <paramref name="size"/>: the same, or scaled down to <see cref="MaxLongSide"/>.</summary>
-    public static PixelSize DrawSize(PixelSize size)
+    public static PixelSize DrawSize(PixelSize size) => Fit(size, MaxLongSide);
+
+    /// <summary>The size a frame of <paramref name="mode"/> is drawn at for a view of <paramref name="size"/>.</summary>
+    public static PixelSize DrawSize(PixelSize size, VisualizerMode mode) => Fit(size, VisualizerModes.Info(mode).Detail switch
+    {
+        VisualizerDetail.Half => MaxLongSide / 2,
+        VisualizerDetail.Field => MaxLongSide / 3,
+        _ => MaxLongSide,
+    });
+
+    private static PixelSize Fit(PixelSize size, int longSide)
     {
         var longest = Math.Max(size.Width, size.Height);
-        if (longest <= MaxLongSide) return size;
-        var scale = (double)MaxLongSide / longest;
+        if (longest <= longSide) return size;
+        var scale = (double)longSide / longest;
         return new PixelSize(Math.Max(1, (int)Math.Round(size.Width * scale)), Math.Max(1, (int)Math.Round(size.Height * scale)));
     }
 
@@ -152,7 +192,21 @@ public sealed class VisualizerRenderer
                 if (_stopping) break;
 
                 PixelSize size;
-                lock (_lock) size = DrawSize(_size);
+                CoverSlot? cover;
+                var mode = Mode;
+                lock (_lock)
+                {
+                    size = DrawSize(_size, mode);
+                    cover = _pendingCover;
+                    _pendingCover = null;
+                }
+
+                if (cover is not null)
+                {
+                    painter.Cover?.Dispose();
+                    painter.Cover = cover.Image;
+                }
+
                 if (size.Width < 4 || size.Height < 4)
                 {
                     _wake.WaitOne(100);
@@ -169,7 +223,8 @@ public sealed class VisualizerRenderer
                     var info = new SKImageInfo(size.Width, size.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
                     using var surface = SKSurface.Create(info, target.Address, target.RowBytes)
                                         ?? throw new InvalidOperationException("Skia could not draw into the visualizer's bitmap.");
-                    painter.Paint(surface.Canvas, size.Width, size.Height, _source(), Mode, Palette, dt);
+                    painter.Classic = Classic?.Invoke();
+                    painter.Paint(surface.Canvas, size.Width, size.Height, _source(), mode, Palette, dt);
                     surface.Canvas.Flush();
                 }
 
@@ -184,6 +239,16 @@ public sealed class VisualizerRenderer
         }
         finally
         {
+            lock (_lock)
+            {
+                _finished = true;
+                _pendingCover?.Image?.Dispose();
+                _pendingCover = null;
+            }
+
+            painter.Cover?.Dispose();
+            painter.Cover = null;
+
             // The view lets go of its frame on the UI thread first; the bitmaps go after it.
             var bitmaps = _bitmaps.ToArray();
             if (Application.Current is not null)

@@ -4,6 +4,10 @@ using Tuxflix.Core.Plex;
 namespace Tuxflix.App.Music;
 
 /// <summary>The full-window visualizer's ways of drawing the same analysis.</summary>
+/// <remarks>
+/// A mode is saved by its name, so names stay as they are and new modes go at the end;
+/// <see cref="VisualizerModes"/> gives the order they are shown and cycled in.
+/// </remarks>
 public enum VisualizerMode
 {
     /// <summary>Bars rising from a floor, with falling caps and a reflection: the analyser.</summary>
@@ -20,6 +24,105 @@ public enum VisualizerMode
 
     /// <summary>Sparks thrown from the centre, a burst on every beat.</summary>
     Particles,
+
+    /// <summary>The classic player's analyser at the window's size: square pixels, the ramp anchored to the rows.</summary>
+    PixelBars,
+
+    /// <summary>One flat colour for every bar, under caps that stand apart from them.</summary>
+    FlatBars,
+
+    /// <summary>Each bar in its band's colour, paling to its tip.</summary>
+    GradientBars,
+
+    /// <summary>Rounded bars in a halo of their own light.</summary>
+    GlowPills,
+
+    /// <summary>Lit segments, as a hi-fi's display shows them.</summary>
+    Led,
+
+    /// <summary>A grid of dots lit by level.</summary>
+    DotMatrix,
+
+    /// <summary>The spectrum as one smooth, filled line.</summary>
+    Curve,
+
+    /// <summary>Time across, pitch up, loudness as light.</summary>
+    Spectrogram,
+
+    /// <summary>The last few seconds of spectra as ridgelines, the newest in front.</summary>
+    Terrain,
+
+    /// <summary>A turning plane of dots the spectrum's recent past raises.</summary>
+    DotPlane,
+
+    /// <summary>The classic player's oscilloscope at the window's size.</summary>
+    PixelScope,
+
+    /// <summary>The waveform filled to its centre line.</summary>
+    FilledScope,
+
+    /// <summary>The waveform's outline mirrored about the centre, as an editor draws it.</summary>
+    Envelope,
+
+    /// <summary>The waveform as dots.</summary>
+    DotScope,
+
+    /// <summary>Left against right: stereo width across, the mix up and down.</summary>
+    Vectorscope,
+
+    /// <summary>A closed curve whose radius follows the waveform.</summary>
+    Superscope,
+
+    /// <summary>The waveform along the arms of a turning star.</summary>
+    ScopeStar,
+
+    /// <summary>A pair of needle meters, left and right.</summary>
+    VuMeters,
+
+    /// <summary>Sparks thrown up from the floor by each band, falling back.</summary>
+    Fountain,
+
+    /// <summary>Rockets on the beat, bursting into sparks.</summary>
+    Fireworks,
+
+    /// <summary>Stars rushing past, faster on the beat.</summary>
+    Starfield,
+
+    /// <summary>Down a tunnel that turns and hurries with the music.</summary>
+    Tunnel,
+
+    /// <summary>Waves of colour, as the demos drew them.</summary>
+    Plasma,
+
+    /// <summary>Flames rising from the spectrum.</summary>
+    Fire,
+
+    /// <summary>A pool the beat drops ripples into.</summary>
+    Water,
+
+    /// <summary>Soft blobs that swell with their bands and melt together.</summary>
+    Blobs,
+
+    /// <summary>Slow colour flowing with the spectrum.</summary>
+    Ambience,
+
+    /// <summary>Each frame drawn again, zoomed and turned, the waveform over it.</summary>
+    Feedback,
+
+    /// <summary>Each frame drawn again into a whirlpool.</summary>
+    Swirl,
+
+    /// <summary>The bands folded into a turning symmetry.</summary>
+    Kaleidoscope,
+
+    /// <summary>Two blades the bass spins.</summary>
+    BassSpin,
+
+    /// <summary>Rings sent out from the middle on the beat.</summary>
+    Pulse,
+
+    /// <summary>The cover playing, breathing with the music in its own light.</summary>
+    Cover,
 }
 
 /// <summary>

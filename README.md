@@ -26,7 +26,9 @@ and filter the ways your server offers, with collections, playlists, a page for 
 director, and a search across everything from the title bar. Music plays too: artists,
 albums and a gapless, loudness-levelled queue, and a compact player that wears classic Winamp skins
 (`.wsz`), with its equalizer, balance, playlist and spectrum analyser working, at any size from the
-original to double (drag its bottom right corner). The rest of the plan is still to come. A built-in demo library of invented titles, with artwork
+original to double (drag its bottom right corner). A full-window visualizer draws the music 38 ways, from
+the classic players' analyser and oscilloscope, square pixels and all, to needle meters, fire, plasma,
+water, a tunnel and fireworks, in the cover's own colours or seven other schemes. The rest of the plan is still to come. A built-in demo library of invented titles, with artwork
 drawn in code, shows the interface without a server.
 
 Installed from a package, Tuxflix runs inside a hardened systemd user unit (see

@@ -250,19 +250,16 @@
             <Panel Name="VisualizerChrome">
                 <Border Height="120" VerticalAlignment="Top" IsHitTestVisible="False" Background="{DynamicResource Brush.Scrim.Top}" />
                 <Border Height="160" VerticalAlignment="Bottom" IsHitTestVisible="False" Background="{DynamicResource Brush.Scrim.Bottom}" />
+                <!-- The mode showing, named while the controls show; presses go through to the band. -->
+                <StackPanel Name="ModeName" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="32,24,0,0" Spacing="2" IsHitTestVisible="False">
+                    <TextBlock Text="{Binding ModeTitle}" FontSize="20" FontWeight="Bold" />
+                    <TextBlock Text="{Binding ModeCaption}" FontSize="12.5" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,22,26,0">
-                    <Button Theme="{StaticResource IconButton}" ui:Tip.Text="{Binding ModeTip}">
+                    <!-- The modes in their families, made as the menu opens so the one showing is ticked. -->
+                    <Button Theme="{StaticResource IconButton}" Name="ModeButton" ui:Tip.Text="{Binding ModeTip}">
                         <Button.Flyout>
-                            <MenuFlyout ItemsSource="{Binding ModeChoices}" Placement="BottomEdgeAlignedRight">
-                                <MenuFlyout.ItemContainerTheme>
-                                    <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:MenuChoice">
-                                        <Setter Property="Header" Value="{Binding Title}" />
-                                        <Setter Property="Command" Value="{Binding ChooseCommand}" />
-                                        <Setter Property="ToggleType" Value="Radio" />
-                                        <Setter Property="IsChecked" Value="{Binding IsChecked}" />
-                                    </ControlTheme>
-                                </MenuFlyout.ItemContainerTheme>
-                            </MenuFlyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight" />
                         </Button.Flyout>
                         <PathIcon Data="{StaticResource Icon.ChartBar}" Width="20" Height="20" />
                     </Button>

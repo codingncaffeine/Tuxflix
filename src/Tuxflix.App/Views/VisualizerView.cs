@@ -1,9 +1,15 @@
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
+using SkiaSharp;
+using Tuxflix.App.Imaging;
 using Tuxflix.App.Music;
+using Tuxflix.Core.Diagnostics;
+using Tuxflix.Core.Plex;
 
 namespace Tuxflix.App.Views;
 
@@ -26,10 +32,15 @@ public sealed class VisualizerView : Control
     public static readonly StyledProperty<VisualizerPalette?> PaletteProperty =
         AvaloniaProperty.Register<VisualizerView, VisualizerPalette?>(nameof(Palette));
 
+    private const int CoverSize = 640;
+
     private VisualizerRenderer? _renderer;
     private IDisposable? _lease;
     private WriteableBitmap? _front;
     private bool _attached;
+    private MusicPlayer? _drawing;
+    private CancellationTokenSource? _coverLoad;
+    private string? _coverPath;
 
     public MusicPlayer? Music
     {
@@ -98,20 +109,107 @@ public sealed class VisualizerView : Control
     private void StartDrawing(MusicPlayer music)
     {
         _lease = music.Visuals.Listen();
-        var renderer = new VisualizerRenderer(() => music.Visuals.Full, Present) { Mode = Mode, Palette = Palette ?? VisualizerPalettes.Fixed[0] };
+        var renderer = new VisualizerRenderer(() => music.Visuals.Full, Present)
+        {
+            Mode = Mode,
+            Palette = Palette ?? VisualizerPalettes.Fixed[0],
+            Classic = () => music.Visuals.Classic,
+        };
         _renderer = renderer;
+        _drawing = music;
+        music.PropertyChanged += OnMusicChanged;
         renderer.Resize(PixelSizeNow());
         renderer.Start();
+        LoadCover(music.ArtPath);
     }
 
     private void StopDrawing()
     {
+        if (_drawing is not null) _drawing.PropertyChanged -= OnMusicChanged;
+        _drawing = null;
+        _coverLoad?.Cancel();
+        _coverLoad = null;
+        _coverPath = null;
         _front = null;
         _renderer?.Stop();
         _renderer = null;
         _lease?.Dispose();
         _lease = null;
         InvalidateVisual();
+    }
+
+    private void OnMusicChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MusicPlayer.ArtPath) && sender is MusicPlayer music) LoadCover(music.ArtPath);
+    }
+
+    // The cover for the modes that show it, fetched and turned into a picture Skia can draw on a
+    // worker; the renderer takes it on its own thread.
+    private void LoadCover(string? path)
+    {
+        if (path == _coverPath || _renderer is not { } renderer) return;
+        _coverPath = path;
+        _coverLoad?.Cancel();
+        if (path is null || ImageLoader.Current is not { } loader)
+        {
+            renderer.SetCover(null);
+            return;
+        }
+
+        var cancel = _coverLoad = new CancellationTokenSource();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var lease = await loader.AcquireAsync(path, CoverSize, CoverSize, ImageFormat.Jpeg, cancel.Token).ConfigureAwait(false);
+                if (lease is null || cancel.IsCancellationRequested) return;
+                var image = ToSkia(lease.Bitmap);
+                if (cancel.IsCancellationRequested) image.Dispose();
+                else renderer.SetCover(image);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("The visualizer could not take the cover.", ex);
+            }
+        });
+    }
+
+    /// <summary>A copy of <paramref name="bitmap"/> as a Skia image, in the renderer's own pixel format.</summary>
+    internal static SKImage ToSkia(Bitmap bitmap)
+    {
+        var size = bitmap.PixelSize;
+        var info = new SKImageInfo(size.Width, size.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using var pixels = new SKBitmap(info);
+        using (var target = new SkiaFramebuffer(pixels))
+        {
+            bitmap.CopyPixels(target);
+        }
+
+        pixels.SetImmutable();
+        return SKImage.FromBitmap(pixels);
+    }
+
+    // A Skia bitmap's memory, as the frame buffer a bitmap copies its pixels into (and converts them for).
+    private sealed class SkiaFramebuffer(SKBitmap bitmap) : ILockedFramebuffer
+    {
+        public IntPtr Address => bitmap.GetPixels();
+
+        public PixelSize Size => new(bitmap.Width, bitmap.Height);
+
+        public int RowBytes => bitmap.RowBytes;
+
+        public Vector Dpi => new(96, 96);
+
+        public PixelFormat Format => PixelFormat.Bgra8888;
+
+        public AlphaFormat AlphaFormat => AlphaFormat.Premul;
+
+        public void Dispose()
+        {
+        }
     }
 
     // On the drawing thread: the frame is shown on the next pass of the UI thread, and only then may the next be drawn.

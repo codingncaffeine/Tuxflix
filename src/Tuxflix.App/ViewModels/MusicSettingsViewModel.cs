@@ -14,13 +14,14 @@ public sealed partial class MusicSettingsViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(shell);
         _shell = shell;
         var music = shell.Settings.Music;
-        VisualizerMode = Enum.TryParse<VisualizerMode>(music.VisualizerMode, out var mode) ? mode.ToString() : nameof(Music.VisualizerMode.Spectrum);
+        VisualizerMode = VisualizerModes.Title(VisualizerModes.Find(music.VisualizerMode) ?? Music.VisualizerMode.Spectrum);
         VisualizerPalette = VisualizerPalettes.Names.Contains(music.VisualizerPalette) ? music.VisualizerPalette : VisualizerPalettes.AlbumName;
         ShowLyrics = music.ShowLyrics;
         _ready = true;
     }
 
-    public IReadOnlyList<string> Modes { get; } = Enum.GetNames<VisualizerMode>();
+    /// <summary>Every mode by its title, in the menus' order; the setting keeps the mode's own name.</summary>
+    public IReadOnlyList<string> Modes { get; } = [.. VisualizerModes.All.Select(m => m.Title)];
 
     public IReadOnlyList<string> Palettes => VisualizerPalettes.Names;
 
@@ -33,7 +34,7 @@ public sealed partial class MusicSettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowLyrics { get; set; }
 
-    partial void OnVisualizerModeChanged(string value) => Save(m => m.VisualizerMode = value);
+    partial void OnVisualizerModeChanged(string value) => Save(m => m.VisualizerMode = (VisualizerModes.Find(value) ?? Music.VisualizerMode.Spectrum).ToString());
 
     partial void OnVisualizerPaletteChanged(string value) => Save(m => m.VisualizerPalette = value);
 
