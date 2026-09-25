@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.ItemViewerBar"
+             x:DataType="vm:ItemPageViewModel">
+
+    <!-- The viewer's own row under the play bar, as Steam keeps a game's own actions under its
+         play bar: their rating, watched or not, a playlist, and the audio and subtitles it starts with. -->
+    <WrapPanel Margin="44,14,44,0" Orientation="Horizontal" ItemSpacing="0">
+
+        <StackPanel Orientation="Horizontal" Spacing="12" Margin="4,0,24,10" VerticalAlignment="Center" IsVisible="{Binding CanRate}">
+            <TextBlock Classes="label" Text="YOUR RATING" VerticalAlignment="Center" />
+            <ui:StarRating Value="{Binding UserRating}" StarSize="17" VerticalAlignment="Center"
+                           ui:Tip.Text="{Binding RatingTip}" AutomationProperties.Name="Your rating" />
+        </StackPanel>
+
+        <Button Theme="{StaticResource GhostButton}" Padding="14,8" Margin="0,0,10,10" Classes.toggle-on="{Binding IsWatched}"
+                Command="{Binding ToggleWatchedCommand}" IsVisible="{Binding CanMarkWatched}" ui:Tip.Text="{Binding WatchedTip}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Panel Width="15" Height="15">
+                    <PathIcon Data="{StaticResource Icon.CheckCircle.Fill}" Width="15" Height="15" IsVisible="{Binding IsWatched}" />
+                    <PathIcon Data="{StaticResource Icon.CheckCircle}" Width="15" Height="15" IsVisible="{Binding !IsWatched}" />
+                </Panel>
+                <TextBlock Text="{Binding WatchedLabel}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Button>
+
+        <Button Theme="{StaticResource GhostButton}" Padding="14,8" Margin="0,0,24,10" IsVisible="{Binding CanAddToPlaylist}"
+                ui:ViewerMenu.Playlists="{Binding}" ui:Tip.Text="Add it to one of your playlists, or to a new one">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{StaticResource Icon.ListPlus}" Width="15" Height="15" />
+                <TextBlock Text="ADD TO PLAYLIST" VerticalAlignment="Center" />
+                <PathIcon Data="{StaticResource Icon.CaretDown.Bold}" Width="9" Height="9" />
+            </StackPanel>
+        </Button>
+
+        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,10" IsVisible="{Binding HasStreamChoices}">
+            <PathIcon Data="{StaticResource Icon.SpeakerHigh}" Width="16" Height="16" VerticalAlignment="Center"
+                      Foreground="{DynamicResource Brush.Text.Secondary}" />
+            <ComboBox ItemsSource="{Binding AudioStreams}" SelectedItem="{Binding SelectedAudio}" MinWidth="220" MaxWidth="340"
+                      AutomationProperties.Name="Audio" ui:Tip.Text="The audio it plays with, here and in every Plex player">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StreamOptionViewModel">
+                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <PathIcon Data="{StaticResource Icon.Subtitles}" Width="16" Height="16" Margin="8,0,0,0" VerticalAlignment="Center"
+                      Foreground="{DynamicResource Brush.Text.Secondary}" />
+            <ComboBox ItemsSource="{Binding SubtitleStreams}" SelectedItem="{Binding SelectedSubtitle}" MinWidth="180" MaxWidth="320"
+                      AutomationProperties.Name="Subtitles" ui:Tip.Text="The subtitles it plays with, here and in every Plex player">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StreamOptionViewModel">
+                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+    </WrapPanel>
+</UserControl>

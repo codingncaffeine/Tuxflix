@@ -17,13 +17,13 @@ public abstract partial class MediaTileViewModel(ShellViewModel shell, MetadataI
 
     public abstract string Subtitle { get; }
 
-    public double Progress => Item.Progress ?? 0;
+    public double Progress => State.Progress ?? 0;
 
-    public bool HasProgress => Item.Progress is > 0 and < 1;
+    public bool HasProgress => State.HasProgress;
 
-    public bool IsWatched => Item.IsWatched && !HasProgress;
+    public bool IsWatched => State.IsWatched && !HasProgress;
 
-    public int UnwatchedCount => Item.Type is "show" or "season" ? Item.UnwatchedLeaves : 0;
+    public int UnwatchedCount => Item.Type is "show" or "season" ? State.UnwatchedLeaves : 0;
 
     public bool HasUnwatchedCount => UnwatchedCount > 0 && !IsWatched;
 
@@ -32,9 +32,7 @@ public abstract partial class MediaTileViewModel(ShellViewModel shell, MetadataI
     /// <summary>Added in the last fortnight and never started: Steam's "new to library".</summary>
     public bool IsNew => Item.AddedAt is { } added
                          && DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(added) < TimeSpan.FromDays(14)
-                         && Item.ViewCount is null or 0
-                         && Item.ViewedLeafCount is null or 0
-                         && !HasProgress;
+                         && State.IsUnplayed;
 
     /// <summary>What a screen reader says for the tile.</summary>
     public string AccessibleName => string.IsNullOrEmpty(Subtitle) ? Title : $"{Title}, {Subtitle}";

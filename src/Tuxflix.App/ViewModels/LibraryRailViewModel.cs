@@ -224,14 +224,14 @@ public sealed partial class RailItemRow(LibraryRailViewModel rail, MetadataItem 
 
     public string? ThumbPath => Item.Thumb;
 
-    public bool IsWatched => Item.IsWatched;
+    public bool IsWatched => State.IsWatched;
 
     /// <summary>"42%" for something part-way through, "3" unwatched episodes for a series.</summary>
-    public string Trailing => Item.Progress is > 0 and < 1 ? $"{Item.Progress.Value:P0}".Replace(" ", string.Empty, StringComparison.Ordinal)
-        : Item.Type == "show" && Item.UnwatchedLeaves > 0 && Item.ViewedLeafCount > 0 ? Item.UnwatchedLeaves.ToString(CultureInfo.InvariantCulture)
+    public string Trailing => State.HasProgress ? $"{State.Progress!.Value:P0}".Replace(" ", string.Empty, StringComparison.Ordinal)
+        : Item.Type == "show" && State.UnwatchedLeaves > 0 && State.ViewedLeafCount > 0 ? State.UnwatchedLeaves.ToString(CultureInfo.InvariantCulture)
         : string.Empty;
 
-    public bool IsInProgress => Item.Progress is > 0 and < 1;
+    public bool IsInProgress => State.HasProgress;
 
     public bool HasTrailing => Trailing.Length > 0;
 

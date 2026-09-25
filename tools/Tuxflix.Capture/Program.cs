@@ -3,6 +3,7 @@
 //   dotnet run --project tools/Tuxflix.Capture -c Release -- <output-dir> [WIDTHxHEIGHT] [pose ...]
 //
 // Poses: home, home-hover, movie, series, welcome, discover, tooltip. With none given, all of them.
+// The viewer's own: movie-rated, home-menu (a tile's menu), playlist-edit, playlist-rename, activity.
 // With --real also: artist, album, nowplaying, and classic (the compact player over a playing album;
 // CLASSIC_SKIN=path.wsz wears that skin, otherwise the base skin, fetched as the app fetches it;
 // CLASSIC_SCALE=1.5 sets its size).
@@ -88,11 +89,13 @@ void Capture(string pose)
 
     // The keyring is the user's: a capture reads the real sign-in and never stores over or deletes it.
     // Nor does it make a sound or tell the server anything about what it plays.
+    Tuxflix.Core.Demo.DemoNotificationSource? demoNews = null;
     var shell = new ShellViewModel(settings, paths)
     {
         Keyring = new ReadOnlySecretStore(new Keyring()),
         ReportsPlayback = false,
         Silent = true,
+        NotificationSources = real ? null : s => demoNews = new Tuxflix.Core.Demo.DemoNotificationSource(s.Demo!),
     };
     var window = new MainWindow(shell, settings) { Width = width, Height = height };
     window.Show();
@@ -251,6 +254,11 @@ void Capture(string pose)
         Idle(shell);
     }
 
+    if (!real && pose is "movie-rated" or "home-menu" or "playlist-edit" or "playlist-rename" or "activity")
+    {
+        ViewerPose(shell, window, pose, demoNews);
+    }
+
     if (pose == "player")
     {
         // The overlay over a black picture: there is no OpenGL on the headless platform.
@@ -347,6 +355,67 @@ void Capture(string pose)
     frame.Save(file, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
     Console.WriteLine($"{pose}: {file} ({frame.PixelSize.Width}x{frame.PixelSize.Height})");
     window.Close();
+}
+
+// The viewer's own poses: a rating and a watched mark, a tile's menu, a playlist being edited, Activity.
+void ViewerPose(ShellViewModel shell, Window window, string pose, Tuxflix.Core.Demo.DemoNotificationSource? news)
+{
+    var session = shell.Session ?? throw new InvalidOperationException("No server is open.");
+    switch (pose)
+    {
+        case "movie-rated":
+            shell.OpenItem(session.Demo!.Movies[2]);
+            Idle(shell);
+            var page = (ItemPageViewModel)shell.Router.Current!;
+            page.UserRating = 7;
+            Wait(page.ToggleWatchedCommand.ExecuteAsync(null));
+            Settle(shell);
+            break;
+        case "home-menu":
+            var tile = window.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("tile") && b.DataContext is PosterTileViewModel).Skip(1).First();
+            tile.ContextFlyout!.ShowAt(tile);
+            Pump(TimeSpan.FromMilliseconds(400));
+            var into = window.GetVisualDescendants().Concat(TopLevel.GetTopLevel(window)!.GetVisualDescendants()).OfType<MenuItem>().FirstOrDefault(m => m.Header as string == "Add to playlist");
+            if (into is not null) into.IsSubMenuOpen = true;
+            Pump(TimeSpan.FromMilliseconds(400));
+            break;
+        case "playlist-edit" or "playlist-rename":
+            shell.OpenItem(Result(session.Client.GetPlaylistsAsync(CancellationToken.None))[0]);
+            Idle(shell);
+            var playlist = (PlaylistPageViewModel)shell.Router.Current!;
+            if (pose == "playlist-rename") playlist.StartRenameCommand.Execute(null);
+            Pump(TimeSpan.FromMilliseconds(300));
+            var rows = window.GetVisualDescendants().OfType<Button>().Where(b => b.DataContext is PlaylistVideoRowViewModel).ToList();
+            if (rows.Count > 1 && rows[1].TranslatePoint(new Point(rows[1].Bounds.Width / 2, rows[1].Bounds.Height / 2), window) is { } middle)
+            {
+                window.MouseMove(middle);
+                Pump(TimeSpan.FromMilliseconds(400));
+            }
+
+            break;
+        case "activity":
+            shell.ShowActivityCommand.Execute(null);
+            Idle(shell);
+
+            // A library scan part-way through, as the server reports one.
+            using (var stop = new CancellationTokenSource())
+            {
+                var scan = news!.ScanAsync("1", "Movies", 10, TimeSpan.FromMilliseconds(150), stop.Token);
+                Pump(TimeSpan.FromMilliseconds(700));
+                stop.Cancel();
+                try
+                {
+                    Wait(scan);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Stopped part-way on purpose.
+                }
+            }
+
+            Settle(shell);
+            break;
+    }
 }
 
 // Waits for the current page to finish loading (a library's later pages too), then for its artwork.

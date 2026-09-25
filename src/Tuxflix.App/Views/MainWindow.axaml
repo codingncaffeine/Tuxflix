@@ -166,7 +166,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="9">
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="ACTIVITY" Classes="label" HorizontalAlignment="Right" Foreground="{DynamicResource Brush.Text.Secondary}" />
-                                    <TextBlock Text="Nothing playing" FontSize="10.5" Classes="faint" HorizontalAlignment="Right" />
+                                    <TextBlock Text="{Binding Live.Summary}" FontSize="10.5" Classes="faint" HorizontalAlignment="Right" />
                                 </StackPanel>
                                 <PathIcon Data="{StaticResource Icon.Pulse}" Width="14" Height="14" />
                             </StackPanel>

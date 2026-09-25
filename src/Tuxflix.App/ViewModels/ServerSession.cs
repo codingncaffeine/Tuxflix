@@ -37,13 +37,19 @@ public sealed class ServerSession : IDisposable
 
     public bool IsDemo => Client.IsDemo;
 
+    /// <summary>The demo library behind a demo session, whose changes its stand-in notifications report.</summary>
+    public DemoCatalog? Demo { get; private init; }
+
+    /// <summary>The signed-in account owns the server: it sees everyone's playbacks and history, its own as account 1.</summary>
+    public bool IsOwned { get; private init; }
+
     public static ServerSession CreateDemo(PlexClientIdentity identity)
     {
         ArgumentNullException.ThrowIfNull(identity);
         var catalog = DemoCatalog.Create(DateTimeOffset.Now);
         var http = identity.CreateHttpClient(new DemoPlexHandler(catalog, new ProceduralArt()));
         var client = new PlexServerClient(http, DemoPlexHandler.BaseUri, token: null, "Demo Library", isDemo: true);
-        return new ServerSession(http, client, "Built-in", diskCache: null, DemoCatalog.MachineIdentifier);
+        return new ServerSession(http, client, "Built-in", diskCache: null, DemoCatalog.MachineIdentifier) { Demo = catalog, IsOwned = true };
     }
 
     /// <summary>A real server, over the connection the picker chose, with its artwork cached on disk.</summary>
@@ -57,7 +63,7 @@ public sealed class ServerSession : IDisposable
         var http = identity.CreateHttpClient(network, disposeHandler: network is null);
         var client = new PlexServerClient(http, connection.Uri, server.AccessToken, server.Name);
         var cache = Path.Combine(paths.ImageCache, Sanitise(server.ClientIdentifier));
-        return new ServerSession(http, client, connection.Describe(), cache, server.ClientIdentifier, isRemote: connection.Kind != ConnectionKind.Local);
+        return new ServerSession(http, client, connection.Describe(), cache, server.ClientIdentifier, isRemote: connection.Kind != ConnectionKind.Local) { IsOwned = server.Owned };
     }
 
     public void Dispose() => _http.Dispose();

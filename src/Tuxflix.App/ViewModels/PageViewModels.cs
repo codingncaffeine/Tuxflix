@@ -302,11 +302,11 @@ public sealed partial class EpisodeRowViewModel(ShellViewModel shell, MetadataIt
 
     public string? ThumbPath => Episode.Thumb;
 
-    public bool IsWatched => Episode.IsWatched;
+    public bool IsWatched => State.IsWatched;
 
-    public bool HasProgress => Episode.Progress is > 0 and < 1;
+    public bool HasProgress => State.HasProgress;
 
-    public double Progress => Episode.Progress ?? 0;
+    public double Progress => State.Progress ?? 0;
 
     [RelayCommand]
     private void Open() => shell.OpenItem(Episode);
