@@ -18,6 +18,9 @@ public enum DemoArtKind
 
     /// <summary>The title as a transparent logo, as a server's clearLogo image is.</summary>
     Logo,
+
+    /// <summary>A photograph: a scene, with nothing written on it.</summary>
+    Photo,
 }
 
 public sealed record DemoArtRequest(DemoArtKind Kind, string Title, string? Subtitle, int Seed, int Width, int Height);
@@ -82,7 +85,7 @@ public sealed partial class DemoPlexHandler(DemoCatalog catalog, IDemoArtRendere
             ["library", "sections", _, "sorts"] => Json(new MediaContainer { Directory = [.. Sorts] }),
             ["library", "sections", var section, "filters"] => Json(new MediaContainer { Directory = [.. Filters(section)] }),
             ["library", "sections", var section, "collections"] => Json(new MediaContainer { Size = catalog.CollectionsOf(section).Count, Metadata = [.. catalog.CollectionsOf(section)] }),
-            ["library", "sections", var section, var filter] => Json(new MediaContainer { Directory = [.. catalog.FilterValues(section, filter)] }),
+            ["library", "sections", var section, var filter] when filter is "genre" or "decade" or "contentRating" => Json(new MediaContainer { Directory = [.. catalog.FilterValues(section, filter)] }),
             ["library", "collections", var key, "children"] => Json(new MediaContainer { Size = catalog.ChildrenOf(key).Count, Metadata = [.. catalog.ChildrenOf(key)] }),
             ["hubs", "search"] => Json(new MediaContainer { Hub = [.. catalog.Search(query["query"] ?? string.Empty, ParseInt(query["limit"], 10))] }),
             ["hubs"] => Json(new MediaContainer { Size = catalog.HomeHubs().Count, Hub = [.. catalog.HomeHubs()] }),
@@ -91,6 +94,10 @@ public sealed partial class DemoPlexHandler(DemoCatalog catalog, IDemoArtRendere
                 ? Json(new MediaContainer { Size = items.Count, Metadata = [.. items] })
                 : NotFound(),
             ["library", "metadata", var key, "children"] => Json(new MediaContainer { Size = catalog.ChildrenOf(key).Count, Metadata = [.. catalog.ChildrenOf(key)] }),
+            ["library", "metadata", var key, "allLeaves"] => catalog.Find(key) is null ? NotFound() : List(catalog.AllLeaves(key)),
+
+            // A stream's own content: a subtitle file kept beside a film, or a track's lyrics.
+            ["library", "streams", var id] => SubtitleFile(id) ?? Lyrics(id) ?? NotFound(),
             ["photo", ":", "transcode"] => Image(query["url"], ParseInt(query["width"]), ParseInt(query["height"])),
             ["library", "parts", var part, "indexes", "sd"] => Previews(part),
             ["services", "ultrablur", "colors"] => query["url"] is { } url && catalog.UltraBlurFor(url) is { } colours
@@ -134,7 +141,7 @@ public sealed partial class DemoPlexHandler(DemoCatalog catalog, IDemoArtRendere
     /// <summary>A section listing with the server's sort and filter parameters, as far as the demo has the data.</summary>
     private HttpResponseMessage SectionItems(string section, System.Collections.Specialized.NameValueCollection query, int? start, int? size)
     {
-        IEnumerable<MetadataItem> items = catalog.SectionItems(section);
+        IEnumerable<MetadataItem> items = catalog.SectionItems(section, query["type"]);
         if (query["genre"] is { } genre) items = items.Where(i => i.Genre?.Any(g => Same(g.Id, genre)) == true);
         if (query["decade"] is { } decade) items = items.Where(i => i.Year is { } year && (year / 10 * 10).ToString(CultureInfo.InvariantCulture) == decade);
         if (query["contentRating"] is { } rating) items = items.Where(i => i.ContentRating == rating);
@@ -172,6 +179,7 @@ public sealed partial class DemoPlexHandler(DemoCatalog catalog, IDemoArtRendere
         }
 
         var kind = path.StartsWith("/demo/person/", StringComparison.Ordinal) ? DemoArtKind.Person
+            : path.StartsWith("/demo/photo/", StringComparison.Ordinal) ? DemoArtKind.Photo
             : path.Contains("/clearLogo/", StringComparison.Ordinal) ? DemoArtKind.Logo
             : path.Contains("/art/", StringComparison.Ordinal) ? DemoArtKind.Backdrop
             : subject.Subtitle is { } sub && !sub.StartsWith("Season ", StringComparison.Ordinal) && !int.TryParse(sub, out _) ? DemoArtKind.Still

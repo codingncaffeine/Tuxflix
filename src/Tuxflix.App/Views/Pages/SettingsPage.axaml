@@ -196,6 +196,22 @@
                 </Border>
             </StackPanel>
 
+            <!-- ===== Music ===== -->
+            <StackPanel Spacing="10">
+                <TextBlock Text="Music" FontSize="17" FontWeight="SemiBold" />
+                <Border Classes="section">
+                    <sections:MusicSettingsView DataContext="{Binding Music}" />
+                </Border>
+            </StackPanel>
+
+            <!-- ===== Photos ===== -->
+            <StackPanel Spacing="10">
+                <TextBlock Text="Photos" FontSize="17" FontWeight="SemiBold" />
+                <Border Classes="section">
+                    <sections:PhotoSettingsView DataContext="{Binding Photos}" />
+                </Border>
+            </StackPanel>
+
             <!-- ===== About ===== -->
             <StackPanel Spacing="10">
                 <TextBlock Text="About Tuxflix" FontSize="17" FontWeight="SemiBold" />

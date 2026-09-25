@@ -15,7 +15,6 @@ public sealed partial class DemoPlexHandler
     {
         ["library", "metadata", var key, "subtitles"] when request.Method == HttpMethod.Get => handler.FoundSubtitles(key, query["language"] ?? "en"),
         ["library", "metadata", var key, "subtitles"] when request.Method == HttpMethod.Put => handler.KeepSubtitle(key, query),
-        ["library", "streams", var id] => handler.SubtitleFile(id),
         _ => null,
     });
 
@@ -59,9 +58,10 @@ public sealed partial class DemoPlexHandler
         return new HttpResponseMessage(HttpStatusCode.OK);
     }
 
-    private HttpResponseMessage SubtitleFile(string id)
+    /// <summary>A subtitle file the demo kept beside a film, or null when the stream is not one.</summary>
+    private HttpResponseMessage? SubtitleFile(string id)
     {
-        if (!id.StartsWith("81", StringComparison.Ordinal)) return NotFound();
+        if (!id.StartsWith("81", StringComparison.Ordinal)) return null;
         var srt = "1\n00:00:01,000 --> 00:00:04,000\nA subtitle found online.\n\n2\n00:00:05,000 --> 00:00:09,000\nThe demo library kept it with the film.\n";
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(srt, Encoding.UTF8, "text/srt") };
     }

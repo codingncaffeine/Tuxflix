@@ -56,6 +56,12 @@ public sealed partial class SettingsPageViewModel(ShellViewModel shell) : PageVi
     /// <summary>Downloads: where they go, how many at once and how fast.</summary>
     public DownloadSettingsViewModel Downloads { get; } = new(shell);
 
+    /// <summary>Music: the visualizer and the lyrics.</summary>
+    public MusicSettingsViewModel Music { get; } = new(shell);
+
+    /// <summary>Photos: the slideshow.</summary>
+    public PhotoSettingsViewModel Photos { get; } = new(shell);
+
     // ===== How films and episodes play =====
 
     public IReadOnlyList<StreamQuality> QualityChoices => StreamQuality.All;

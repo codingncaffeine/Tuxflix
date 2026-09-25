@@ -246,7 +246,7 @@ public sealed class DemoLibraryTests
         var (client, _, _) = Create();
 
         var sections = await client.GetSectionsAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(["movie", "show"], sections.Select(s => s.Type));
+        Assert.Equal(["movie", "show", "artist", "photo"], sections.Select(s => s.Type));
 
         var hubs = await client.GetHomeHubsAsync(TestContext.Current.CancellationToken);
         Assert.Equal("home.continue", hubs[0].HubIdentifier);

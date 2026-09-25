@@ -87,17 +87,19 @@ public sealed class SignInFlowTests
 
             shell.Router.Navigate(new SignInPageViewModel(shell));
 
+            // The session is set a moment before its home page replaces "Connecting": wait for both.
             var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(15);
-            while (shell.Session is null && DateTime.UtcNow < deadline)
+            while ((shell.Session is null || shell.Router.Current is not HomePageViewModel) && DateTime.UtcNow < deadline)
             {
                 await Task.Delay(50, TestContext.Current.CancellationToken);
             }
 
-            // Where sign-in stood at the deadline, so a failure (seen once in about 75 runs) says what happened.
-            Assert.True(shell.Session is not null, $"no session after 15 s; the page is {shell.Router.Current?.GetType().Name} \"{shell.Router.Current?.Title}\", error \"{(shell.Router.Current as PageViewModel)?.ErrorMessage}\", browser opened {browserOpened} times");
+            // Where sign-in stood at the deadline, so a failure says what happened.
+            var stood = $"the page is {shell.Router.Current?.GetType().Name} \"{shell.Router.Current?.Title}\", error \"{(shell.Router.Current as PageViewModel)?.ErrorMessage}\", browser opened {browserOpened} times";
+            Assert.True(shell.Session is not null, "no session after 15 s; " + stood);
+            Assert.True(shell.Router.Current is HomePageViewModel, "no home page after 15 s; " + stood);
             Assert.Equal(1, browserOpened);
             Assert.Equal("Den", shell.Session.Name);
-            Assert.IsType<HomePageViewModel>(shell.Router.Current);
             Assert.Equal("account-token", Assert.Single(secrets.Kept).Value);
         }
         finally

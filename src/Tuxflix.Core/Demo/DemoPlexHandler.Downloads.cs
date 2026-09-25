@@ -21,7 +21,6 @@ public sealed partial class DemoPlexHandler
     private static readonly bool DownloadRoutes = Add((handler, segments, query, request) => segments switch
     {
         ["library", "parts", var id, _, _] when query["download"] == "1" => handler.Download(id, request),
-        ["library", "metadata", var key, "allLeaves"] => handler.AllLeaves(key),
         [":", "timeline"] => handler.Note($"timeline {query["ratingKey"]} {query["state"]} {query["time"]}"),
         _ => null,
     });
@@ -97,13 +96,6 @@ public sealed partial class DemoPlexHandler
     }
 
     /// <summary>Every episode of a series in order, or of a season.</summary>
-    private HttpResponseMessage? AllLeaves(string key)
-    {
-        if (Catalog.Find(key) is not { } item) return null;
-        List<MetadataItem> leaves = item.Type == "show" ? [.. Catalog.ChildrenOf(key).SelectMany(s => Catalog.ChildrenOf(s.RatingKey))] : [.. Catalog.ChildrenOf(key)];
-        return Json(new MediaContainer { Size = leaves.Count, Metadata = leaves });
-    }
-
     /// <summary>
     /// Notes a watch report, then gives the answer that acts on it: one route for a report that
     /// both the downloads' replay and the viewer's marks rely on, whatever order routes are tried in.

@@ -40,6 +40,8 @@
         <DataTemplate DataType="vm:PlaylistsPageViewModel"><pages:PlaylistsPage /></DataTemplate>
         <DataTemplate DataType="vm:PlaylistPageViewModel"><pages:PlaylistPage /></DataTemplate>
         <DataTemplate DataType="vm:DownloadsPageViewModel"><pages:DownloadsPage /></DataTemplate>
+        <DataTemplate DataType="vm:PhotosPageViewModel"><pages:PhotosPage /></DataTemplate>
+        <DataTemplate DataType="vm:PhotoViewerPageViewModel"><pages:PhotoViewerPage /></DataTemplate>
 
         <!-- Artwork tiles -->
         <DataTemplate DataType="vm:PosterTileViewModel"><tiles:PosterTile /></DataTemplate>
@@ -47,6 +49,7 @@
         <DataTemplate DataType="vm:AlbumTileViewModel"><tiles:AlbumTile /></DataTemplate>
         <DataTemplate DataType="vm:PersonTileViewModel"><tiles:PersonTile /></DataTemplate>
         <DataTemplate DataType="vm:PlaylistTileViewModel"><tiles:PlaylistTile /></DataTemplate>
+        <DataTemplate DataType="vm:PhotoTileViewModel"><tiles:PhotoTile /></DataTemplate>
 
         <!-- The Watchlist and item extras -->
         <DataTemplate DataType="vm:WatchlistPageViewModel"><pages:WatchlistPage /></DataTemplate>

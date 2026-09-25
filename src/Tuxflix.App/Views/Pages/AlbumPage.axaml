@@ -106,6 +106,7 @@
                                             <MenuItem Header="Play next" Command="{Binding PlayNextCommand}" />
                                             <MenuItem Header="Add to the queue" Command="{Binding AddToQueueCommand}" />
                                             <MenuItem Header="Add to playlist" ui:ViewerMenu.Submenu="{Binding}" />
+                                            <MenuItem Header="Sonic adventure from the track playing" Command="{Binding SonicAdventureCommand}" IsVisible="{Binding CanSonicAdventure}" />
                                         </MenuFlyout>
                                     </Button.ContextFlyout>
                                     <Grid ColumnDefinitions="44,*,Auto" Classes="hover-reveal">

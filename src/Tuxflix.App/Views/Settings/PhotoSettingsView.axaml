@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Settings.PhotoSettingsView"
+             x:DataType="vm:PhotoSettingsViewModel">
+
+    <!-- Photos: the slideshow's pace and order. Rows in the settings page's own style. -->
+    <StackPanel>
+        <Grid Classes="row" ColumnDefinitions="*,Auto">
+            <TextBlock Classes="name" Text="Seconds for each photo in a slideshow" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Column="1" Width="120" Minimum="2" Maximum="60" Increment="1" FormatString="0"
+                           Value="{Binding SlideshowSeconds}" ui:Tip.Text="How long each photo shows in a slideshow" />
+        </Grid>
+        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+        <Grid Classes="row" ColumnDefinitions="*,Auto">
+            <TextBlock Classes="name" Text="Shuffle slideshows" VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1" IsChecked="{Binding SlideshowShuffle}" ui:Tip.Text="Show a slideshow's photos in a random order" />
+        </Grid>
+    </StackPanel>
+</UserControl>

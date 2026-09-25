@@ -1,0 +1,60 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:classic="using:Tuxflix.App.Classic"
+        xmlns:ui="using:Tuxflix.App.Controls"
+        x:Class="Tuxflix.App.Classic.SkinMuseumWindow"
+        x:DataType="classic:SkinMuseumViewModel"
+        Title="Winamp Skin Museum" Width="1060" Height="780" MinWidth="560" MinHeight="420"
+        Background="{DynamicResource Brush.Canvas}">
+
+    <!-- The museum's skins as their pictures, a search, and a button that adds one to the library. -->
+    <Grid RowDefinitions="Auto,*,Auto">
+        <Grid ColumnDefinitions="*,Auto" Margin="28,22,28,14">
+            <StackPanel Spacing="4" VerticalAlignment="Center">
+                <TextBlock Classes="label" Text="WINAMP SKIN MUSEUM" Foreground="{DynamicResource Brush.Accent}" />
+                <TextBlock Text="{Binding Status}" FontSize="13" Classes="faint" />
+            </StackPanel>
+            <TextBox Grid.Column="1" Name="Search" Width="320" PlaceholderText="Search the museum" Text="{Binding SearchText}"
+                     AutomationProperties.Name="Search the museum">
+                <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
+                </TextBox.KeyBindings>
+            </TextBox>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Skins}" Margin="22,4,22,12">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="classic:MuseumSkinViewModel">
+                        <StackPanel Width="236" Margin="6,6,6,18" Spacing="8">
+                            <Border Width="236" Height="290" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
+                                <Image Source="{Binding Screenshot}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
+                            </Border>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Theme="{StaticResource GhostButton}" Padding="12,6" Command="{Binding AddCommand}"
+                                        ui:Tip.Text="{Binding AddTip}">
+                                    <TextBlock Text="{Binding AddLabel}" FontSize="11.5" FontWeight="SemiBold" LetterSpacing="0.6" />
+                                </Button>
+                            </Grid>
+                            <TextBlock Text="{Binding Problem}" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                       FontSize="12" Foreground="{DynamicResource Brush.Danger}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="14" Margin="0,4,0,18">
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Width="160" Height="2" MinHeight="2"
+                         Foreground="{DynamicResource Brush.Accent}" Background="Transparent" VerticalAlignment="Center" />
+            <Button Theme="{StaticResource GhostButton}" Padding="18,8" Command="{Binding MoreCommand}" IsVisible="{Binding CanLoadMore}"
+                    ui:Tip.Text="The next skins">
+                <TextBlock Text="MORE" FontWeight="SemiBold" LetterSpacing="0.6" />
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

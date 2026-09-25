@@ -23,6 +23,7 @@ public sealed partial class MediaStream
     [JsonPropertyName("hearingImpaired")]
     public bool HearingImpaired { get; init; }
 
+    /// <summary>The stream's file form: a subtitle's (<c>srt</c>, <c>ass</c>), or a lyric stream's, <c>lrc</c> (timed) or <c>txt</c>.</summary>
     [JsonPropertyName("format")]
     public string? Format { get; init; }
 }

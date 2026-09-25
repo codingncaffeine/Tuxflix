@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Settings.MusicSettingsView"
+             x:DataType="vm:MusicSettingsViewModel">
+
+    <!-- Music: how the visualizer opens, and whether the lyrics stand in for the queue. Rows in the
+         settings page's own style. -->
+    <StackPanel>
+        <Grid Classes="row" ColumnDefinitions="*,Auto">
+            <StackPanel>
+                <TextBlock Classes="name" Text="Visualizer" />
+                <TextBlock Classes="about" Text="The shape it opens in; the Now Playing page can change it while it plays." />
+            </StackPanel>
+            <ComboBox Grid.Column="1" MinWidth="170" ItemsSource="{Binding Modes}" SelectedItem="{Binding VisualizerMode}"
+                      ui:Tip.Text="The shape the visualizer opens in" />
+        </Grid>
+        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+        <Grid Classes="row" ColumnDefinitions="*,Auto">
+            <StackPanel>
+                <TextBlock Classes="name" Text="Visualizer colours" />
+                <TextBlock Classes="about" Text="Album takes them from the cover of what plays." />
+            </StackPanel>
+            <ComboBox Grid.Column="1" MinWidth="170" ItemsSource="{Binding Palettes}" SelectedItem="{Binding VisualizerPalette}"
+                      ui:Tip.Text="The visualizer's colours" />
+        </Grid>
+        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" />
+        <Grid Classes="row" ColumnDefinitions="*,Auto">
+            <StackPanel>
+                <TextBlock Classes="name" Text="Lyrics beside the cover" />
+                <TextBlock Classes="about" Text="In place of the queue, for a track that has them." />
+            </StackPanel>
+            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowLyrics}" ui:Tip.Text="Show a track's lyrics in place of the queue" />
+        </Grid>
+    </StackPanel>
+</UserControl>

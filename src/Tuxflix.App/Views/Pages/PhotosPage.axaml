@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:views="using:Tuxflix.App.Views"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.PhotosPage"
+             x:DataType="vm:PhotosPageViewModel">
+
+    <!-- A photo library or album: its name, a slideshow, then its albums and photos. -->
+    <Grid RowDefinitions="Auto,*">
+        <Grid ColumnDefinitions="*,Auto" Margin="36,28,36,20">
+            <StackPanel VerticalAlignment="Center" Spacing="5">
+                <TextBlock Classes="label" Text="{Binding Kicker}" Foreground="{DynamicResource Brush.Accent}" />
+                <TextBlock Text="{Binding Title}" FontSize="30" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding CountText}" Classes="faint" FontSize="13" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" IsVisible="{Binding HasPhotos}">
+                <Button Theme="{StaticResource PlayButton}" Command="{Binding SlideshowCommand}" ui:Tip.Text="Show every photo in turn">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" />
+                        <TextBlock Text="SLIDESHOW" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Theme="{StaticResource GhostButton}" Padding="18,10" Command="{Binding ShuffleSlideshowCommand}"
+                        ui:Tip.Text="A slideshow in a random order">
+                    <StackPanel Orientation="Horizontal" Spacing="9">
+                        <PathIcon Data="{StaticResource Icon.Shuffle}" Width="16" Height="16" />
+                        <TextBlock Text="SHUFFLE" VerticalAlignment="Center" FontWeight="SemiBold" LetterSpacing="0.6" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Panel Grid.Row="1">
+            <views:RowsGrid />
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top"
+                         Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+            <TextBlock IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+        </Panel>
+    </Grid>
+</UserControl>

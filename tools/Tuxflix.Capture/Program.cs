@@ -7,9 +7,13 @@
 // movie-more (a film's page scrolled to its extras, critics and related shelves), library.
 // The viewer's own: movie-rated, home-tile-menu (a tile's menu), playlist-edit, playlist-rename, activity.
 // Downloads: downloads, downloads-options, movie-download (a film part-way down), series-download, offline (a start with no server in reach).
-// With --real also: artist, album, nowplaying, and classic (the compact player over a playing album;
+// With --real also: artist, album, nowplaying, nowplaying-lyrics (MUSIC_ALBUM_TITLE picks the artist's album by
+// title), and classic (the compact player over a playing album;
 // CLASSIC_SKIN=path.wsz wears that skin, otherwise the base skin, fetched as the app fetches it;
 // CLASSIC_SCALE=1.5 sets its size).
+// Demo music: music-album, music-artist, music-queue, music-lyrics, music-visualizer (VIS_MODE, VIS_PALETTE,
+// MUSIC_WAIT under 2 also keeps music-visualizer-controls.png); photos: photos, photo-album, photo-viewer,
+// photo-info; museum (the real Winamp Skin Museum, MUSEUM_QUERY to search; nothing is added).
 // Every run uses a throwaway profile under the output directory; nothing touches the real one.
 
 using System.Diagnostics;
@@ -135,7 +139,7 @@ void Capture(string pose)
         Settle(shell);
     }
 
-    if (real && pose is "artist" or "album" or "nowplaying" or "classic")
+    if (real && pose is "artist" or "album" or "nowplaying" or "nowplaying-lyrics" or "classic")
     {
         // An artist with a photo, by position in the rail (MUSIC_ARTIST picks another by name).
         var wanted = Environment.GetEnvironmentVariable("MUSIC_ARTIST");
@@ -146,15 +150,18 @@ void Capture(string pose)
         shell.OpenItem(row.Item);
         Settle(shell);
 
-        if (pose is "album" or "nowplaying" or "classic")
+        if (pose is "album" or "nowplaying" or "nowplaying-lyrics" or "classic")
         {
-            var album = (shell.Router.Current as ArtistPageViewModel)?.Albums.FirstOrDefault()?.Album
+            var albums = (shell.Router.Current as ArtistPageViewModel)?.Albums.Select(a => a.Album).ToList() ?? [];
+            var title = Environment.GetEnvironmentVariable("MUSIC_ALBUM_TITLE");
+            var album = (title is { Length: > 0 } ? albums.FirstOrDefault(a => a.Title.Contains(title, StringComparison.OrdinalIgnoreCase)) : null)
+                        ?? albums.FirstOrDefault()
                         ?? throw new InvalidOperationException("The artist has no album.");
             shell.OpenItem(album);
             Settle(shell);
         }
 
-        if (pose is "nowplaying" or "classic")
+        if (pose is "nowplaying" or "nowplaying-lyrics" or "classic")
         {
             var page = shell.Router.Current as AlbumPageViewModel ?? throw new InvalidOperationException("No album page.");
             page.PlayCommand.Execute(null);
@@ -164,6 +171,110 @@ void Capture(string pose)
             Settle(shell);
             Pump(TimeSpan.FromSeconds(1));
             Settle(shell);
+            if (pose == "nowplaying-lyrics" && shell.Router.Current is NowPlayingPageViewModel now)
+            {
+                // The lyrics panel in place of the queue, the lines as the server read them.
+                now.ShowLyricsPanelCommand.Execute(null);
+                var waited = Stopwatch.StartNew();
+                while (!now.HasLyrics && waited.Elapsed < TimeSpan.FromSeconds(10)) Pump(TimeSpan.FromMilliseconds(100));
+                Pump(TimeSpan.FromSeconds(2));
+                Settle(shell);
+                Console.WriteLine($"{pose}: {(now.HasLyrics ? $"{now.LyricLines.Count} lines, {(now.IsLyricsTimed ? "timed" : "untimed")}, line {now.CurrentLyric} now, {now.LyricsCredit}" : "no lyrics")}");
+                Console.WriteLine($"{pose}: radio: {string.Join(", ", now.RadioChoices.Select(c => c.Title))}");
+            }
+        }
+    }
+
+    if (pose == "museum")
+    {
+        // The Winamp Skin Museum window, reading the real museum (MUSEUM_QUERY searches it); nothing is added.
+        using var skins = new Tuxflix.App.Classic.SkinLibrary(Path.Combine(paths.Data, "skins"));
+        var model = new Tuxflix.App.Classic.SkinMuseumViewModel(new Tuxflix.App.Classic.SkinMuseum(), skins);
+        var museum = new Tuxflix.App.Classic.SkinMuseumWindow(model) { Width = 1060, Height = 780 };
+        museum.Show();
+        Pump(TimeSpan.FromSeconds(2));
+        if (Environment.GetEnvironmentVariable("MUSEUM_QUERY") is { Length: > 0 } query)
+        {
+            model.SearchText = query;
+            model.SearchCommand.Execute(null);
+        }
+
+        var until = Stopwatch.StartNew();
+        while ((model.IsLoading || model.Skins.Take(8).Any(s => s.Screenshot is null)) && until.Elapsed < TimeSpan.FromSeconds(20)) Pump(TimeSpan.FromMilliseconds(100));
+        Pump(TimeSpan.FromMilliseconds(400));
+        var shot = museum.CaptureRenderedFrame() ?? throw new InvalidOperationException("The museum rendered nothing.");
+        shot.Save(Path.Combine(output, "museum.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+        Console.WriteLine($"museum: {model.Skins.Count} skins, {model.Skins.Count(s => s.Screenshot is not null)} pictures; {model.Status}");
+        museum.Close();
+        window.Close();
+        return;
+    }
+
+    if (!real && pose is "photos" or "photo-album" or "photo-viewer" or "photo-info")
+    {
+        // The demo's photo library, an album of it, and a photo full size (with its details for photo-info).
+        var session = shell.Session ?? throw new InvalidOperationException("No server is open.");
+        var section = Result(session.Client.GetSectionsAsync(CancellationToken.None)).First(s => s.Type == "photo");
+        var catalog = Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now);
+        if (pose == "photos") shell.OpenSection(section);
+        else if (pose == "photo-album") shell.OpenItem(catalog.PhotoAlbums[0]);
+        else
+        {
+            var photos = Result(session.Client.GetChildrenAsync(catalog.PhotoAlbums[0].RatingKey, CancellationToken.None));
+            shell.ShowPhotos(photos, 2);
+            Settle(shell);
+            if (pose == "photo-info") (shell.Router.Current as PhotoViewerPageViewModel)?.ToggleInfoCommand.Execute(null);
+        }
+
+        Settle(shell);
+    }
+
+    if (!real && pose.StartsWith("music-", StringComparison.Ordinal))
+    {
+        // The demo's music: an album playing (MUSIC_ALBUM picks which, 0 on), then the Now Playing page
+        // after MUSIC_WAIT seconds (3), with its lyrics, or its visualizer (VIS_MODE, VIS_PALETTE).
+        var catalog = Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now);
+        var which = int.TryParse(Environment.GetEnvironmentVariable("MUSIC_ALBUM"), out var n) ? n : 0;
+        if (pose == "music-artist")
+        {
+            shell.OpenItem(catalog.Artists[which % catalog.Artists.Count]);
+            Settle(shell);
+        }
+
+        shell.OpenItem(catalog.Albums[which % catalog.Albums.Count]);
+        Settle(shell);
+        var album = shell.Router.Current as AlbumPageViewModel ?? throw new InvalidOperationException("No album page.");
+        if (pose == "music-artist") shell.GoBackCommand.Execute(null);
+        else if (pose != "music-album")
+        {
+            album.PlayCommand.Execute(null);
+            var wait = double.TryParse(Environment.GetEnvironmentVariable("MUSIC_WAIT"), System.Globalization.CultureInfo.InvariantCulture, out var seconds) ? seconds : 3;
+            var started = Stopwatch.StartNew();
+            while (shell.Music?.Position is null or < 0.5 && started.Elapsed < TimeSpan.FromSeconds(20)) Pump(TimeSpan.FromMilliseconds(100));
+            shell.ShowNowPlayingCommand.Execute(null);
+            Settle(shell);
+            var now = shell.Router.Current as NowPlayingPageViewModel ?? throw new InvalidOperationException("No Now Playing page.");
+            if (pose == "music-lyrics") now.ShowLyricsPanelCommand.Execute(null);
+            if (pose == "music-queue") now.ShowQueuePanelCommand.Execute(null);
+            if (pose == "music-visualizer")
+            {
+                if (Enum.TryParse<Tuxflix.App.Music.VisualizerMode>(Environment.GetEnvironmentVariable("VIS_MODE"), out var mode)) now.ChooseMode(mode);
+                if (Environment.GetEnvironmentVariable("VIS_PALETTE") is { Length: > 0 } palette) now.ChoosePalette(palette);
+                now.SetVisualizer(true);
+            }
+
+            Pump(TimeSpan.FromSeconds(wait));
+            if (pose == "music-visualizer" && wait < 2)
+            {
+                // Its controls show for three seconds after it opens, then leave the picture alone.
+                window.CaptureRenderedFrame()?.Save(Path.Combine(output, "music-visualizer-controls.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+            }
+
+            Settle(shell);
+            if (pose == "music-visualizer" && window.GetVisualDescendants().OfType<VisualizerView>().FirstOrDefault()?.Renderer is { } renderer)
+            {
+                Console.WriteLine(System.FormattableString.Invariant($"{pose}: {renderer.Times.Count} frames drawn, 95 % under {renderer.Times.Percentile(0.95):0.0} ms, slowest {renderer.Times.Max:0.0} ms"));
+            }
         }
     }
 

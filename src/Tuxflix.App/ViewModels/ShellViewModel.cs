@@ -409,6 +409,8 @@ public sealed partial class ShellViewModel : ObservableObject
             "track" when item.ParentRatingKey is { } album => new AlbumPageViewModel(this, session, new MetadataItem { RatingKey = album, Type = "album", Title = item.ParentTitle ?? string.Empty }),
             "collection" => new CollectionPageViewModel(this, session, item),
             "playlist" => new PlaylistPageViewModel(this, session, item),
+            "photo" or "photoalbum" when PhotoItems.IsAlbum(item) => new PhotosPageViewModel(this, session, item),
+            "photo" => new PhotoViewerPageViewModel(this, session, [item], 0),
             _ => new ItemPageViewModel(this, session, item),
         };
         Router.Navigate(page);
@@ -420,9 +422,24 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(section);
         if (Session is not { } session) return;
+        if (section.Type == "photo")
+        {
+            Router.Navigate(new PhotosPageViewModel(this, session, section));
+            Rail.ClearHighlight();
+            return;
+        }
+
         if (Router.Current is LibraryPageViewModel open && open.Section.Key == section.Key) return;
         Router.Navigate(new LibraryPageViewModel(this, session, section));
         Rail.ClearHighlight();
+    }
+
+    /// <summary>Photos one at a time, from <paramref name="index"/>, or a slideshow of them.</summary>
+    public void ShowPhotos(IReadOnlyList<MetadataItem> photos, int index, bool slideshow = false, bool shuffle = false)
+    {
+        ArgumentNullException.ThrowIfNull(photos);
+        if (Session is not { } session || photos.Count == 0) return;
+        Router.Navigate(new PhotoViewerPageViewModel(this, session, photos, index, slideshow, shuffle));
     }
 
     /// <summary>Everything one person is in.</summary>
@@ -509,6 +526,13 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     partial void OnAccountNameChanged(string value) => OnPropertyChanged(nameof(AccountInitials));
+
+    /// <summary>The page went into or out of its own full-window view (the visualizer) without a page change.</summary>
+    internal void ImmersionChanged()
+    {
+        OnPropertyChanged(nameof(IsImmersive));
+        OnPropertyChanged(nameof(ShowNowPlayingBar));
+    }
 
     private void OnRouterChanged(object? sender, PropertyChangedEventArgs e)
     {

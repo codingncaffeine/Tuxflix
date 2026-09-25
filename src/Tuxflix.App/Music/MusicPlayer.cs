@@ -325,6 +325,7 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
         ArgumentNullException.ThrowIfNull(tracks);
         var playable = tracks.Where(t => t.Type == "track").ToList();
         if (playable.Count == 0 || _disposed) return;
+        EndRadio();
 
         _filling?.Cancel();
         var filling = _filling = new CancellationTokenSource();
@@ -670,7 +671,8 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
     }
 
     private string Url(MetadataItem track) =>
-        track.Media?.FirstOrDefault()?.Part?.FirstOrDefault()?.Key is { } key ? _session.Client.MediaUri(key).ToString() : "about:blank";
+        _session.IsDemo ? DemoTune.Address(track)
+        : track.Media?.FirstOrDefault()?.Part?.FirstOrDefault()?.Key is { } key ? _session.Client.MediaUri(key).ToString() : "about:blank";
 
     /// <summary>mpv's per-file options for a track: its title for the desktop, and its levelling gain.</summary>
     private string Options(MetadataItem track)
@@ -717,7 +719,8 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
                 if (!IsScrubbing) SeekValue = seconds;
                 UpdateClock();
                 break;
-            case "duration" when change.Number is { } seconds && seconds > 0:
+            // The demo's synthesized songs report a length that grows as they play: the track's own stands.
+            case "duration" when change.Number is { } seconds && seconds > 0 && !_session.IsDemo:
                 Duration = seconds;
                 break;
             case "pause" when change.Flag is { } paused:
