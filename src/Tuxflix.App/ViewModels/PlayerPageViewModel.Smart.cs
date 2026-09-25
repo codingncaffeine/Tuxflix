@@ -94,6 +94,10 @@ public sealed partial class PlayerPageViewModel
 
     public bool HasChapters => Chapters.Count > 1;
 
+    /// <summary>The window is the small picture-in-picture one (set by the window).</summary>
+    [ObservableProperty]
+    public partial bool IsPictureInPicture { get; set; }
+
     /// <summary>What the seek bar shows under the pointer; null until the full record is in.</summary>
     [ObservableProperty]
     public partial SeekPreviews? Previews { get; private set; }
@@ -164,6 +168,33 @@ public sealed partial class PlayerPageViewModel
             Playback.NightMode = value;
             Owner.SaveSettings();
             Player?.Player.PostProperty("af", value ? NightFilter : string.Empty);
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>The codecs a receiver decodes itself, when passthrough is on.</summary>
+    private const string PassthroughCodecs = "ac3,eac3,dts,dts-hd,truehd";
+
+    public bool Passthrough
+    {
+        get => Playback.Passthrough;
+        set
+        {
+            Playback.Passthrough = value;
+            Owner.SaveSettings();
+            Player?.Player.PostProperty("audio-spdif", value ? PassthroughCodecs : string.Empty);
+            OnPropertyChanged();
+        }
+    }
+
+    public bool Stereo
+    {
+        get => Playback.Stereo;
+        set
+        {
+            Playback.Stereo = value;
+            Owner.SaveSettings();
+            Player?.Player.PostProperty("audio-channels", value ? "stereo" : "auto-safe");
             OnPropertyChanged();
         }
     }
@@ -249,6 +280,11 @@ public sealed partial class PlayerPageViewModel
         options["sub-scale"] = Playback.SubtitleScale.ToString("0.##", CultureInfo.InvariantCulture);
         if (Playback.SubtitlesRaised) options["sub-pos"] = "88";
         if (Playback.NightMode) options["af"] = NightFilter;
+        if (Playback.Passthrough) options["audio-spdif"] = PassthroughCodecs;
+        if (Playback.Stereo) options["audio-channels"] = "stereo";
+
+        // A mix down to fewer speakers is kept from clipping.
+        options["audio-normalize-downmix"] = "yes";
     }
 
     /// <summary>Once the full record is in: the markers, the chapters, and (for an episode) what comes next.</summary>

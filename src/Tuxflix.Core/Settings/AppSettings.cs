@@ -55,6 +55,12 @@ public sealed class PlaybackSettings
 
     /// <summary>Quiet dialogue up and loud moments down: for late at night.</summary>
     public bool NightMode { get; set; }
+
+    /// <summary>Surround sound sent as it is (Dolby, DTS) for an AV receiver to decode; no volume or night mode then.</summary>
+    public bool Passthrough { get; set; }
+
+    /// <summary>Surround mixed down to two speakers, for headphones and TVs that mishandle more.</summary>
+    public bool Stereo { get; set; }
 }
 
 public sealed class ClassicPlayerSettings

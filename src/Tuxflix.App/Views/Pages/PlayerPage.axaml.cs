@@ -99,6 +99,12 @@ public partial class PlayerPage : UserControl
             case Key.F or Key.F11:
                 ToggleFullScreen();
                 break;
+            case Key.I:
+                TogglePictureInPicture();
+                break;
+            case Key.Escape when _top is MainWindow { IsPictureInPicture: true } small:
+                small.ExitPictureInPicture();
+                break;
             case Key.Enter when model.ShowsUpNext:
                 model.PlayNextCommand.Execute(null);
                 break;
@@ -122,12 +128,40 @@ public partial class PlayerPage : UserControl
     private void OnStagePressed(object? sender, PointerPressedEventArgs e)
     {
         // Only presses on the picture itself: the controls handle their own.
-        if (!ReferenceEquals(e.Source, Video) || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        if (!ReferenceEquals(e.Source, Video) && !ReferenceEquals(e.Source, PipBar)) return;
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+
+        // The small window moves with the picture; a double press brings it back to full size.
+        if (_top is MainWindow { IsPictureInPicture: true } small)
+        {
+            if (e.ClickCount == 2) small.ExitPictureInPicture();
+            else small.BeginMoveDrag(e);
+            return;
+        }
+
+        if (!ReferenceEquals(e.Source, Video)) return;
         if (e.ClickCount == 2) ToggleFullScreen();
         Model?.TogglePauseCommand.Execute(null);
     }
 
     private void OnFullScreen(object? sender, RoutedEventArgs e) => ToggleFullScreen();
+
+    private void OnPictureInPicture(object? sender, RoutedEventArgs e) => TogglePictureInPicture();
+
+    /// <summary>The window becomes a small one showing only the picture, or comes back.</summary>
+    public void TogglePictureInPicture()
+    {
+        if (_top is not MainWindow window || Model is not { } model) return;
+        if (window.IsPictureInPicture)
+        {
+            window.ExitPictureInPicture();
+            return;
+        }
+
+        var media = model.Item.Media?.FirstOrDefault();
+        var aspect = media?.AspectRatio ?? (media is { Width: > 0, Height: > 0 } ? (double)media.Width.Value / media.Height.Value : 16.0 / 9);
+        window.EnterPictureInPicture(model, aspect);
+    }
 
     /// <summary>The playback menu, built from the player's state each time it opens.</summary>
     private void OnSettings(object? sender, RoutedEventArgs e) => OpenSettings();
@@ -195,6 +229,9 @@ public partial class PlayerPage : UserControl
         menu.Items.Add(Submenu("Sound",
         [
             Check("Night mode: quiet dialogue up, loud moments down", model.NightMode, () => model.NightMode = !model.NightMode),
+            Check("Stereo only: surround mixed down to two speakers", model.Stereo, () => model.Stereo = !model.Stereo),
+            Check("Passthrough: surround sent to an AV receiver as it is", model.Passthrough, () => model.Passthrough = !model.Passthrough),
+            .. model.Passthrough ? [Label("The receiver decodes it: no volume or night mode here")] : Array.Empty<Control>(),
             new Separator(),
             Label(PlayerPageViewModel.DelayText(model.AudioDelay)),
             Item("Play 0.1 s earlier", () => model.AudioDelay = Math.Round(model.AudioDelay - 0.1, 2)),
@@ -251,6 +288,7 @@ public partial class PlayerPage : UserControl
 
     private void ToggleFullScreen()
     {
+        if (_top is MainWindow { IsPictureInPicture: true } small) small.ExitPictureInPicture();
         if (_top is not Window window) return;
         window.WindowState = window.WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
     }

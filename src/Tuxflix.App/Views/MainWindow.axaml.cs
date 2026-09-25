@@ -21,6 +21,10 @@ public partial class MainWindow : Window
     private bool _openingClassic;
     private bool _quitting;
 
+    /// <summary>How the window was before it became the small picture-in-picture one; null when it is not.</summary>
+    private (WindowState State, PixelPoint Position, double Width, double Height, double MinWidth, double MinHeight, bool Topmost)? _beforePip;
+    private PlayerPageViewModel? _pipPage;
+
     /// <summary>For the XAML loader and the designer.</summary>
     public MainWindow()
     {
@@ -58,6 +62,70 @@ public partial class MainWindow : Window
         Closing += (_, _) => RememberPlacement();
         Opened += (_, _) => Platform.DesktopIdentity.Apply(this);
         shell.CompactPlayerRequested += () => _ = ShowClassicAsync();
+
+        // Whatever ends the playback (the file's end, back, the next page) ends the small window too.
+        shell.Router.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(Router.Current) && _pipPage is not null && !ReferenceEquals(shell.Router.Current, _pipPage))
+            {
+                ExitPictureInPicture();
+            }
+        };
+    }
+
+    public bool IsPictureInPicture => _beforePip is not null;
+
+    /// <summary>
+    /// Makes the window a small borderless one showing only the picture, in the bottom right corner
+    /// and above the other windows (under Plasma on Wayland, KWin is asked to do both).
+    /// </summary>
+    internal void EnterPictureInPicture(PlayerPageViewModel page, double aspect)
+    {
+        if (_beforePip is not null) return;
+        _beforePip = (WindowState, Position, Width, Height, MinWidth, MinHeight, Topmost);
+        _pipPage = page;
+        page.IsPictureInPicture = true;
+        WindowState = WindowState.Normal;
+        MinWidth = 240;
+        MinHeight = 120;
+        Width = 480;
+        Height = Math.Round(480 / Math.Clamp(double.IsFinite(aspect) && aspect > 0 ? aspect : 16.0 / 9, 1.2, 2.4));
+        Topmost = true;
+        if (Screens.ScreenFromWindow(this) is { } screen)
+        {
+            var area = screen.WorkingArea;
+            var scale = screen.Scaling;
+            Position = new PixelPoint(area.Right - (int)((Width + 24) * scale), area.Bottom - (int)((Height + 24) * scale));
+        }
+
+        Log.Info("Picture in picture.");
+        if (Platform.KeepAbove.ViaKWin) _ = AskKWinAsync(above: true);
+    }
+
+    internal void ExitPictureInPicture()
+    {
+        if (_beforePip is not { } before) return;
+        _beforePip = null;
+        if (_pipPage is { } page) page.IsPictureInPicture = false;
+        _pipPage = null;
+        Topmost = before.Topmost;
+        MinWidth = before.MinWidth;
+        MinHeight = before.MinHeight;
+        Width = before.Width;
+        Height = before.Height;
+        Position = before.Position;
+        WindowState = before.State;
+        Log.Info("Back from picture in picture.");
+        if (Platform.KeepAbove.ViaKWin && before.State == WindowState.Normal) _ = AskKWinAsync(above: false);
+    }
+
+    /// <summary>KWin places the window once its new size has reached the compositor.</summary>
+    private async Task AskKWinAsync(bool above)
+    {
+        if (_shell is null) return;
+        var folder = Path.Combine(_shell.Paths.Cache, "kwin");
+        await Task.Delay(250);
+        await Task.Run(() => Platform.KeepAbove.SetAsync(above, folder));
     }
 
     /// <summary>The compact classic player, while it stands in for this window.</summary>
@@ -244,6 +312,15 @@ public partial class MainWindow : Window
     private void RememberPlacement()
     {
         if (_settings is null) return;
+
+        // Closed while small: the next start opens as the window was before.
+        if (_beforePip is { } before)
+        {
+            _settings.Current.Window = new WindowPlacement { X = before.Position.X, Y = before.Position.Y, Width = before.Width, Height = before.Height, Maximized = before.State == WindowState.Maximized };
+            _settings.Save();
+            return;
+        }
+
         var maximized = WindowState == WindowState.Maximized;
         var previous = _settings.Current.Window;
         _settings.Current.Window = new WindowPlacement

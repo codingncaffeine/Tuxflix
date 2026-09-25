@@ -276,6 +276,19 @@ void Capture(string pose)
         Pump(TimeSpan.FromMilliseconds(1500));
     }
 
+    if (pose == "player-pip")
+    {
+        // Picture in picture: the small window, the pointer over it so its bar shows.
+        shell.Play(Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now).Movies[0], resume: false);
+        Settle(shell);
+        var page = window.GetVisualDescendants().OfType<Tuxflix.App.Views.Pages.PlayerPage>().FirstOrDefault()
+                   ?? throw new InvalidOperationException("No player page.");
+        page.TogglePictureInPicture();
+        Pump(TimeSpan.FromMilliseconds(400));
+        window.MouseMove(new Point(window.ClientSize.Width / 2, window.ClientSize.Height / 3));
+        Pump(TimeSpan.FromMilliseconds(600));
+    }
+
     if (pose == "stream")
     {
         StreamCheck(shell);

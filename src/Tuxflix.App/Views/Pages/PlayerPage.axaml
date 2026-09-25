@@ -22,9 +22,17 @@
             <Setter Property="Opacity" Value="0" />
             <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
+
+        <!-- Picture in picture: only the picture, and a small bar of three buttons with the pointer over it. -->
+        <Style Selector="Panel#Stage.pip Border#TopBar, Panel#Stage.pip Border#BottomBar, Panel#Stage.pip Button.skip, Panel#Stage.pip Border.upnext, Panel#Stage.pip Border#PreviewBox">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Panel#Stage:not(.pip) Panel#PipBar">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
     </UserControl.Styles>
 
-    <Panel Name="Stage">
+    <Panel Name="Stage" Classes.pip="{Binding IsPictureInPicture}">
         <player:MpvVideoView Name="Video" Player="{Binding Player}" />
 
         <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBuffering}" Width="180" Height="3" MinHeight="3"
@@ -32,6 +40,29 @@
                      Foreground="{DynamicResource Brush.Accent}" Background="#33FFFFFF" />
 
         <Panel Name="Overlay">
+            <!-- ===== Picture in picture: back to full size, play or pause, stop ===== -->
+            <Panel Name="PipBar" Background="#59000000">
+                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Button Theme="{StaticResource IconButton}" Foreground="White" Click="OnPictureInPicture"
+                            ui:Tip.Text="Back to full size" ui:Tip.Keys="I">
+                        <PathIcon Data="{StaticResource Icon.CornersOut}" Width="20" Height="20" />
+                    </Button>
+                    <Button Theme="{StaticResource IconButton}" Foreground="White" Padding="12" Command="{Binding TogglePauseCommand}"
+                            ui:Tip.Text="Play or pause" ui:Tip.Keys="Space">
+                        <Panel>
+                            <PathIcon Data="{StaticResource Icon.Pause.Fill}" Width="24" Height="24" IsVisible="{Binding !IsPaused}" />
+                            <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="24" Height="24" IsVisible="{Binding IsPaused}" />
+                        </Panel>
+                    </Button>
+                    <Button Theme="{StaticResource IconButton}" Foreground="White" Command="{Binding LeaveCommand}"
+                            ui:Tip.Text="Stop watching" ui:Tip.Keys="Esc">
+                        <PathIcon Data="{StaticResource Icon.X}" Width="20" Height="20" />
+                    </Button>
+                </StackPanel>
+                <ProgressBar VerticalAlignment="Bottom" Height="3" MinHeight="3" Maximum="{Binding SeekMaximum}" Value="{Binding Position}"
+                             Foreground="{DynamicResource Brush.Accent}" Background="#33FFFFFF" CornerRadius="0" />
+            </Panel>
+
             <!-- ===== Top: back, and what is playing ===== -->
             <Border Name="TopBar" VerticalAlignment="Top" Height="130" Background="{DynamicResource Brush.Scrim.Top}">
                 <Grid ColumnDefinitions="Auto,*" Margin="18,16,24,0" VerticalAlignment="Top">
@@ -152,6 +183,10 @@
                                     </MenuFlyout>
                                 </Button.Flyout>
                             </Button>
+                            <Button Theme="{StaticResource IconButton}" Foreground="White" Click="OnPictureInPicture"
+                                    ui:Tip.Text="Picture in picture: a small window above the others" ui:Tip.Keys="I">
+                                <PathIcon Data="{StaticResource Icon.PictureInPicture}" Width="20" Height="20" />
+                            </Button>
                             <Button x:Name="SettingsButton" Theme="{StaticResource IconButton}" Foreground="White" Click="OnSettings"
                                     ui:Tip.Text="Playback settings: speed, picture, subtitles, sound, sleep timer">
                                 <PathIcon Data="{StaticResource Icon.Gear}" Width="20" Height="20" />
@@ -195,7 +230,7 @@
         </Button>
 
         <!-- ===== Up next: the following episode, with a countdown ===== -->
-        <Border IsVisible="{Binding ShowsUpNext}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,42,168" Width="420"
+        <Border Classes="upnext" IsVisible="{Binding ShowsUpNext}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,42,168" Width="420"
                 Padding="14" CornerRadius="12" Background="#E60B1126" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
                 BoxShadow="{StaticResource Shadow.Popup}">
             <Grid ColumnDefinitions="Auto,*">

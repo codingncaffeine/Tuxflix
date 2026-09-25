@@ -131,6 +131,13 @@ internal static class PlayerProbe
                 }
             }
 
+            var pipRight = true;
+            if (Environment.GetEnvironmentVariable("TUXFLIX_PROBE_PIP") == "1" && window is Views.MainWindow main
+                && window.GetVisualDescendants().OfType<Views.Pages.PlayerPage>().FirstOrDefault() is { } pipView)
+            {
+                pipRight = await CheckPictureInPictureAsync(main, pipView, shell);
+            }
+
             var leaving = (shell.Router.Current as PlayerPageViewModel)?.Player;
             shell.GoBackCommand.Execute(null);
             var left = Stopwatch.StartNew();
@@ -144,7 +151,7 @@ internal static class PlayerProbe
             var kept = after == before;
             Log.Info($"Probe: the server's resume point is {after / 1000.0:0.0} s, {(kept ? "unchanged" : "MOVED")}.");
 
-            ExitCode = frames > 10 && sounded && answered && destroyed && kept && noDrops && markersRight && menuRight && qualityRight && shell.Router.Current is not PlayerPageViewModel ? 0 : 1;
+            ExitCode = frames > 10 && sounded && answered && destroyed && kept && noDrops && markersRight && menuRight && qualityRight && pipRight && shell.Router.Current is not PlayerPageViewModel ? 0 : 1;
             Log.Info(ExitCode == 0 ? "Probe: playback opens, draws and closes cleanly." : "Probe: FAILED.");
         }
         catch (Exception ex)
@@ -324,6 +331,12 @@ internal static class PlayerProbe
         await Expect("subtitle size back", () => page.SubtitleScale = scale, p => Near(p.GetNumber("sub-scale"), scale));
         await Expect("raised", () => page.SubtitlesRaised = !raised, p => Near(p.GetNumber("sub-pos"), raised ? 100 : 88));
         await Expect("raised back", () => page.SubtitlesRaised = raised, p => Near(p.GetNumber("sub-pos"), raised ? 88 : 100));
+        var stereo = page.Stereo;
+        var passthrough = page.Passthrough;
+        await Expect("stereo", () => page.Stereo = !stereo, p => p.GetString("audio-channels") == (stereo ? "auto-safe" : "stereo"));
+        await Expect("stereo back", () => page.Stereo = stereo, p => p.GetString("audio-channels") == (stereo ? "stereo" : "auto-safe"));
+        await Expect("passthrough", () => page.Passthrough = !passthrough, p => (p.GetString("audio-spdif") ?? string.Empty).Contains("truehd", StringComparison.Ordinal) != passthrough);
+        await Expect("passthrough back", () => page.Passthrough = passthrough, p => (p.GetString("audio-spdif") ?? string.Empty).Contains("truehd", StringComparison.Ordinal) == passthrough);
         await Expect("night mode", () => page.NightMode = !night, p => (p.GetString("af") ?? string.Empty).Contains("dynaudnorm", StringComparison.Ordinal) != night);
         await Expect("night mode back", () => page.NightMode = night, p => (p.GetString("af") ?? string.Empty).Contains("dynaudnorm", StringComparison.Ordinal) == night);
         Log.Info(missed.Count == 0
@@ -391,6 +404,38 @@ internal static class PlayerProbe
         var listed = again2 && running is not null && (await Task.Run(() => session.Client.GetTranscodeSessionsAsync(CancellationToken.None))).Any(s => s.Is(running));
         Log.Info($"Probe: converting again {(listed ? "shows in the server's list" : "DOES NOT SHOW")}{(running != key ? " under a session of its own" : " UNDER THE SAME SESSION")}.");
         return (converting && hls && sized && carried && drew && ours is not null && direct && resumed && stopped && listed && running != key, running);
+    }
+
+    /// <summary>
+    /// Picture in picture: the window becomes 480 wide, borderless in effect, kept on top, the
+    /// small bar in place of the controls; back at full size it is as it was. Entered once more and
+    /// the player left, the window comes back by itself. <c>TUXFLIX_PROBE_PIP_HOLD</c> seconds are
+    /// spent small, for a harness to ask the compositor what it sees.
+    /// </summary>
+    private static async Task<bool> CheckPictureInPictureAsync(Views.MainWindow window, Views.Pages.PlayerPage view, ShellViewModel shell)
+    {
+        var before = window.ClientSize;
+        view.TogglePictureInPicture();
+        var small = await WithinAsync(() => window.IsPictureInPicture && Math.Abs(window.ClientSize.Width - 480) < 2, TimeSpan.FromSeconds(3));
+        var bar = view.FindControl<Panel>("PipBar") is { IsEffectivelyVisible: true };
+        var bars = view.FindControl<Border>("BottomBar") is { IsEffectivelyVisible: true };
+        Log.Info($"Probe: picture in picture {(small ? "made the window" : "DID NOT MAKE THE WINDOW")} {window.ClientSize.Width:0}x{window.ClientSize.Height:0} (was {before.Width:0}x{before.Height:0}), "
+                 + $"topmost {window.Topmost}, the small bar {(bar ? "shows" : "IS MISSING")}, the full controls {(bars ? "STILL SHOW" : "are gone")}.");
+        if (Environment.GetEnvironmentVariable("TUXFLIX_PROBE_UI") is { } folder) Snapshot(window, Path.Combine(folder, "pip.png"));
+        var hold = int.TryParse(Environment.GetEnvironmentVariable("TUXFLIX_PROBE_PIP_HOLD"), CultureInfo.InvariantCulture, out var s) ? s : 1;
+        await Task.Delay(TimeSpan.FromSeconds(hold));
+
+        view.TogglePictureInPicture();
+        var back = await WithinAsync(() => !window.IsPictureInPicture && Math.Abs(window.ClientSize.Width - before.Width) < 2 && Math.Abs(window.ClientSize.Height - before.Height) < 2, TimeSpan.FromSeconds(3));
+        Log.Info($"Probe: back from picture in picture the window {(back ? "is as it was" : "IS NOT AS IT WAS")} ({window.ClientSize.Width:0}x{window.ClientSize.Height:0}), topmost {window.Topmost}.");
+
+        // Small again, then the player left: the window comes back without being asked.
+        view.TogglePictureInPicture();
+        await WithinAsync(() => window.IsPictureInPicture, TimeSpan.FromSeconds(3));
+        shell.GoBackCommand.Execute(null);
+        var restored = await WithinAsync(() => !window.IsPictureInPicture && Math.Abs(window.ClientSize.Width - before.Width) < 2, TimeSpan.FromSeconds(3));
+        Log.Info($"Probe: leaving the player from picture in picture {(restored ? "brought the window back" : "LEFT IT SMALL")}.");
+        return small && bar && !bars && back && restored && !window.Topmost;
     }
 
     /// <summary>After the player was left while converting: the conversion is gone from the server's list.</summary>
