@@ -14,7 +14,7 @@
                 <TextBlock Classes="label" Text="WINAMP SKIN MUSEUM" Foreground="{DynamicResource Brush.Accent}" />
                 <TextBlock Text="{Binding Status}" FontSize="13" Classes="faint" />
             </StackPanel>
-            <TextBox Grid.Column="1" Name="Search" Width="320" Watermark="Search the museum" Text="{Binding SearchText}"
+            <TextBox Grid.Column="1" Name="Search" Width="320" PlaceholderText="Search the museum" Text="{Binding SearchText}"
                      AutomationProperties.Name="Search the museum">
                 <TextBox.KeyBindings>
                     <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
