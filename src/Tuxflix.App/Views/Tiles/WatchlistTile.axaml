@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Tiles.WatchlistTile"
+             x:DataType="vm:WatchlistTileViewModel">
+
+    <!-- A Watchlist title: the poster capsule, dimmed with a band across its foot when the open
+         server does not have it; on hover, a way to take it off the Watchlist. -->
+    <Button Classes="tile" Theme="{StaticResource TileButton}"
+            Command="{Binding OpenCommand}"
+            AutomationProperties.Name="{Binding AccessibleName}">
+        <Panel Width="164" Height="246">
+            <Border Name="Lift" CornerRadius="{StaticResource Radius.Tile}" Background="{DynamicResource Brush.Panel}" />
+            <Border CornerRadius="{StaticResource Radius.Tile}" ClipToBounds="True">
+                <Panel>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10" Margin="14">
+                        <PathIcon Data="{StaticResource Icon.FilmSlate}" Width="26" Height="26"
+                                  Foreground="{DynamicResource Brush.Text.Disabled}" />
+                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" FontSize="13"
+                                   FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                    </StackPanel>
+                    <ui:RemoteImage Path="{Binding ImagePath}" DecodeWidth="164" DecodeHeight="246" />
+                    <Border Background="#99070B18" IsVisible="{Binding IsMissing}" />
+                    <Border Classes="reveal" Background="{DynamicResource Brush.Scrim.Bottom}" />
+                    <StackPanel Classes="reveal" VerticalAlignment="Bottom" Margin="11,0,11,14" Spacing="2">
+                        <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Subtitle}" FontSize="11.5" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    </StackPanel>
+                    <Border IsVisible="{Binding IsMissing}" VerticalAlignment="Bottom" Padding="8,7" Background="#E60B1227">
+                        <TextBlock Text="{Binding MissingText}" FontSize="11" FontWeight="SemiBold" TextAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    </Border>
+                </Panel>
+            </Border>
+            <Border Name="Ring" CornerRadius="{StaticResource Radius.Tile}" />
+            <Button Classes="reveal" Theme="{StaticResource IconButton}" Padding="0" CornerRadius="15"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0"
+                    Command="{Binding RemoveCommand}" ui:Tip.Text="Take it off your Watchlist">
+                <Border Width="30" Height="30" CornerRadius="15" Background="#B3040712" BorderBrush="#66FFFFFF" BorderThickness="1">
+                    <PathIcon Data="{StaticResource Icon.BookmarkSimple.Fill}" Width="13" Height="13" Foreground="{DynamicResource Brush.Accent}" />
+                </Border>
+            </Button>
+        </Panel>
+    </Button>
+</UserControl>

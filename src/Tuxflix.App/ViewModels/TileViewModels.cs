@@ -75,7 +75,7 @@ public sealed class LandscapeTileViewModel(ShellViewModel shell, MetadataItem it
 }
 
 /// <summary>A titled row of tiles, of any kind.</summary>
-public sealed class ShelfViewModel(string title, IEnumerable<object> tiles)
+public sealed partial class ShelfViewModel(string title, IEnumerable<object> tiles)
 {
     public string Title { get; } = title.ToUpperInvariant();
 

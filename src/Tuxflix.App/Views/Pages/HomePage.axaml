@@ -2,21 +2,137 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Tuxflix.App.ViewModels"
              xmlns:views="using:Tuxflix.App.Views"
+             xmlns:ui="using:Tuxflix.App.Controls"
              x:Class="Tuxflix.App.Views.Pages.HomePage"
              x:DataType="vm:HomePageViewModel">
 
     <Panel>
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding Shelves}" Margin="0,28,0,40">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><StackPanel Spacing="18" /></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ShelfViewModel">
-                        <views:ShelfView />
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <StackPanel Margin="0,0,0,40">
+
+                <!-- ===== Spotlight: the most recent thing in Continue Watching, to carry on with ===== -->
+                <ContentControl Content="{Binding Hero}" IsVisible="{Binding HasHero}">
+                    <ContentControl.ContentTemplate>
+                        <DataTemplate x:DataType="vm:HeroViewModel">
+                            <Panel Height="430">
+                                <!-- The title's own light under everything, fading into the canvas at the foot. -->
+                                <Panel IsVisible="{Binding HasBlur}" IsHitTestVisible="False">
+                                    <Panel.OpacityMask>
+                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                            <GradientStop Offset="0" Color="Black" />
+                                            <GradientStop Offset="0.6" Color="#B3000000" />
+                                            <GradientStop Offset="1" Color="Transparent" />
+                                        </LinearGradientBrush>
+                                    </Panel.OpacityMask>
+                                    <Border Background="{Binding BlurBottom}" />
+                                    <Border Background="{Binding BlurTop}">
+                                        <Border.OpacityMask>
+                                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                                <GradientStop Offset="0" Color="Black" />
+                                                <GradientStop Offset="1" Color="Transparent" />
+                                            </LinearGradientBrush>
+                                        </Border.OpacityMask>
+                                    </Border>
+                                    <Border Background="#8C070B18" />
+                                </Panel>
+
+                                <!-- The backdrop on the right, fading out to the left and at its foot. -->
+                                <Panel IsHitTestVisible="False">
+                                    <Panel.OpacityMask>
+                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                            <GradientStop Offset="0" Color="Black" />
+                                            <GradientStop Offset="0.55" Color="Black" />
+                                            <GradientStop Offset="1" Color="Transparent" />
+                                        </LinearGradientBrush>
+                                    </Panel.OpacityMask>
+                                    <ui:RemoteImage Path="{Binding BackdropPath}" DecodeWidth="1600" DecodeHeight="900" />
+                                    <Border>
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                                                <GradientStop Offset="0" Color="#F00B1227" />
+                                                <GradientStop Offset="0.42" Color="#990B1227" />
+                                                <GradientStop Offset="1" Color="#140B1227" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                    </Border>
+                                </Panel>
+
+                                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="36,0,36,34" Spacing="9" MaxWidth="760">
+                                    <TextBlock Classes="label" Text="CONTINUE WATCHING" Foreground="{DynamicResource Brush.Accent}" />
+                                    <ui:RemoteImage Path="{Binding LogoPath}" Format="Png" IsVisible="{Binding HasLogo}"
+                                                    DecodeWidth="440" DecodeHeight="140" MaxWidth="440" MaxHeight="140"
+                                                    Stretch="Uniform" HorizontalAlignment="Left" Margin="0,2,0,4"
+                                                    AutomationProperties.Name="{Binding Heading}" />
+                                    <TextBlock Text="{Binding Heading}" FontSize="42" FontWeight="Bold" LetterSpacing="-0.6"
+                                               IsVisible="{Binding ShowTextTitle}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Subheading}" FontSize="15" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Summary}" IsVisible="{Binding HasSummary}" FontSize="14" LineHeight="21"
+                                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" MaxWidth="640"
+                                               HorizontalAlignment="Left" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,10,0,0">
+                                        <Button Theme="{StaticResource PlayButton}" Command="{Binding PlayCommand}"
+                                                ui:Tip.Text="{Binding PlayTip}" AutomationProperties.Name="{Binding AccessibleName}">
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" />
+                                                <TextBlock Text="{Binding PlayLabel}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Theme="{StaticResource GhostButton}" Command="{Binding MoreInfoCommand}"
+                                                ui:Tip.Text="Open its page: the story, the cast and the details">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <PathIcon Data="{StaticResource Icon.Info}" Width="15" Height="15" />
+                                                <TextBlock Text="MORE INFO" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <StackPanel Spacing="6" IsVisible="{Binding HasProgress}" VerticalAlignment="Center" Margin="16,0,0,0">
+                                            <TextBlock Classes="label" Text="{Binding RemainingText}" />
+                                            <Border CornerRadius="2" ClipToBounds="True" Width="160">
+                                                <ProgressBar Theme="{StaticResource ThinProgress}" Value="{Binding Progress}" Background="#26FFFFFF" />
+                                            </Border>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Panel>
+                        </DataTemplate>
+                    </ContentControl.ContentTemplate>
+                </ContentControl>
+
+                <!-- ===== Shelves, in the viewer's order ===== -->
+                <ItemsControl ItemsSource="{Binding Shelves}" Margin="0,28,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Spacing="18" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShelfViewModel">
+                            <views:ShelfView />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- ===== What the viewer hid, to bring back ===== -->
+                <StackPanel IsVisible="{Binding HasHiddenShelves}" Margin="36,14,36,0" Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{StaticResource Icon.EyeSlash}" Width="14" Height="14" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                        <TextBlock Classes="label" Text="HIDDEN FROM HOME" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding HiddenShelves}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:HiddenShelfViewModel">
+                                <Button Theme="{StaticResource GhostButton}" Padding="12,6" Margin="0,0,8,8" LetterSpacing="0.2"
+                                        Command="{Binding ShowCommand}" ui:Tip.Text="{Binding ShowTip}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Data="{StaticResource Icon.Eye}" Width="14" Height="14" />
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
         </ScrollViewer>
 
         <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top"

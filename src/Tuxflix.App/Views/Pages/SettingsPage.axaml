@@ -4,6 +4,7 @@
              xmlns:themes="using:Tuxflix.App.Themes"
              xmlns:plex="using:Tuxflix.Core.Plex"
              xmlns:ui="using:Tuxflix.App.Controls"
+             xmlns:sections="using:Tuxflix.App.Views.Settings"
              x:Class="Tuxflix.App.Views.Pages.SettingsPage"
              x:DataType="vm:SettingsPageViewModel">
 
@@ -87,6 +88,14 @@
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding UseSystemTitleBar}" ui:Tip.Text="Use the desktop's title bar instead of Tuxflix's" />
                         </Grid>
                     </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ===== Browsing ===== -->
+            <StackPanel Spacing="10">
+                <TextBlock Text="Browsing" FontSize="17" FontWeight="SemiBold" />
+                <Border Classes="section" Padding="20,16">
+                    <sections:BrowseSettingsView DataContext="{Binding Browse}" />
                 </Border>
             </StackPanel>
 

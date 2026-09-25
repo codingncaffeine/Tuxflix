@@ -48,6 +48,11 @@ public sealed partial class SettingsPageViewModel(ShellViewModel shell) : PageVi
 
     public string TitleBarNote => "Takes effect the next time Tuxflix starts.";
 
+    // ===== Sections that features bring =====
+
+    /// <summary>Browsing: theme music and the home screen's shelves.</summary>
+    public BrowseSettingsViewModel Browse { get; } = new(shell);
+
     // ===== How films and episodes play =====
 
     public IReadOnlyList<StreamQuality> QualityChoices => StreamQuality.All;

@@ -32,6 +32,36 @@ public sealed class FlexibleBooleanConverter : JsonConverter<bool>
 }
 
 /// <summary>
+/// Reads a number the server may write as text, or as a word where there is no number to give:
+/// plex.tv's Watchlist names its section <c>"watchlist"</c>. A word reads as no number.
+/// </summary>
+public sealed class LenientInt32Converter : JsonConverter<int?>
+{
+    public override int? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Number:
+                return reader.TryGetInt32(out var number) ? number : null;
+            case JsonTokenType.String:
+                return int.TryParse(reader.GetString(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
+            case JsonTokenType.StartObject or JsonTokenType.StartArray:
+                reader.Skip();
+                return null;
+            default:
+                return null;
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, int? value, JsonSerializerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(writer);
+        if (value is { } number) writer.WriteNumberValue(number);
+        else writer.WriteNullValue();
+    }
+}
+
+/// <summary>
 /// Reads a value the server sends as one object on some endpoints and as a list of one on others
 /// (an item's UltraBlur colours: an object in its metadata, a list in a playback decision).
 /// </summary>

@@ -46,6 +46,11 @@
         <DataTemplate DataType="vm:PersonTileViewModel"><tiles:PersonTile /></DataTemplate>
         <DataTemplate DataType="vm:PlaylistTileViewModel"><tiles:PlaylistTile /></DataTemplate>
 
+        <!-- The Watchlist and item extras -->
+        <DataTemplate DataType="vm:WatchlistPageViewModel"><pages:WatchlistPage /></DataTemplate>
+        <DataTemplate DataType="vm:WatchlistTileViewModel"><tiles:WatchlistTile /></DataTemplate>
+        <DataTemplate DataType="vm:ExtraTileViewModel"><tiles:ExtraTile /></DataTemplate>
+
         <!-- A tooltip's text, with its shortcut drawn as keycaps -->
         <DataTemplate DataType="ui:TipContent">
             <StackPanel Orientation="Horizontal" Spacing="10">

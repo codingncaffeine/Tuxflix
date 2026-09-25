@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:tiles="using:Tuxflix.App.Views.Tiles"
+             x:Class="Tuxflix.App.Views.Pages.WatchlistPage"
+             x:DataType="vm:WatchlistPageViewModel">
+
+    <!-- Discover: the Plex Watchlist, every title as a poster, marked when this server lacks it. -->
+    <Panel>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="36,26,18,40" Spacing="20">
+                <StackPanel Spacing="3">
+                    <TextBlock Classes="page-title" Text="WATCHLIST" />
+                    <TextBlock Classes="faint" FontSize="12.5" Text="{Binding CountText}" IsVisible="{Binding HasList}" />
+                </StackPanel>
+
+                <!-- What a press did, when it could not do what was asked. -->
+                <Border IsVisible="{Binding HasNotice}" Padding="16,10" CornerRadius="8" HorizontalAlignment="Left"
+                        Background="{DynamicResource Brush.Accent.Softer}" BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <PathIcon Data="{StaticResource Icon.Info}" Width="16" Height="16" Foreground="{DynamicResource Brush.Accent}" />
+                        <TextBlock Text="{Binding Notice}" FontSize="13.5" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <ItemsControl ItemsSource="{Binding Titles}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:WatchlistTileViewModel">
+                            <tiles:WatchlistTile Margin="0,0,18,22" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top"
+                     Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+
+        <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="440">
+            <PathIcon Data="{StaticResource Icon.BookmarkSimple}" Width="40" Height="40" Foreground="{DynamicResource Brush.Accent}" />
+            <TextBlock Text="Nothing on your Watchlist yet" FontSize="17" FontWeight="SemiBold" TextAlignment="Center" />
+            <TextBlock Text="Add films and series from their pages, here or in any Plex app, and they wait for you here."
+                       TextWrapping="Wrap" TextAlignment="Center" FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding NeedsSignIn}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14" MaxWidth="440">
+            <PathIcon Data="{StaticResource Icon.BookmarkSimple}" Width="40" Height="40" Foreground="{DynamicResource Brush.Accent}" />
+            <TextBlock Text="Your Watchlist lives in your Plex account" FontSize="17" FontWeight="SemiBold" TextAlignment="Center" />
+            <TextBlock Text="Sign in with Plex to see the films and series you saved for later, from every Plex app."
+                       TextWrapping="Wrap" TextAlignment="Center" FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            <Button Theme="{StaticResource PlayButton}" Content="SIGN IN WITH PLEX" HorizontalAlignment="Center" Margin="0,6,0,0"
+                    Command="{Binding SignInCommand}" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding NeedsServer}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14" MaxWidth="440">
+            <PathIcon Data="{StaticResource Icon.HardDrives}" Width="40" Height="40" Foreground="{DynamicResource Brush.Accent}" />
+            <TextBlock Text="Choose a server" FontSize="17" FontWeight="SemiBold" TextAlignment="Center" />
+            <TextBlock Text="Your Watchlist is shown against a server's libraries, so you can see what it has and open it."
+                       TextWrapping="Wrap" TextAlignment="Center" FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            <Button Theme="{StaticResource PlayButton}" Content="CHOOSE A SERVER" HorizontalAlignment="Center" Margin="0,6,0,0"
+                    Command="{Binding ChooseServerCommand}" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding HasError}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="420">
+            <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="40" Height="40" Foreground="{DynamicResource Brush.Accent}" />
+            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" TextAlignment="Center" FontSize="14"
+                       Foreground="{DynamicResource Brush.Text.Secondary}" />
+        </StackPanel>
+    </Panel>
+</UserControl>

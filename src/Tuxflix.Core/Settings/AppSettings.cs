@@ -37,6 +37,9 @@ public sealed class AppSettings
 
     /// <summary>How films and episodes play: skipping, what comes next, subtitles, sound.</summary>
     public PlaybackSettings Playback { get; set; } = new();
+
+    /// <summary>How the libraries are browsed: the home shelves of each server, theme music.</summary>
+    public BrowseSettings Browse { get; set; } = new();
 }
 
 public sealed class PlaybackSettings

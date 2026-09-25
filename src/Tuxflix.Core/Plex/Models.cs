@@ -40,6 +40,7 @@ public sealed partial class MediaContainer
     public string? Version { get; init; }
 
     [JsonPropertyName("librarySectionID")]
+    [JsonConverter(typeof(LenientInt32Converter))]
     public int? LibrarySectionId { get; init; }
 
     [JsonPropertyName("librarySectionTitle")]
@@ -236,6 +237,7 @@ public sealed partial class TagEntry
     public string? Filter { get; init; }
 
     [JsonPropertyName("librarySectionID")]
+    [JsonConverter(typeof(LenientInt32Converter))]
     public int? LibrarySectionId { get; init; }
 
     [JsonPropertyName("librarySectionTitle")]
@@ -398,6 +400,7 @@ public sealed partial class MetadataItem
     public int? ChildCount { get; init; }
 
     [JsonPropertyName("librarySectionID")]
+    [JsonConverter(typeof(LenientInt32Converter))]
     public int? LibrarySectionId { get; init; }
 
     [JsonPropertyName("librarySectionTitle")]

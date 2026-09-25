@@ -15,6 +15,7 @@ public sealed class SettingsTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tuxflix-tests", "settings-" + Guid.NewGuid().ToString("N")[..8]);
     private readonly AppPaths _paths;
+    private readonly SettingsStore _store;
     private readonly ShellViewModel _shell;
 
     public SettingsTests()
@@ -22,13 +23,17 @@ public sealed class SettingsTests : IDisposable
         HeadlessSkia.Ensure();
         _paths = AppPaths.Resolve(_root, Environment.GetEnvironmentVariable);
         _paths.EnsureCreated();
-        _shell = new ShellViewModel(SettingsStore.Load(_paths.SettingsFile), _paths) { ReportsPlayback = false };
+        _store = SettingsStore.Load(_paths.SettingsFile);
+        _shell = new ShellViewModel(_store, _paths) { ReportsPlayback = false };
     }
 
     public void Dispose()
     {
         _shell.Router.Current?.Deactivate();
         _shell.Session?.Dispose();
+
+        // Settings are written on a worker: the last write lands before the folder goes.
+        _store.Flush(TimeSpan.FromSeconds(5));
         Directory.Delete(_root, recursive: true);
     }
 

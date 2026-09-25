@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Settings.BrowseSettingsView"
+             x:DataType="vm:BrowseSettingsViewModel">
+
+    <!-- Browsing: theme music on title pages, and the open server's home shelves. -->
+    <StackPanel Spacing="22">
+        <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="4" VerticalAlignment="Center">
+                <TextBlock Text="Theme music" FontSize="14.5" FontWeight="SemiBold" />
+                <TextBlock Text="A series' or a film's theme plays quietly while its page is open, and fades when you leave."
+                           FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            </StackPanel>
+            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ThemeMusic}" OnContent="" OffContent="" Margin="24,0,0,0"
+                          VerticalAlignment="Center" ui:Tip.Text="Play a title's theme quietly while its page is open" />
+        </Grid>
+
+        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasServer}">
+            <StackPanel Spacing="4" VerticalAlignment="Center">
+                <TextBlock Text="{Binding HomeHeading}" FontSize="14.5" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding HomeSummary}" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            </StackPanel>
+            <Button Grid.Column="1" Theme="{StaticResource GhostButton}" Padding="14,8" Margin="24,0,0,0" VerticalAlignment="Center"
+                    Command="{Binding RestoreHomeCommand}"
+                    ui:Tip.Text="Put every shelf back, in the order the server gives them">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{StaticResource Icon.ArrowCounterClockwise}" Width="14" Height="14" />
+                    <TextBlock Text="RESTORE" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </Grid>
+    </StackPanel>
+</UserControl>
