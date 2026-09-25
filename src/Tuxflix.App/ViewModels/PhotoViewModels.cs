@@ -160,9 +160,14 @@ public sealed partial class PhotosPageViewModel : PageViewModel, IGridPage
 }
 
 /// <summary>An album or a photo in a grid.</summary>
-public sealed partial class PhotoTileViewModel(ShellViewModel shell, PhotosPageViewModel page, MetadataItem item, int index)
+public sealed partial class PhotoTileViewModel(ShellViewModel shell, PhotosPageViewModel page, MetadataItem item, int index) : Controls.IMenuSource
 {
     public MetadataItem Item { get; } = item;
+
+    /// <summary>A photo shows, or starts a slideshow from itself; an album only opens, which its click does.</summary>
+    public IReadOnlyList<Controls.MenuEntry> MenuEntries() => IsAlbum
+        ? []
+        : [new("Show this photo", () => page.Open(index)), new("Slideshow from here", () => page.Open(index, slideshow: true))];
 
     public bool IsAlbum => index < 0;
 

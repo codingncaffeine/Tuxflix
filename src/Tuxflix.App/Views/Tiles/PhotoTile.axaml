@@ -7,7 +7,7 @@
 
     <!-- A square picture: an album's first photo, or the photo itself. -->
     <StackPanel Width="176" Spacing="9" Margin="0,0,22,26">
-        <Button Classes="tile" Theme="{StaticResource TileButton}" Command="{Binding OpenCommand}"
+        <Button Classes="tile" Theme="{StaticResource TileButton}" Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}"
                 AutomationProperties.Name="{Binding Title}" ui:Tip.Text="{Binding OpenTip}">
             <Panel Width="176" Height="176">
                 <Border Name="Lift" CornerRadius="{StaticResource Radius.Tile}" Background="{DynamicResource Brush.Panel}" />

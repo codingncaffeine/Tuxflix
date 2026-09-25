@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Tuxflix.App.ViewModels;
@@ -22,7 +23,16 @@ public sealed class App : Application
     /// <summary>Done once the downloads have stopped and their list is written; the process waits for it at exit.</summary>
     internal static Task DownloadsStopped { get; private set; } = Task.CompletedTask;
 
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+    public override void Initialize()
+    {
+        AvaloniaXamlLoader.Load(this);
+
+        // Shift+F10 opens a context menu as well as the Menu key, as in GTK and Qt applications.
+        if (PlatformSettings?.HotkeyConfiguration.OpenContextMenu is { } open && !open.Exists(g => g.Key == Key.F10))
+        {
+            open.Add(new KeyGesture(Key.F10, KeyModifiers.Shift));
+        }
+    }
 
     public override void OnFrameworkInitializationCompleted()
     {

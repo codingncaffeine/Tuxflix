@@ -14,7 +14,7 @@
                 <ContentControl Content="{Binding Hero}" IsVisible="{Binding HasHero}">
                     <ContentControl.ContentTemplate>
                         <DataTemplate x:DataType="vm:HeroViewModel">
-                            <Panel Height="430">
+                            <Panel Height="430" Background="Transparent" ui:ViewerMenu.For="{Binding}">
                                 <!-- The title's own light under everything, fading into the canvas at the foot. -->
                                 <Panel IsVisible="{Binding HasBlur}" IsHitTestVisible="False">
                                     <Panel.OpacityMask>

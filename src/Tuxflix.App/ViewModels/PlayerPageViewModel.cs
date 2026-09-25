@@ -40,6 +40,12 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
 
     public override bool IsImmersive => true;
 
+    /// <summary>Asked to start where the viewer left off, rather than from the start.</summary>
+    internal bool Resumes => resume;
+
+    /// <summary>What it plays as part of (a playlist, a collection, a shuffle); null for one on its own.</summary>
+    internal VideoQueue? Queue => queue;
+
     [ObservableProperty]
     public partial SharedPlayer? Player { get; private set; }
 

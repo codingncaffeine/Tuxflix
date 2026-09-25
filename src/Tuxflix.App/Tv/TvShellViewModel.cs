@@ -51,6 +51,10 @@ public sealed partial class TvShellViewModel : ObservableObject, IDisposable
 
     public bool HasNoPads => !HasPads;
 
+    /// <summary>What the menu button does where focus is: a title's options, or the menu.</summary>
+    [ObservableProperty]
+    public partial string MenuLegend { get; set; } = "MENU";
+
     /// <summary>The next start opens in the TV interface, full screen.</summary>
     public bool StartsInTv
     {

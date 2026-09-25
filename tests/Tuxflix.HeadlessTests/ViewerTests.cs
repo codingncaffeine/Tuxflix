@@ -232,9 +232,9 @@ public sealed class ViewerTests : IDisposable
         await Viewer.LoadPlaylistsAsync();
         var movie = await Fresh(Demo.Movies[8].RatingKey);
         var tile = new PosterTileViewModel(_shell, movie);
-        var menu = ViewerMenu.Entries(tile, whole: true, anchor: null);
-        Assert.Equal(["Mark as watched", "Add to playlist"], menu.Select(e => e.Header));
-        var playlists = menu[1].Children!;
+        var menu = ViewerMenu.Entries(tile, anchor: null);
+        Assert.Contains("Mark as watched", menu.Select(e => e.Header));
+        var playlists = menu.Single(e => e.Header == "Add to playlist").Children!;
         Assert.Equal("New playlist…", playlists[0].Header);
         Assert.Null(playlists[1].Header);
         Assert.Equal(["Rainy Day Mysteries", "Weekend Marathon"], playlists.Skip(2).Select(p => p.Header));
@@ -246,10 +246,10 @@ public sealed class ViewerTests : IDisposable
         await Until(() => _shell.Live.Summary == "Added to Weekend Marathon", "the status bar to say so");
 
         // Watched from the menu too; an item page's button offers the playlists alone.
-        menu[0].Act!();
+        menu.Single(e => e.Header == "Mark as watched").Act!();
         await Until(() => tile.IsWatched && tile.State.Pending == 0, "the menu's watched mark");
-        Assert.Equal("Mark as unwatched", ViewerMenu.Entries(tile, whole: true, anchor: null)[0].Header);
-        Assert.Equal("New playlist…", ViewerMenu.Entries(tile, whole: false, anchor: null)[0].Header);
+        Assert.Contains("Mark as unwatched", ViewerMenu.Entries(tile, anchor: null).Select(e => e.Header));
+        Assert.Equal("New playlist…", ViewerMenu.PlaylistEntries(tile, anchor: null)[0].Header);
     }
 
     [Fact]
@@ -258,9 +258,9 @@ public sealed class ViewerTests : IDisposable
         await Session.Client.CreatePlaylistAsync("Road Trip", "audio", Session.MachineIdentifier!, ["777777"], CancellationToken.None);
         await Viewer.LoadPlaylistsAsync();
         var album = new AlbumTileViewModel(_shell, new MetadataItem { RatingKey = "4001", Type = "album", Title = "Tidewater Songs" });
-        var menu = ViewerMenu.Entries(album, whole: true, anchor: null);
-        Assert.Equal(["Add to playlist"], menu.Select(e => e.Header));
-        Assert.Equal(["New playlist…", null, "Road Trip"], menu[0].Children!.Select(e => e.Header));
+        var menu = ViewerMenu.Entries(album, anchor: null);
+        Assert.DoesNotContain(menu, e => e.Header?.StartsWith("Mark as", StringComparison.Ordinal) == true);
+        Assert.Equal(["New playlist…", null, "Road Trip"], menu.Single(e => e.Header == "Add to playlist").Children!.Select(e => e.Header));
         Assert.Equal("audio", ViewerState.PlaylistTypeOf(new MetadataItem { Type = "track" }));
         Assert.Null(ViewerState.PlaylistTypeOf(new MetadataItem { Type = "collection" }));
     }

@@ -145,7 +145,7 @@ public sealed class GamepadMap
         TvAction.Up or TvAction.Down or TvAction.Left or TvAction.Right => "Moves the focus; in the player, seeks or shows the controls",
         TvAction.Select => "Presses what has focus; in the player, play or pause",
         TvAction.Back => "Goes back, closes a menu; in the player, stops",
-        TvAction.Menu => "Opens the menu; in the player, the playback settings",
+        TvAction.Menu => "Options for the title in focus, elsewhere the menu; in the player, the playback settings",
         TvAction.Home => "Library home; from the desktop, the TV interface",
         TvAction.PageLeft => "A screenful left; in the player, the previous chapter",
         TvAction.PageRight => "A screenful right; in the player, the next chapter",

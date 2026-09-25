@@ -237,9 +237,16 @@ public sealed partial class HiddenShelfViewModel(HomePageViewModel home, string 
 }
 
 /// <summary>The top of the home screen: what was being watched most recently, large, to carry on with.</summary>
-public sealed partial class HeroViewModel(ShellViewModel shell, ServerSession session, MetadataItem item) : ObservableObject
+public sealed partial class HeroViewModel(ShellViewModel shell, ServerSession session, MetadataItem item) : ObservableObject, IViewerItem
 {
+    private ItemState? _state;
+
     public MetadataItem Item => item;
+
+    public ShellViewModel Shell => shell;
+
+    /// <summary>The item's shared state, for the spotlight's menu.</summary>
+    public ItemState State => _state ??= shell.Viewer?.For(item) ?? ItemState.Detached(item);
 
     public bool IsEpisode => item.Type == "episode";
 

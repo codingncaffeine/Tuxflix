@@ -8,7 +8,7 @@
     <!-- A playlist's mosaic, square like an album cover, with the same rising play button. -->
     <StackPanel Width="176" Spacing="9" Margin="0,0,22,26">
         <Panel Classes="hover-reveal">
-            <Button Classes="tile" Theme="{StaticResource TileButton}" Command="{Binding OpenCommand}"
+            <Button Classes="tile" Theme="{StaticResource TileButton}" Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}"
                     AutomationProperties.Name="{Binding Title}" ui:Tip.Text="{Binding Title}">
                 <Panel Width="176" Height="176">
                     <Border Name="Lift" CornerRadius="{StaticResource Radius.Tile}" Background="{DynamicResource Brush.Panel}" />

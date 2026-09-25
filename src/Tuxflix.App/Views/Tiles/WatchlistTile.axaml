@@ -8,7 +8,7 @@
     <!-- A Watchlist title: the poster capsule, dimmed with a band across its foot when the open
          server does not have it; on hover, a way to take it off the Watchlist. -->
     <Button Classes="tile" Theme="{StaticResource TileButton}"
-            Command="{Binding OpenCommand}"
+            Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}"
             AutomationProperties.Name="{Binding AccessibleName}">
         <Panel Width="164" Height="246">
             <Border Name="Lift" CornerRadius="{StaticResource Radius.Tile}" Background="{DynamicResource Brush.Panel}" />

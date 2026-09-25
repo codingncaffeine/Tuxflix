@@ -14,6 +14,7 @@ namespace Tuxflix.App.ViewModels;
 public sealed class WatchlistService(ServerSession session, PlexDiscoverClient discover)
 {
     private readonly ConcurrentDictionary<string, Task<MetadataItem?>> _copies = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, bool> _known = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _lookups = new(4);
 
     public ServerSession Session => session;
@@ -33,11 +34,19 @@ public sealed class WatchlistService(ServerSession session, PlexDiscoverClient d
 
     /// <summary>Whether a title of the catalogue is on the Watchlist.</summary>
     public Task<bool> ContainsAsync(string catalogKey, CancellationToken cancellation) =>
-        Task.Run(() => discover.IsOnWatchlistAsync(catalogKey, cancellation), cancellation);
+        Task.Run(async () => _known[catalogKey] = await discover.IsOnWatchlistAsync(catalogKey, cancellation), cancellation);
 
     /// <summary>Puts a title of the catalogue on the Watchlist, or takes it off.</summary>
     public Task SetAsync(string catalogKey, bool on) =>
-        Task.Run(() => on ? discover.AddAsync(catalogKey, CancellationToken.None) : discover.RemoveAsync(catalogKey, CancellationToken.None));
+        Task.Run(async () =>
+        {
+            if (on) await discover.AddAsync(catalogKey, CancellationToken.None);
+            else await discover.RemoveAsync(catalogKey, CancellationToken.None);
+            _known[catalogKey] = on;
+        });
+
+    /// <summary>Whether a title was on the Watchlist when last asked or changed here; null when it never was.</summary>
+    public bool? Known(string catalogKey) => _known.TryGetValue(catalogKey, out var on) ? on : null;
 
     private async Task<MetadataItem?> LookUpAsync(string guid)
     {

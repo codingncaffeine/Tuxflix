@@ -18,7 +18,7 @@ public enum TvAction
     /// <summary>B: back a page, close a menu; in the player, hide the controls, then stop.</summary>
     Back,
 
-    /// <summary>Start: the menu; in the player, the playback settings.</summary>
+    /// <summary>Start: the options of the title in focus, else the menu; in the player, the playback settings.</summary>
     Menu,
 
     /// <summary>Guide: library home; from the desktop interface, the TV interface.</summary>

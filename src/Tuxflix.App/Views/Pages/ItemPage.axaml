@@ -396,6 +396,13 @@
                         <StackPanel Spacing="4" IsVisible="{Binding HasMediaSummary}">
                             <TextBlock Classes="label" Text="VIDEO AND AUDIO" />
                             <TextBlock Text="{Binding MediaSummary}" FontSize="13.5" TextWrapping="Wrap" />
+                            <Button Theme="{StaticResource GhostButton}" Padding="12,6" Margin="0,6,0,0" HorizontalAlignment="Left"
+                                    Click="OnMediaInfo" ui:Tip.Text="The file, its picture, and every soundtrack and subtitle in it">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <PathIcon Data="{StaticResource Icon.Info}" Width="14" Height="14" />
+                                    <TextBlock Text="MEDIA INFO" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </StackPanel>
                 </Border>

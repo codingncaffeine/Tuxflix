@@ -1,12 +1,15 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Tuxflix.App.Controls;
 using Tuxflix.App.ViewModels;
 
 namespace Tuxflix.App.Tv;
@@ -32,6 +35,7 @@ public partial class TvShell : UserControl, ITvInputTarget
     public const double DesignHeight = 1080;
 
     private readonly ConditionalWeakTable<PageViewModel, object> _focusedOn = new();
+    private readonly Stack<(string Heading, IReadOnlyList<MenuEntry> Entries)> _levels = new();
     private readonly TvController? _controller;
     private PageViewModel? _page;
     private Control? _beforeOverlay;
@@ -56,6 +60,8 @@ public partial class TvShell : UserControl, ITvInputTarget
         model.Shell.Router.PropertyChanged += OnRouterChanged;
         Pages.LayoutUpdated += (_, _) => PlaceFocus();
         AddHandler(GotFocusEvent, (_, _) => PlaceFrame(), RoutingStrategies.Bubble, handledEventsToo: true);
+        AddHandler(GotFocusEvent, (_, e) => model.MenuLegend = !Overlay.IsVisible && OptionsOf(e.Source as Control) is not null ? "OPTIONS" : "MENU", RoutingStrategies.Bubble, handledEventsToo: true);
+        AddHandler(ContextRequestedEvent, OnContextRequested, RoutingStrategies.Tunnel);
         FocusLayer.LayoutUpdated += (_, _) => PlaceFrame();
         Keyboard.Done += CloseOverlay;
         Keyboard.PropertyChanged += (_, e) =>
@@ -72,11 +78,20 @@ public partial class TvShell : UserControl, ITvInputTarget
 
     internal TvShellViewModel? Model { get; }
 
-    /// <summary>Where focus moves now: the menu or the keyboard when one is open, else the whole frame.</summary>
-    internal Control ActiveScope => !Overlay.IsVisible ? Canvas : MenuPanel.IsVisible ? MenuPanel : KeyboardPanel;
+    /// <summary>Where focus moves now: the menu, a title's options or the keyboard when one is open, else the whole frame.</summary>
+    internal Control ActiveScope => !Overlay.IsVisible ? Canvas : MenuPanel.IsVisible ? MenuPanel : OptionsPanel.IsVisible ? OptionsPanel : KeyboardPanel;
 
     /// <summary>The menu is open.</summary>
     internal bool IsMenuOpen => Overlay.IsVisible && MenuPanel.IsVisible;
+
+    /// <summary>A title's options are open.</summary>
+    internal bool IsOptionsOpen => Overlay.IsVisible && OptionsPanel.IsVisible;
+
+    /// <summary>The heading over the options showing: the title, or the line they were opened from.</summary>
+    internal string OptionsHeading => OptionsTitle.Text ?? string.Empty;
+
+    /// <summary>The rows of the options showing, each with its line as its tag.</summary>
+    internal IReadOnlyList<Button> OptionButtons => [.. OptionsRows.Children.OfType<Button>()];
 
     /// <summary>The on-screen keyboard is open over a text field.</summary>
     internal bool IsKeyboardOpen => Overlay.IsVisible && KeyboardPanel.IsVisible;
@@ -100,9 +115,11 @@ public partial class TvShell : UserControl, ITvInputTarget
         if (Overlay.IsVisible) return InOverlay(input);
         if (input.Phase == TvPhase.Release) return PageView?.Handle(input) == true;
 
+        // The menu button is a title's options where one has focus, as on Xbox and in Big Picture;
+        // anywhere else it is the menu.
         if (input.Action == TvAction.Menu && Model?.Shell.IsImmersive != true)
         {
-            OpenMenu();
+            if (!OpenOptions(FocusEngine.Focused(Canvas))) OpenMenu();
             return true;
         }
 
@@ -129,9 +146,154 @@ public partial class TvShell : UserControl, ITvInputTarget
     {
         _beforeOverlay = FocusEngine.Focused(Canvas);
         KeyboardPanel.IsVisible = false;
+        OptionsPanel.IsVisible = false;
         MenuPanel.IsVisible = true;
         Overlay.IsVisible = true;
         Dispatcher.UIThread.Post(() => _controller?.Focus.FocusFirst(MenuPanel), DispatcherPriority.Loaded);
+    }
+
+    /// <summary>
+    /// What <paramref name="control"/> or the nearest control around it has a menu for: a tile's
+    /// title, an episode row, the page's own title behind its PLAY; null for anything else.
+    /// </summary>
+    private static object? OptionsOf(Control? control)
+    {
+        for (var at = control; at is not null; at = at.GetVisualParent() as Control)
+        {
+            if ((ViewerMenu.GetFor(at) ?? at.DataContext) is (IViewerItem or IMenuSource) and var target) return target;
+            if (at is TvShell || at.DataContext is PageViewModel and not IViewerItem) return null;
+        }
+
+        return null;
+    }
+
+    /// <summary>Opens the options of what <paramref name="control"/> shows; false when it has none.</summary>
+    internal bool OpenOptions(Control? control)
+    {
+        if (OptionsOf(control) is not { } target || ViewerMenu.Entries(target, control) is not { Count: > 0 } entries) return false;
+        _beforeOverlay = FocusEngine.Focused(Canvas) ?? control;
+        _levels.Clear();
+        MenuPanel.IsVisible = false;
+        KeyboardPanel.IsVisible = false;
+        OptionsPanel.IsVisible = true;
+        Overlay.IsVisible = true;
+        ShowOptions(Heading(target), entries);
+        return true;
+    }
+
+    private static string Heading(object target) => target switch
+    {
+        IViewerItem { Item: { Type: "episode" } episode } => $"{episode.GrandparentTitle} · {episode.Title}",
+        IViewerItem { Item: var item } => item.Title,
+        WatchlistTileViewModel title => title.Title,
+        PhotoTileViewModel photo => photo.Title,
+        _ => string.Empty,
+    };
+
+    /// <summary>Shows one level of options, focus on its first row that can be chosen.</summary>
+    private void ShowOptions(string heading, IReadOnlyList<MenuEntry> entries)
+    {
+        _levels.Push((heading, entries));
+        OptionsTitle.Text = heading;
+        OptionsRows.Children.Clear();
+        var ticks = entries.Any(e => e.IsChecked);
+        foreach (var entry in entries) OptionsRows.Children.Add(OptionRow(entry, ticks));
+        Dispatcher.UIThread.Post(() => _controller?.Focus.FocusFirst(OptionsRows), DispatcherPriority.Loaded);
+    }
+
+    private Control OptionRow(MenuEntry entry, bool ticks)
+    {
+        if (entry.Header is null) return new Border { Height = 1, Margin = new Thickness(26, 10), Background = this.FindResource("Brush.Line.Hairline") as IBrush };
+        var row = new Button();
+        if (this.FindResource("TvRow") is ControlTheme theme) row.Theme = theme;
+        ShowOption(row, entry, ticks);
+        row.Click += (_, _) => Choose(row.Tag as MenuEntry);
+        if (entry.Later is { } later) _ = SettleAsync(row, later, ticks);
+        return row;
+    }
+
+    private void ShowOption(Button row, MenuEntry entry, bool ticks)
+    {
+        row.Tag = entry;
+        row.IsEnabled = entry.IsEnabled;
+        var line = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 18 };
+        if (ticks)
+        {
+            line.Children.Add(new PathIcon { Data = entry.IsChecked ? this.FindResource("Icon.Check") as Geometry : null, Width = 26, Height = 26 });
+        }
+
+        var words = new TextBlock { Text = entry.Header, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        Grid.SetColumn(words, 1);
+        line.Children.Add(words);
+        if (entry.Children is { Count: > 0 })
+        {
+            var more = new PathIcon { Data = this.FindResource("Icon.CaretRight") as Geometry, Width = 22, Height = 22 };
+            Grid.SetColumn(more, 2);
+            line.Children.Add(more);
+        }
+
+        row.Content = line;
+        AutomationProperties.SetName(row, entry.Header);
+    }
+
+    /// <summary>A row whose words wait on a request takes them when they come, if its level still shows.</summary>
+    private async Task SettleAsync(Button row, Task<MenuEntry?> later, bool ticks)
+    {
+        try
+        {
+            if (await later is { } entry && OptionsRows.Children.Contains(row)) ShowOption(row, entry, ticks);
+        }
+        catch (Exception ex)
+        {
+            Tuxflix.Core.Diagnostics.Log.Warn("An option could not be filled in.", ex);
+        }
+    }
+
+    /// <summary>A row with more under it opens them in its place; any other does what it says, the options closed first.</summary>
+    private void Choose(MenuEntry? entry)
+    {
+        if (entry is null) return;
+        if (entry.Children is { Count: > 0 } children)
+        {
+            ShowOptions(entry.Header ?? string.Empty, children);
+            return;
+        }
+
+        CloseOverlay();
+        entry.Act?.Invoke();
+    }
+
+    /// <summary>Back out of a level of options to the one it opened from; out of the first, the options close.</summary>
+    private void BackOutOfOptions()
+    {
+        if (_levels.Count < 2)
+        {
+            CloseOverlay();
+            return;
+        }
+
+        _levels.Pop();
+        var (heading, entries) = _levels.Pop();
+        ShowOptions(heading, entries);
+    }
+
+    /// <summary>
+    /// A right click or the Menu key's own request in the TV interface: a title's options open
+    /// here, never the desktop's small menu over the room's view. With the menu, the options or
+    /// the keyboard up (the Menu key's press opened them), no menu opens over them; anything else
+    /// keeps a menu of its own (a text field's).
+    /// </summary>
+    private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (Overlay.IsVisible)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (OptionsOf(e.Source as Control) is null) return;
+        e.Handled = true;
+        OpenOptions(e.Source as Control);
     }
 
     /// <summary>Opens the on-screen keyboard to type into <paramref name="box"/>.</summary>
@@ -144,6 +306,7 @@ public partial class TvShell : UserControl, ITvInputTarget
         KeyboardLabel.Text = (Controls.Tip.GetText(box) ?? box.PlaceholderText ?? "TYPE").ToUpperInvariant();
         KeyboardPreview.Text = Keyboard.Text;
         MenuPanel.IsVisible = false;
+        OptionsPanel.IsVisible = false;
         KeyboardPanel.IsVisible = true;
         Overlay.IsVisible = true;
         Dispatcher.UIThread.Post(() => _controller?.Focus.FocusFirst(KeyboardPanel), DispatcherPriority.Loaded);
@@ -153,6 +316,9 @@ public partial class TvShell : UserControl, ITvInputTarget
     {
         Overlay.IsVisible = false;
         MenuPanel.IsVisible = false;
+        OptionsPanel.IsVisible = false;
+        OptionsRows.Children.Clear();
+        _levels.Clear();
         KeyboardPanel.IsVisible = false;
         _typingInto = null;
         if (_beforeOverlay is { } back && TopLevel.GetTopLevel(back) is not null) back.Focus(NavigationMethod.Directional);
@@ -164,6 +330,9 @@ public partial class TvShell : UserControl, ITvInputTarget
         if (input.Phase == TvPhase.Release) return true;
         switch (input.Action)
         {
+            case TvAction.Back when input.Phase == TvPhase.Press && IsOptionsOpen:
+                BackOutOfOptions();
+                return true;
             case TvAction.Back or TvAction.Menu when input.Phase == TvPhase.Press:
                 CloseOverlay();
                 return true;

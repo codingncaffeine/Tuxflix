@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             x:Class="Tuxflix.App.Views.MediaInfoView"
+             x:DataType="vm:MediaInfoViewModel">
+
+    <!-- What a film or an episode is made of: each version's file, picture, sound and subtitles.
+         The values can be selected, to copy a file's name. -->
+    <ScrollViewer Width="460" MaxHeight="560" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="14" Margin="6,4,10,4">
+            <StackPanel Spacing="3">
+                <TextBlock Classes="label" Text="MEDIA INFO" />
+                <TextBlock Text="{Binding Heading}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+            </StackPanel>
+            <TextBlock Classes="faint" Text="Reading…" FontSize="13" IsVisible="{Binding IsLoading}" />
+            <TextBlock Text="{Binding Problem}" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding HasProblem}" />
+            <ItemsControl ItemsSource="{Binding Versions}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:MediaVersionViewModel">
+                        <StackPanel Spacing="6" Margin="0,0,0,14">
+                            <TextBlock Classes="label" Text="{Binding Label}" />
+                            <TextBlock Text="{Binding Summary}" FontSize="13.5" FontWeight="SemiBold" IsVisible="{Binding HasSummary}" />
+                            <ItemsControl ItemsSource="{Binding Lines}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:InfoLine">
+                                        <Grid ColumnDefinitions="88,*" Margin="0,2">
+                                            <TextBlock Text="{Binding Label}" FontSize="12.5" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                                            <SelectableTextBlock Grid.Column="1" Text="{Binding Text}" FontSize="12.5" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

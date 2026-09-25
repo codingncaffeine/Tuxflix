@@ -50,13 +50,20 @@ public sealed class VisualizerBandTests
                 Palette = VisualizerPalettes.Resolve("Aurora", null),
             };
             renderer.Resize(new PixelSize(1600, 1000));
+
+            // The suite before this leaves garbage behind; collected in the middle of a mode, it
+            // would time the heap, not the drawing.
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            var full = GC.CollectionCount(2);
             var clock = Stopwatch.StartNew();
             renderer.Start();
             await Task.Delay(TimeSpan.FromSeconds(1.5), TestContext.Current.CancellationToken);
             renderer.Stop();
             var elapsed = clock.Elapsed.TotalSeconds;
             var times = renderer.Times;
-            Output.WriteLine($"{mode}: {times.Count} frames in {elapsed:0.00} s, 95 % under {times.Percentile(0.95):0.00} ms, slowest {times.Max:0.00} ms");
+            Output.WriteLine($"{mode}: {times.Count} frames in {elapsed:0.00} s, 95 % under {times.Percentile(0.95):0.00} ms, slowest {times.Max:0.00} ms, full collections {GC.CollectionCount(2) - full}");
             Assert.InRange(times.Percentile(0.95), 0.01, 8.0);
             Assert.InRange(times.Max, 0.01, 1000.0 / 60);
             Assert.InRange(shown / elapsed, 50, 64);

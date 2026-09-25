@@ -18,6 +18,9 @@ public sealed class VideoQueue
 
     public int Count => _items.Count;
 
+    /// <summary>The whole run, in the order it plays.</summary>
+    public IReadOnlyList<MetadataItem> Items => _items;
+
     public MetadataItem Current => _items[Index];
 
     /// <summary>The one after this, or null at the end.</summary>

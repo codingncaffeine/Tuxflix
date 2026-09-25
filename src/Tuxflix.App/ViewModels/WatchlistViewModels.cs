@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Tuxflix.App.Controls;
 using Tuxflix.Core.Diagnostics;
 using Tuxflix.Core.Plex;
 
@@ -108,8 +109,19 @@ public sealed partial class WatchlistPageViewModel(ShellViewModel shell, ServerS
 }
 
 /// <summary>A title on the Watchlist: its poster, and whether the open server has it.</summary>
-public sealed partial class WatchlistTileViewModel(ShellViewModel shell, WatchlistService watchlist, MetadataItem title) : ObservableObject
+public sealed partial class WatchlistTileViewModel(ShellViewModel shell, WatchlistService watchlist, MetadataItem title) : ObservableObject, IMenuSource
 {
+    /// <summary>Open it (a film the server has plays at once), or take it off the Watchlist.</summary>
+    public IReadOnlyList<MenuEntry> MenuEntries()
+    {
+        var entries = new List<MenuEntry>();
+        if (Copy is { Type: "movie" } film) entries.Add(new("Play", () => shell.Play(film, resume: true)));
+        entries.Add(new("Open", () => OpenCommand.Execute(null)));
+        entries.Add(MenuEntry.Separator);
+        entries.Add(new("Remove from Watchlist", () => RemoveCommand.Execute(null)));
+        return entries;
+    }
+
     /// <summary>The title as Plex's catalogue has it.</summary>
     public MetadataItem Item => title;
 

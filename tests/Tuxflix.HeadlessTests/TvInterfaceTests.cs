@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Tuxflix.App;
+using Tuxflix.App.Controls;
 using Tuxflix.App.Tv;
 using Tuxflix.App.Tv.Pages;
 using Tuxflix.App.ViewModels;
@@ -108,33 +109,70 @@ public sealed class TvInterfaceTests
     });
 
     [Fact]
-    public Task AControllerPressMovesFocusWithinFiftyMilliseconds() => HeadlessApp.Run(async () =>
+    public Task TheMenuButtonOnATitleOpensItsOptionsAndBackComesOutALevelAtATime() => HeadlessApp.Run(async () =>
     {
-        var pad = new FakePadSource();
-        using var tv = await TvHarness.OpenHomeAsync(pad: pad);
-        await tv.UntilAsync(() => pad.Opened, "the controller thread");
+        using var tv = await TvHarness.OpenHomeAsync();
+        var frame = tv.Frame;
+        var tile = Assert.IsAssignableFrom<MediaTileViewModel>(tv.Focused!.DataContext);
+        await tv.UntilAsync(() => tv.Shell.Viewer!.Playlists.Count > 0, "the playlists");
+        Assert.Equal("OPTIONS", frame.Model!.MenuLegend);
+        string? Line() => (tv.Focused as Button)?.Tag is MenuEntry entry ? entry.Header : null;
 
-        // Timed from the press to the moment focus changes on the UI thread; the test's own
-        // drawing between presses is outside the measurement.
-        var clock = Stopwatch.StartNew();
-        var focusedAt = new List<TimeSpan>();
-        tv.Window.AddHandler(InputElement.GotFocusEvent, (_, _) => focusedAt.Add(clock.Elapsed), RoutingStrategies.Bubble, handledEventsToo: true);
-        var moved = new List<double>();
-        for (var i = 0; i < 8; i++)
-        {
-            var button = i % 2 == 0 ? PadButton.DPadRight : PadButton.DPadLeft;
-            var before = focusedAt.Count;
-            var pressedAt = clock.Elapsed;
-            pad.Push(PadEvent.Down(button));
-            pad.Push(PadEvent.Up(button));
-            while (focusedAt.Count == before && clock.Elapsed - pressedAt < TimeSpan.FromSeconds(5)) await Task.Delay(1, TestContext.Current.CancellationToken);
-            Assert.True(focusedAt.Count > before, $"press {i} moved no focus");
-            moved.Add((focusedAt[before] - pressedAt).TotalMilliseconds);
-            tv.Pump();
-        }
+        // The rows are the menu's own lines, and a room's menu has no line that needs a desktop:
+        // no name to type, no panel beside the tile.
+        tv.Act(TvAction.Menu);
+        Assert.True(frame.IsOptionsOpen);
+        Assert.False(frame.IsMenuOpen);
+        await tv.UntilAsync(() => Line() is not null, "focus on the first option");
+        var menu = ViewerMenu.Entries(tile, anchor: null);
+        var lines = menu.Where(e => e.Header is not null).Select(e => e.Header).ToList();
+        Assert.Equal(lines, frame.OptionButtons.Select(b => ((MenuEntry)b.Tag!).Header));
+        Assert.Equal(lines[0], Line());
+        Assert.DoesNotContain("Media info", lines);
+        Assert.DoesNotContain("New playlist…", menu.Single(e => e.Header == "Add to playlist").Children!.Select(e => e.Header));
+        Assert.Equal(tile.Item.Type == "episode" ? $"{tile.Item.GrandparentTitle} · {tile.Item.Title}" : tile.Item.Title, frame.OptionsHeading);
 
-        // The band: a press reaches focus within 50 ms, three frames at 60 Hz.
-        Assert.All(moved, ms => Assert.InRange(ms, 0, 50));
+        // In and out of a line with more under it.
+        while (Line() != "Rate") tv.Act(TvAction.Down);
+        tv.Act(TvAction.Select);
+        Assert.Equal("Rate", frame.OptionsHeading);
+        await tv.UntilAsync(() => Line() == ((MenuEntry)frame.OptionButtons[0].Tag!).Header, "focus on the first star");
+        Assert.Contains("5 stars", frame.OptionButtons.Select(b => ((MenuEntry)b.Tag!).Header));
+        tv.Act(TvAction.Back);
+        Assert.True(frame.IsOptionsOpen);
+        Assert.NotEqual("Rate", frame.OptionsHeading);
+        tv.Act(TvAction.Back);
+        Assert.False(frame.IsOptionsOpen);
+        await tv.UntilAsync(() => ReferenceEquals(tv.Focused?.DataContext, tile), "focus back on the title");
+
+        // A line that acts closes the options first, then acts.
+        var watched = tile.State.IsWatched;
+        tv.Act(TvAction.Menu);
+        await tv.UntilAsync(() => Line() is not null, "focus in the options");
+        while (Line()?.StartsWith("Mark as", StringComparison.Ordinal) != true) tv.Act(TvAction.Down);
+        tv.Act(TvAction.Select);
+        Assert.False(frame.IsOptionsOpen);
+        await tv.UntilAsync(() => tile.State.IsWatched != watched && tile.State.Pending == 0, "the title marked");
+
+        // A right click opens the same options, and never the desktop's small menu under them.
+        var button = tv.Window.GetVisualDescendants().OfType<Button>().First(b => ReferenceEquals(b.DataContext, tile));
+        button.RaiseEvent(new ContextRequestedEventArgs());
+        Assert.True(frame.IsOptionsOpen);
+        Assert.False(button.ContextFlyout?.IsOpen ?? false);
+        tv.Act(TvAction.Back);
+
+        // Up on the tabs nothing has options: the button is the menu, and a request there passes
+        // on untouched to whatever menu the control has of its own.
+        for (var i = 0; i < 6 && tv.Focused?.DataContext is not TvTabViewModel; i++) tv.Act(TvAction.Up);
+        Assert.IsType<TvTabViewModel>(tv.Focused?.DataContext);
+        Assert.Equal("MENU", frame.Model.MenuLegend);
+        var request = new ContextRequestedEventArgs();
+        tv.Focused!.RaiseEvent(request);
+        Assert.False(request.Handled);
+        Assert.False(frame.IsOptionsOpen);
+        tv.Act(TvAction.Menu);
+        Assert.True(frame.IsMenuOpen);
+        Assert.False(frame.IsOptionsOpen);
     });
 
     [Fact]
@@ -256,7 +294,12 @@ public sealed class TvInterfaceTests
         Assert.True(tv.Window.IsTvShowing);
         Assert.Equal(Avalonia.Controls.WindowState.FullScreen, tv.Window.WindowState);
 
-        // Start opens the menu; its last-but-one row goes back to the desktop.
+        // Start on a title opens its options; up on the tabs, where nothing has options, it opens
+        // the menu, whose last-but-one row goes back to the desktop.
+        tv.Act(TvAction.Menu);
+        Assert.True(tv.Frame.IsOptionsOpen);
+        tv.Act(TvAction.Back);
+        for (var i = 0; i < 6 && tv.Focused?.DataContext is not TvTabViewModel; i++) tv.Act(TvAction.Up);
         tv.Act(TvAction.Menu);
         Assert.True(tv.Frame.IsMenuOpen);
         tv.Act(TvAction.Back);

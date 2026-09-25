@@ -97,7 +97,7 @@
                         <Border Classes="pad-glyph" Background="{DynamicResource Brush.Raised}">
                             <PathIcon Data="{StaticResource Icon.List}" Width="15" Height="15" Foreground="White" />
                         </Border>
-                        <TextBlock Classes="legend" Text="MENU" />
+                        <TextBlock Classes="legend" Text="{Binding MenuLegend}" />
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="28" IsVisible="{Binding HasNoPads}">
@@ -111,7 +111,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <Border Classes="keycap tv"><TextBlock Text="F10" /></Border>
-                        <TextBlock Classes="legend" Text="MENU" />
+                        <TextBlock Classes="legend" Text="{Binding MenuLegend}" />
                     </StackPanel>
                 </StackPanel>
             </StackPanel>
@@ -176,6 +176,21 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
+                </Border>
+
+                <!-- A title's options: the lines of the desktop's right-click menu, as rows for a room;
+                     a line with more under it opens them in its place, and Back comes out again. -->
+                <Border Name="OptionsPanel" HorizontalAlignment="Right" Width="560" Padding="48,56"
+                        Background="{DynamicResource Brush.Rail}" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1,0,0,0"
+                        BoxShadow="-24 0 60 0 #B3020510" IsVisible="False">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+                        <StackPanel Spacing="8">
+                            <TextBlock Classes="tv-kicker" Text="OPTIONS" Margin="26,0,0,6" />
+                            <TextBlock Name="OptionsTitle" FontSize="30" FontWeight="Bold" TextWrapping="Wrap" MaxLines="2"
+                                       TextTrimming="CharacterEllipsis" Margin="26,0,0,18" />
+                            <StackPanel Name="OptionsRows" Spacing="8" />
+                        </StackPanel>
+                    </ScrollViewer>
                 </Border>
 
                 <Border Name="KeyboardPanel" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,60" Padding="40,32"

@@ -7,9 +7,18 @@ using Tuxflix.Core.Plex;
 namespace Tuxflix.App.ViewModels;
 
 /// <summary>A playlist as a square tile: its mosaic, its name, how long it runs.</summary>
-public sealed partial class PlaylistTileViewModel(ShellViewModel shell, MetadataItem playlist)
+public sealed partial class PlaylistTileViewModel(ShellViewModel shell, MetadataItem playlist) : IViewerItem
 {
+    private ItemState? _state;
+
     public MetadataItem Playlist { get; } = playlist;
+
+    public ShellViewModel Shell => shell;
+
+    public MetadataItem Item => Playlist;
+
+    /// <summary>A playlist has no marks of its own to share: its menu only plays it.</summary>
+    public ItemState State => _state ??= ItemState.Detached(Playlist);
 
     public string Title => Playlist.Title;
 
