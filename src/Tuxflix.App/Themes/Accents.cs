@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
+using Avalonia.Threading;
 
 namespace Tuxflix.App.Themes;
 
@@ -31,6 +32,9 @@ public static class Accents
     public static void Apply(Accent accent)
     {
         ArgumentNullException.ThrowIfNull(accent);
+
+        // The brushes belong to the thread that makes them, and the renderer reads them on the UI thread.
+        Dispatcher.UIThread.VerifyAccess();
         if (Application.Current?.Resources is not { } resources) return;
         resources["Color.Accent"] = accent.Main;
         resources["Color.Accent.Light"] = accent.Light;

@@ -53,8 +53,9 @@ public sealed class SettingsTests : IDisposable
         await Until(() => player.Quality == fourMegabits);
     }
 
+    // The accent's brushes are made on the application's thread, where the renderer reads them.
     [Fact]
-    public void AnAccentChosenHereRepaintsTheAccentBrushes()
+    public Task AnAccentChosenHereRepaintsTheAccentBrushes() => HeadlessApp.Run(() =>
     {
         var page = new SettingsPageViewModel(_shell);
         var sky = Accents.All.Single(a => a.Key == "sky");
@@ -67,7 +68,8 @@ public sealed class SettingsTests : IDisposable
         Assert.Same(Accents.All[0], Accents.Find("no such colour"));
 
         page.Accent = Accents.All[0];
-    }
+        return Task.CompletedTask;
+    });
 
     private static async Task Until(Func<bool> condition)
     {
