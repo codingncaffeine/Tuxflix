@@ -65,6 +65,34 @@ public sealed class AppPathsTests
         // A Unix socket path over 108 bytes cannot be bound at all.
         Assert.True(paths.InstanceSocket.Length < 108);
     }
+
+    [Fact]
+    public void WithoutARuntimeDirectoryTheSocketStaysInTheProfilesOwnCache()
+    {
+        // Never the shared temporary folder, where another user could make the folder first.
+        var paths = AppPaths.Resolve(null, name => name == "HOME" ? "/home/viewer" : null);
+        var portable = AppPaths.Resolve("/media/stick/tuxflix", _ => null);
+
+        Assert.Equal("/home/viewer/.cache/tuxflix/runtime/instance.sock", paths.InstanceSocket);
+        Assert.Equal("/media/stick/tuxflix/cache/runtime", portable.Runtime);
+    }
+
+    [Fact]
+    [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+    public void TheProfileFoldersAreTheUsersAlone()
+    {
+        const UnixFileMode ownerOnly = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+        using var scratch = new Scratch();
+        var paths = AppPaths.Resolve(Path.Combine(scratch.Root, "profile"), _ => null);
+
+        // One folder made earlier, readable by everyone, as mkdir leaves it.
+        Directory.CreateDirectory(paths.Config);
+        File.SetUnixFileMode(paths.Config, ownerOnly | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+
+        paths.EnsureCreated();
+
+        Assert.All(new[] { paths.Config, paths.Data, paths.State, paths.Cache, paths.Logs, paths.Runtime }, folder => Assert.Equal(ownerOnly, File.GetUnixFileMode(folder)));
+    }
 }
 
 public sealed class SettingsStoreTests
