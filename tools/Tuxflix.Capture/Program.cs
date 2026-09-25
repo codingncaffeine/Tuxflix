@@ -4,7 +4,8 @@
 //
 // Poses: home, home-hover, movie, series, welcome, discover, tooltip. With none given, all of them.
 // With --real also: artist, album, nowplaying, and classic (the compact player over a playing album;
-// CLASSIC_SKIN=path.wsz wears that skin, otherwise the base skin, fetched as the app fetches it).
+// CLASSIC_SKIN=path.wsz wears that skin, otherwise the base skin, fetched as the app fetches it;
+// CLASSIC_SCALE=1.5 sets its size).
 // Every run uses a throwaway profile under the output directory; nothing touches the real one.
 
 using System.Diagnostics;
@@ -12,6 +13,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Input.Raw;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -165,12 +167,41 @@ void Capture(string pose)
             shell.Settings.Classic.Skin = Result(library.ImportAsync(skinFile));
         }
 
+        var scale = Environment.GetEnvironmentVariable("CLASSIC_SCALE");
+        if (scale is { Length: > 0 }) shell.Settings.Classic.Scale = double.Parse(scale, System.Globalization.CultureInfo.InvariantCulture);
         Wait(window.ShowClassicAsync());
         var classic = window.Classic ?? throw new InvalidOperationException("The compact player did not open.");
-        // The analyser needs its decode to run ahead, and the marquee a step or two.
-        Pump(TimeSpan.FromSeconds(3));
+        // CLASSIC_DRAG=dx,dy drags the resize corner that far, the way a hand would: press, ten moves, release.
+        if (Environment.GetEnvironmentVariable("CLASSIC_DRAG") is { Length: > 0 } drag)
+        {
+            var by = drag.Split(',').Select(v => double.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            var start = new Point(classic.ClientSize.Width - 4, classic.ClientSize.Height - 4);
+            classic.MouseMove(start);
+            Pump(TimeSpan.FromMilliseconds(100));
+            classic.MouseDown(start, MouseButton.Left);
+            for (var i = 1; i <= 10; i++)
+            {
+                classic.MouseMove(start + new Vector(by[0] * i / 10, by[1] * i / 10), RawInputModifiers.LeftMouseButton);
+                Pump(TimeSpan.FromMilliseconds(50));
+            }
+
+            classic.MouseUp(start + new Vector(by[0], by[1]), MouseButton.Left);
+            Pump(TimeSpan.FromMilliseconds(300));
+            Console.WriteLine($"{pose}: dragged the corner by {by[0]},{by[1]}: size {classic.View.Scale:0.###}, window {classic.ClientSize.Width:0.##}x{classic.ClientSize.Height:0.##}");
+        }
+
+        // The analyser needs its decode to run ahead, and the marquee a step or two (CLASSIC_WAIT seconds, 3).
+        var wait = double.TryParse(Environment.GetEnvironmentVariable("CLASSIC_WAIT"), System.Globalization.CultureInfo.InvariantCulture, out var w) ? w : 3;
+        Pump(TimeSpan.FromSeconds(wait));
+        if (Environment.GetEnvironmentVariable("CLASSIC_EARLIER") is { Length: > 0 } earlier)
+        {
+            // A frame a second before the kept one, to see what moved between them.
+            classic.CaptureRenderedFrame()?.Save(Path.Combine(output, earlier), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+            Pump(TimeSpan.FromSeconds(1));
+        }
+
         var shot = classic.CaptureRenderedFrame() ?? throw new InvalidOperationException("The compact player rendered nothing.");
-        var name = "classic-" + (skinFile is { Length: > 0 } ? Path.GetFileNameWithoutExtension(skinFile) : "base") + ".png";
+        var name = "classic-" + (skinFile is { Length: > 0 } ? Path.GetFileNameWithoutExtension(skinFile) : "base") + (scale is { Length: > 0 } ? "-" + scale : string.Empty) + ".png";
         shot.Save(Path.Combine(output, name), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
         Console.WriteLine($"{pose}: {Path.Combine(output, name)} ({shot.PixelSize.Width}x{shot.PixelSize.Height}, skin {classic.View.Skin.Name})");
         classic.Close();

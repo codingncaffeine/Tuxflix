@@ -38,8 +38,8 @@ public sealed class ClassicPlayerSettings
     /// <summary>The <c>.wsz</c> file in use; none means the classic base skin.</summary>
     public string? Skin { get; set; }
 
-    /// <summary>Pixels per skin pixel: 2 ("double size") suits today's screens.</summary>
-    public int Scale { get; set; } = 2;
+    /// <summary>Screen pixels per skin pixel, 1 to 2: 2 ("double size") suits today's screens.</summary>
+    public double Scale { get; set; } = 2;
 
     public bool ShowEqualizer { get; set; } = true;
 

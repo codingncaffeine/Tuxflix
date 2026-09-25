@@ -93,12 +93,23 @@ internal static class ClassicProbe
             var view = classic.View;
             var stepped = !window.IsVisible;
             var scaling = classic.RenderScaling;
-            var unit = Math.Max(1, Math.Round(view.Scale * scaling)) / scaling;
+            var unit = view.LogicalUnit;
             var full = Size(view.ShowEqualizer, view.ShowPlaylist, shaded: false);
-            var sized = Near(classic.ClientSize, new Size(ClassicSprites.MainWidth * unit, full * unit));
+            var sized = Near(classic.ClientSize, new Size(ClassicSprites.MainWidth * unit, full * unit)) && !classic.IsSmoothing;
             Log.Info($"Probe: compact player open after {opening.Elapsed.TotalSeconds:0.0} s in the {view.Skin.Name} skin; main window "
                      + $"{(stepped ? "stepped aside" : "STILL SHOWN")}; window {classic.ClientSize.Width:0.##}x{classic.ClientSize.Height:0.##} at scale {scaling:0.##} "
-                     + $"({classic.ClientSize.Width * scaling:0.##}x{classic.ClientSize.Height * scaling:0.##} pixels, {unit * scaling:0} a skin pixel), {(sized ? "as expected" : "WRONG SIZE")}.");
+                     + $"({classic.ClientSize.Width * scaling:0.##}x{classic.ClientSize.Height * scaling:0.##} pixels, {unit * scaling:0.##} a skin pixel), {(sized ? "as expected" : "WRONG SIZE")}.");
+
+            // Between whole sizes: the window takes the size between, and the drawing goes through the smoothing layer.
+            view.Scale = 1.5;
+            await Task.Delay(700);
+            var between = Near(classic.ClientSize, new Size(ClassicSprites.MainWidth * 1.5, full * 1.5)) && classic.IsSmoothing && view.DrawScale == (int)Math.Ceiling(1.5 * scaling);
+            var betweenSize = classic.ClientSize;
+            view.Scale = 2;
+            await Task.Delay(700);
+            var wholeAgain = Near(classic.ClientSize, new Size(ClassicSprites.MainWidth * unit, full * unit)) && !classic.IsSmoothing;
+            Log.Info($"Probe: at 1.5 times the window is {betweenSize.Width:0.##}x{betweenSize.Height:0.##}, drawn at {view.DrawScale} and smoothed: "
+                     + $"{(between ? "yes" : "NO")}; back at double size, sharp again: {(wholeAgain ? "yes" : "NO")}.");
 
             view.Shaded = true;
             await Task.Delay(700);
@@ -155,7 +166,7 @@ internal static class ClassicProbe
             var remembered = !shell.Settings.Equalizer.On && shell.Settings.Equalizer.Bands[0] == 6 && !shell.Settings.Classic.Shaded;
             Log.Info($"Probe: closed; the main window is {(back ? "back" : "NOT BACK")}; settings {(remembered ? "kept" : "NOT KEPT")}.");
 
-            ExitCode = stepped && sized && rolled && unrolled && built && cleared.Length == 0 && kept && answered && back && same && remembered && _runs == 1 ? 0 : 1;
+            ExitCode = stepped && sized && between && wholeAgain && rolled && unrolled && built && cleared.Length == 0 && kept && answered && back && same && remembered && _runs == 1 ? 0 : 1;
             Log.Info(ExitCode == 0 ? "Probe: the compact player opens, plays, rolls up and gives the window back." : "Probe: FAILED.");
         }
         catch (Exception ex)
@@ -175,8 +186,9 @@ internal static class ClassicProbe
     private static int Size(bool equalizer, bool playlist, bool shaded) =>
         (shaded ? ClassicSprites.ShadeHeight : ClassicSprites.MainHeight) + (equalizer ? ClassicSprites.EqHeight : 0) + (playlist ? ClassicSprites.PlaylistHeight : 0);
 
+    /// <summary>Within the one pixel a window rounds its size to.</summary>
     private static bool Near(Size actual, Size expected) =>
-        Math.Abs(actual.Width - expected.Width) < 0.5 && Math.Abs(actual.Height - expected.Height) < 0.5;
+        Math.Abs(actual.Width - expected.Width) <= 1 && Math.Abs(actual.Height - expected.Height) <= 1;
 
     /// <summary>Milliseconds until a job posted now at this priority runs on the UI thread; NaN after three seconds.</summary>
     private static async Task<double> AnswerAsync(DispatcherPriority priority)

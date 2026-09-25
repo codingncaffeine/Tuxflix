@@ -48,6 +48,8 @@ public sealed class ClassicPlayerView : Control
     private double? _dragEq;
     private int _eqBand;
     private int _miniButton;
+    private Vector _gripOffset;
+    private Cursor? _gripCursor;
     private Part _activePart = Part.Main;
     private string? _flash;
     private DateTime _flashUntil;
@@ -108,16 +110,51 @@ public sealed class ClassicPlayerView : Control
         }
     }
 
-    /// <summary>Screen pixels per skin pixel, as chosen: 1 is the original size, 2 double size.</summary>
-    public int Scale
+    public const double MinScale = 1;
+
+    public const double MaxScale = 2;
+
+    /// <summary>The size, in screen pixels per skin pixel: 1 is the original size, 2 double size, and anything between.</summary>
+    public double Scale
     {
-        get => Math.Clamp(_settings.Scale, 1, 4);
+        get => Math.Clamp(_settings.Scale, MinScale, MaxScale);
         set
         {
-            _settings.Scale = Math.Clamp(value, 1, 4);
+            _settings.Scale = Math.Clamp(value, MinScale, MaxScale);
             Changed(relayout: true);
         }
     }
+
+    /// <summary>
+    /// Screen pixels per skin pixel the view draws at: always a whole number, so every skin pixel
+    /// is the same size. A size between two whole ones draws at the next one up, and the host
+    /// scales that drawing down smoothly by <see cref="Shrink"/> (the "sharp bilinear" of
+    /// emulators): even pixels, softened by at most one screen pixel at their edges.
+    /// </summary>
+    public int DrawScale
+    {
+        get
+        {
+            var device = Scale * ScreenScale;
+            var whole = Math.Round(device);
+            return (int)Math.Max(1, Math.Abs(device - whole) < 0.01 ? whole : Math.Ceiling(device));
+        }
+    }
+
+    /// <summary>What the host scales the drawing by: exactly 1 at a whole size, below 1 between two.</summary>
+    public double Shrink
+    {
+        get
+        {
+            var shrink = Scale * ScreenScale / DrawScale;
+            return Math.Abs(shrink - 1) < 0.01 ? 1 : shrink;
+        }
+    }
+
+    /// <summary>Logical units per skin pixel on screen, after the host's scaling.</summary>
+    public double LogicalUnit => DrawScale * Shrink / ScreenScale;
+
+    private double ScreenScale => TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
 
     public bool ShowEqualizer
     {
@@ -173,18 +210,8 @@ public sealed class ClassicPlayerView : Control
 
     private ClassicVis Vis => Visualizer;
 
-    /// <summary>
-    /// Logical units per skin pixel. The chosen size is rounded to whole screen pixels, so at a
-    /// fractional desktop scale (1.25, 1.5) every skin pixel still covers the same number of them.
-    /// </summary>
-    private double Unit
-    {
-        get
-        {
-            var screen = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
-            return Math.Max(1, Math.Round(Scale * screen)) / screen;
-        }
-    }
+    /// <summary>Logical units per skin pixel in the view's own drawing: a whole number of screen pixels.</summary>
+    private double Unit => DrawScale / ScreenScale;
 
     private int MainHeight => Shaded ? S.ShadeHeight : S.MainHeight;
 
@@ -276,7 +303,7 @@ public sealed class ClassicPlayerView : Control
 
         Draw(c, S.ClutterBar, S.ClutterArea);
         if (AlwaysOnTop) Draw(c, S.ClutterA, S.ClutterAArea);
-        if (Scale >= 2) Draw(c, S.ClutterD, S.ClutterDArea);
+        if (Scale >= MaxScale - 0.01) Draw(c, S.ClutterD, S.ClutterDArea);
 
         var playing = _music.HasCurrent && !_music.IsPaused;
         Draw(c, playing ? S.PlayingIndicator : _music.IsHalted || !_music.HasCurrent ? S.StoppedIndicator : S.PausedIndicator, S.StatusArea);
@@ -625,6 +652,11 @@ public sealed class ClassicPlayerView : Control
                 if (e.ClickCount >= 2 && row >= 0 && row < _music.Queue.Count) _music.PlayEntry(_music.Queue[row]);
                 _selected = row;
                 break;
+            case Region.Grip when TopLevel.GetTopLevel(this) is { } top:
+                // The corner keeps its distance from the pointer while the window follows it.
+                var at = e.GetPosition(top);
+                _gripOffset = new Vector(top.ClientSize.Width - at.X, top.ClientSize.Height - at.Y);
+                break;
             case Region.Drag when e.ClickCount == 2 && point.Y < S.ShadeHeight:
                 _pressed = Region.None;
                 Shaded = !Shaded;
@@ -643,10 +675,18 @@ public sealed class ClassicPlayerView : Control
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
-        if (_pressed == Region.None) return;
         var point = Logical(e.GetPosition(this));
+        if (_pressed == Region.None)
+        {
+            Cursor = Grip.Contains(point) ? _gripCursor ??= new Cursor(StandardCursorType.BottomRightCorner) : null;
+            return;
+        }
+
         switch (_pressed)
         {
+            case Region.Grip:
+                Resize(e);
+                return;
             case Region.Volume or Region.Balance or Region.Position or Region.EqBand or Region.EqPreamp:
                 Slide(point);
                 break;
@@ -734,7 +774,7 @@ public sealed class ClassicPlayerView : Control
             case Region.Options or Region.ClutterO or Region.ClutterI: MenuRequested?.Invoke(); break;
             case Region.Shade: Shaded = !Shaded; break;
             case Region.ClutterA: AlwaysOnTop = !AlwaysOnTop; break;
-            case Region.ClutterD: Scale = Scale >= 2 ? 1 : 2; break;
+            case Region.ClutterD: Scale = Scale >= MaxScale - 0.01 ? MinScale : MaxScale; break;
             case Region.ClutterV or Region.Visualizer: CycleVisualizer(); break;
             case Region.Time: ShowRemaining = !ShowRemaining; break;
             case Region.Previous: _music.PreviousCommand.Execute(null); break;
@@ -828,6 +868,26 @@ public sealed class ClassicPlayerView : Control
         }
     }
 
+    /// <summary>
+    /// The size follows the corner: the pointer's position, projected onto the window's own
+    /// proportions, so any drag direction scales it evenly. Near a whole size it snaps there,
+    /// where every skin pixel is sharp.
+    /// </summary>
+    private void Resize(PointerEventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this) is not { } top) return;
+        var at = e.GetPosition(top) + _gripOffset;
+        double width = S.MainWidth;
+        double height = LogicalHeight;
+        var scale = ((at.X * width) + (at.Y * height)) / ((width * width) + (height * height));
+        var whole = Math.Round(scale);
+        if (Math.Abs(scale - whole) < 0.04) scale = whole;
+        scale = Math.Clamp(scale, MinScale, MaxScale);
+        if (Math.Abs(scale - Scale) < 0.001) return;
+        Scale = scale;
+        Flash(string.Create(CultureInfo.InvariantCulture, $"Size: {Math.Round(scale * 100)}%"));
+    }
+
     private static string Hertz(int frequency) =>
         frequency >= 1000 ? string.Create(CultureInfo.InvariantCulture, $"{frequency / 1000}kHz") : string.Create(CultureInfo.InvariantCulture, $"{frequency}Hz");
 
@@ -848,6 +908,7 @@ public sealed class ClassicPlayerView : Control
     private Region HitTest(Point p, out int band)
     {
         band = -2;
+        if (Grip.Contains(p)) return Region.Grip;
         if (Shaded && p.Y < S.ShadeHeight)
         {
             if (S.CloseArea.Contains(p)) return Region.Close;
@@ -937,6 +998,12 @@ public sealed class ClassicPlayerView : Control
     }
 
     private bool Pressed(Region region) => _pressed == region && _hover == region;
+
+    /// <summary>
+    /// The bottom right corner resizes, as the playlist's grip did in Winamp; a strip rolled up
+    /// on its own is too short for one and keeps its close button.
+    /// </summary>
+    private Rect Grip => LogicalHeight > S.ShadeHeight ? new Rect(S.MainWidth - 12, LogicalHeight - 12, 12, 12) : default;
 
     /// <summary>As in Winamp, the part last clicked has the lit title bar, and none has while another window has the focus.</summary>
     private bool IsActive(Part part) => _activePart == part && TopLevel.GetTopLevel(this) is WindowBase { IsActive: true };
@@ -1050,6 +1117,7 @@ public sealed class ClassicPlayerView : Control
         PlaylistClose,
         PlaylistRow,
         PlaylistTransport,
+        Grip,
     }
 }
 
