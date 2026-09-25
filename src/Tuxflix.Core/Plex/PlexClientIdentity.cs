@@ -27,16 +27,20 @@ public sealed record PlexClientIdentity(string ClientIdentifier, string Version,
         headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     }
 
-    /// <summary>An HTTP client carrying this identity on every request.</summary>
+    /// <summary>
+    /// An HTTP client carrying this identity on every request. Redirects are followed by a
+    /// <see cref="RedirectGuard"/>, which leaves the token behind when a hop leaves the origin.
+    /// </summary>
     public HttpClient CreateHttpClient(HttpMessageHandler? handler = null, bool disposeHandler = true)
     {
         var client = handler is null
-            ? new HttpClient(new SocketsHttpHandler
+            ? new HttpClient(new RedirectGuard(new SocketsHttpHandler
             {
                 PooledConnectionLifetime = TimeSpan.FromMinutes(5),
                 AutomaticDecompression = System.Net.DecompressionMethods.All,
-            })
-            : new HttpClient(handler, disposeHandler);
+                AllowAutoRedirect = false,
+            }))
+            : new HttpClient(new RedirectGuard(handler), disposeHandler);
         client.Timeout = TimeSpan.FromSeconds(30);
         Apply(client.DefaultRequestHeaders);
         return client;
