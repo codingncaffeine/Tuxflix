@@ -22,8 +22,14 @@ public enum LogLevel
 /// makes it wait: a line is formatted and queued, and a thread of the log's own writes the file
 /// and the terminal, so logging from the UI thread costs no disk or terminal I/O there. A crash
 /// report is waited for, briefly, because the process may be about to end.
+/// <para>
+/// A sign-in never reaches the log: a token in a line (an address's <c>X-Plex-Token=</c>, a
+/// header, a JSON answer's <c>authToken</c>) is masked before the line goes anywhere, as Plex's own
+/// server masks its logs. mpv's verbose log prints the request headers, and a log is a file people
+/// attach to reports.
+/// </para>
 /// </remarks>
-public static class Log
+public static partial class Log
 {
     private const int Keep = 5;
     private const int RecentLimit = 500;
@@ -102,7 +108,7 @@ public static class Log
         Describe(report, error, 0);
         Write(LogLevel.Error, report.ToString().TrimEnd(), null);
         Flush(TimeSpan.FromSeconds(2));
-        return report.ToString();
+        return Redact(report.ToString());
     }
 
     /// <summary>Waits until every line queued so far is written, or <paramref name="limit"/> passes.</summary>
@@ -168,6 +174,17 @@ public static class Log
         }
     }
 
+    /// <summary><paramref name="text"/> with every token in it masked.</summary>
+    public static string Redact(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        return text.Contains("token", StringComparison.OrdinalIgnoreCase) ? TokenValue().Replace(text, "$1xxxxxxxxxxxxxxxxxxxx") : text;
+    }
+
+    // The name, its separator and any quote around the value, kept; the value itself replaced.
+    [System.Text.RegularExpressions.GeneratedRegex("""((?:X-Plex-Token|authToken|accessToken|auth_token)["']?\s*[:=]\s*["']?)[^\s"'&,;}]+""", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    private static partial System.Text.RegularExpressions.Regex TokenValue();
+
     private static void Write(LogLevel level, string message, Exception? error)
     {
         if (level < Minimum) return;
@@ -180,6 +197,7 @@ public static class Log
             line += Environment.NewLine + report.ToString().TrimEnd();
         }
 
+        line = Redact(line);
         lock (Gate)
         {
             Recent.Enqueue(line);

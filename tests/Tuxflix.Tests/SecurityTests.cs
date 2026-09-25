@@ -240,3 +240,41 @@ public sealed class LocalArtworkTests : IDisposable
         Assert.Null(await read);
     }
 }
+
+/// <summary>A token never reaches the log, whichever way a line carries it.</summary>
+public sealed class LogRedactionTests
+{
+    [Theory]
+    [InlineData("GET https://server:32400/library/sections?X-Plex-Token=Zq8Wt3Kd9Lm2Np4Rs6Tu&X-Plex-Product=Tuxflix", "Zq8Wt3Kd9Lm2Np4Rs6Tu")]
+    [InlineData("mpv cplayer: Setting option 'http-header-fields' = 'X-Plex-Product: Tuxflix,X-Plex-Token: Zq8Wt3Kd9Lm2Np4Rs6Tu' (flags = 4)", "Zq8Wt3Kd9Lm2Np4Rs6Tu")]
+    [InlineData("""plex.tv answered {"id":888596567,"code":"abc","authToken":"Zq8Wt3Kd9Lm2Np4Rs6Tu"}""", "Zq8Wt3Kd9Lm2Np4Rs6Tu")]
+    [InlineData("""{"name":"Den","accessToken": "Zq8Wt3Kd9Lm2Np4Rs6Tu","owned":true}""", "Zq8Wt3Kd9Lm2Np4Rs6Tu")]
+    public void ATokenInALineIsMasked(string line, string token)
+    {
+        var marker = Guid.NewGuid().ToString("N");
+
+        Tuxflix.Core.Diagnostics.Log.Warn($"{marker} {line}");
+        Tuxflix.Core.Diagnostics.Log.Warn(marker + " failed", new HttpRequestException(line));
+
+        var written = Tuxflix.Core.Diagnostics.Log.RecentEntries().Where(e => e.Contains(marker, StringComparison.Ordinal)).ToList();
+        Assert.Equal(2, written.Count);
+        Assert.All(written, e => Assert.DoesNotContain(token, e, StringComparison.Ordinal));
+        Assert.All(written, e => Assert.Contains("xxxxxxxxxxxxxxxxxxxx", e, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ALineWithoutATokenIsLeftAlone()
+    {
+        const string line = "Reaching Den over a local connection (12 ms); CancellationToken: none; X-Plex-Product=Tuxflix";
+
+        Assert.Equal(line, Tuxflix.Core.Diagnostics.Log.Redact(line));
+    }
+
+    [Fact]
+    public void ACrashReportShownOnScreenIsMaskedToo()
+    {
+        var report = Tuxflix.Core.Diagnostics.Log.Crash("a test", new InvalidOperationException("X-Plex-Token=Zq8Wt3Kd9Lm2Np4Rs6Tu"));
+
+        Assert.DoesNotContain("Zq8Wt3Kd9Lm2Np4Rs6Tu", report, StringComparison.Ordinal);
+    }
+}
