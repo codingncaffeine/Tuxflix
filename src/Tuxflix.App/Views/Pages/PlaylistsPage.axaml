@@ -15,12 +15,10 @@
             <views:RowsGrid />
             <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top"
                          Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
-            <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-                <PathIcon Data="{StaticResource Icon.Playlist}" Width="34" Height="34" Foreground="{DynamicResource Brush.Text.Disabled}" />
-                <TextBlock Text="No playlists yet." FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" />
-            </StackPanel>
-            <TextBlock IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                       FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            <views:EmptyState IsVisible="{Binding IsEmpty}" Icon="{StaticResource Icon.Playlist}"
+                              Text="No playlists yet. Make one from any title's menu, under Add to playlist." />
+            <views:EmptyState IsVisible="{Binding HasError}" Icon="{StaticResource Icon.WarningCircle}" IsProblem="True"
+                              Text="{Binding ErrorMessage}" ActionText="TRY AGAIN" Command="{Binding RetryCommand}" />
         </Panel>
     </Grid>
 </UserControl>

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:views="using:Tuxflix.App.Views"
              xmlns:ui="using:Tuxflix.App.Controls"
              x:Class="Tuxflix.App.Views.Pages.AlbumPage"
              x:DataType="vm:AlbumPageViewModel">
@@ -129,5 +130,11 @@
                 </StackPanel>
             </Grid>
         </ScrollViewer>
+
+        <!-- It could not be loaded: said over what little is known, with a way to try again. -->
+        <Border IsVisible="{Binding HasError}" Background="{DynamicResource Brush.Canvas}">
+            <views:EmptyState Icon="{StaticResource Icon.WarningCircle}" IsProblem="True"
+                              Text="{Binding ErrorMessage}" ActionText="TRY AGAIN" Command="{Binding RetryCommand}" />
+        </Border>
     </Panel>
 </UserControl>

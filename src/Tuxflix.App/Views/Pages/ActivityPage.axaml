@@ -111,7 +111,10 @@
                             IsVisible="{Binding CanShowMore}" ui:Tip.Text="The next fifty from your history" />
                     <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingHistory}" Height="2" MinHeight="2" Width="240" HorizontalAlignment="Left"
                                  Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
-                    <TextBlock IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    <StackPanel IsVisible="{Binding HasError}" Orientation="Horizontal" Spacing="14">
+                        <TextBlock Text="{Binding ErrorMessage}" FontSize="14" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        <Button Theme="{StaticResource GhostButton}" Padding="12,5" Content="TRY AGAIN" Command="{Binding RetryCommand}" />
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
 

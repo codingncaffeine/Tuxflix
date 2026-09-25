@@ -17,6 +17,21 @@
                           VerticalAlignment="Center" ui:Tip.Text="Play a title's theme quietly while its page is open" />
         </Grid>
 
+        <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="4" VerticalAlignment="Center">
+                <TextBlock Text="Tile size in libraries" FontSize="14.5" FontWeight="SemiBold" />
+                <TextBlock Text="How large films, series and albums are drawn in a library's grid; the slider beside a library's sort does the same."
+                           FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" Margin="24,0,0,0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding GridScaleText}" FontSize="13" MinWidth="70" TextAlignment="Right" VerticalAlignment="Center"
+                           Foreground="{DynamicResource Brush.Text.Secondary}" />
+                <Slider Width="160" Minimum="{x:Static vm:TileSizes.Smallest}" Maximum="{x:Static vm:TileSizes.Largest}"
+                        TickFrequency="{x:Static vm:TileSizes.Step}" IsSnapToTickEnabled="True" Value="{Binding GridScale}"
+                        ui:Tip.Text="Tile size in libraries" AutomationProperties.Name="Tile size in libraries" />
+            </StackPanel>
+        </Grid>
+
         <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasServer}">
             <StackPanel Spacing="4" VerticalAlignment="Center">
                 <TextBlock Text="{Binding HomeHeading}" FontSize="14.5" FontWeight="SemiBold" />

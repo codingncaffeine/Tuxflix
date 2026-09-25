@@ -6,17 +6,17 @@
              x:DataType="vm:PlaylistTileViewModel">
 
     <!-- A playlist's mosaic, square like an album cover, with the same rising play button. -->
-    <StackPanel Width="176" Spacing="9" Margin="0,0,22,26">
+    <StackPanel Width="{DynamicResource Tile.Square}" Spacing="9" Margin="0,0,22,26">
         <Panel Classes="hover-reveal">
             <Button Classes="tile" Theme="{StaticResource TileButton}" Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}"
                     AutomationProperties.Name="{Binding Title}" ui:Tip.Text="{Binding Title}">
-                <Panel Width="176" Height="176">
+                <Panel Width="{DynamicResource Tile.Square}" Height="{DynamicResource Tile.Square}">
                     <Border Name="Lift" CornerRadius="{StaticResource Radius.Tile}" Background="{DynamicResource Brush.Panel}" />
                     <Border CornerRadius="{StaticResource Radius.Tile}" ClipToBounds="True">
                         <Panel>
                             <PathIcon Data="{StaticResource Icon.Playlist}" Width="44" Height="44"
                                       Foreground="{DynamicResource Brush.Text.Disabled}" />
-                            <ui:RemoteImage Path="{Binding CoverPath}" DecodeWidth="176" DecodeHeight="176" />
+                            <ui:RemoteImage Path="{Binding CoverPath}" DecodeWidth="{DynamicResource Tile.Square}" DecodeHeight="{DynamicResource Tile.Square}" />
                         </Panel>
                     </Border>
                     <Border Name="Ring" CornerRadius="{StaticResource Radius.Tile}" />

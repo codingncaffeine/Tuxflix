@@ -33,20 +33,11 @@
         <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSearching}" VerticalAlignment="Top"
                      Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
 
-        <StackPanel IsVisible="{Binding IsNothing}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-            <PathIcon Data="{StaticResource Icon.MagnifyingGlass}" Width="34" Height="34" Foreground="{DynamicResource Brush.Text.Disabled}" />
-            <TextBlock Text="Nothing in your libraries matches that." FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
-        </StackPanel>
+        <views:EmptyState IsVisible="{Binding IsNothing}" Icon="{StaticResource Icon.MagnifyingGlass}" Text="{Binding NothingText}" />
 
-        <StackPanel IsVisible="{Binding IsBlank}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-            <PathIcon Data="{StaticResource Icon.MagnifyingGlass}" Width="34" Height="34" Foreground="{DynamicResource Brush.Text.Disabled}" />
-            <TextBlock Text="Type in the search box to look through every library." FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
-        </StackPanel>
+        <views:EmptyState IsVisible="{Binding IsBlank}" Icon="{StaticResource Icon.MagnifyingGlass}" Text="Type in the search box to look through every library." />
 
-        <StackPanel IsVisible="{Binding HasError}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="420">
-            <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="40" Height="40" Foreground="{DynamicResource Brush.Accent}" />
-            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" TextAlignment="Center" FontSize="14"
-                       Foreground="{DynamicResource Brush.Text.Secondary}" />
-        </StackPanel>
+        <views:EmptyState IsVisible="{Binding HasError}" Icon="{StaticResource Icon.WarningCircle}" IsProblem="True"
+                          Text="{Binding ErrorMessage}" ActionText="TRY AGAIN" Command="{Binding RetryCommand}" />
     </Panel>
 </UserControl>

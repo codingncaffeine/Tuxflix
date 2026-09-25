@@ -525,6 +525,10 @@ public sealed partial class Media
     [JsonPropertyName("videoProfile")]
     public string? VideoProfile { get; init; }
 
+    /// <summary>The main soundtrack's kind, in listings too: <c>dolby truehd + dolby atmos</c>, <c>ma + dts:x</c>.</summary>
+    [JsonPropertyName("audioProfile")]
+    public string? AudioProfile { get; init; }
+
     /// <summary>In a playback decision: the version the server chose.</summary>
     [JsonPropertyName("selected")]
     public bool Selected { get; init; }
@@ -607,6 +611,22 @@ public sealed partial class MediaStream
 
     [JsonPropertyName("channels")]
     public int? Channels { get; init; }
+
+    /// <summary>A codec's profile: <c>main 10</c> for a picture, <c>dolby truehd + dolby atmos</c> for a soundtrack.</summary>
+    [JsonPropertyName("profile")]
+    public string? Profile { get; init; }
+
+    /// <summary>A picture's transfer: <c>smpte2084</c> is HDR10's PQ, <c>arib-std-b67</c> is HLG.</summary>
+    [JsonPropertyName("colorTrc")]
+    public string? ColorTrc { get; init; }
+
+    /// <summary>The picture carries Dolby Vision.</summary>
+    [JsonPropertyName("DOVIPresent")]
+    public bool DolbyVision { get; init; }
+
+    /// <summary>The Dolby Vision profile (5, 7, 8), when the picture carries it.</summary>
+    [JsonPropertyName("DOVIProfile")]
+    public int? DolbyVisionProfile { get; init; }
 
     /// <summary>An audio stream's sample rate in hertz.</summary>
     [JsonPropertyName("samplingRate")]

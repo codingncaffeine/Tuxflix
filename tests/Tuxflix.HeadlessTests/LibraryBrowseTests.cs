@@ -60,7 +60,7 @@ public sealed class LibraryBrowseTests : IDisposable
     public async Task TheLibraryListsSortsAndFiltersAsTheServerDoes()
     {
         var page = new LibraryPageViewModel(_shell, _session, Movies());
-        page.Fit(1200);
+        page.Fit(1200, 1);
         await page.ActivateAsync();
 
         Assert.Null(page.ErrorMessage);
@@ -96,7 +96,7 @@ public sealed class LibraryBrowseTests : IDisposable
     public async Task TheLetterStripPointsAtEachInitialsFirstTitle()
     {
         var page = new LibraryPageViewModel(_shell, _session, Movies());
-        page.Fit(1200);
+        page.Fit(1200, 1);
         await page.ActivateAsync();
 
         Assert.True(page.ShowsLetters);
@@ -112,7 +112,7 @@ public sealed class LibraryBrowseTests : IDisposable
     public async Task CollectionsListAndOpenOntoTheirMembers()
     {
         var page = new LibraryPageViewModel(_shell, _session, Movies());
-        page.Fit(1200);
+        page.Fit(1200, 1);
         await page.ActivateAsync();
         await page.ShowViewCommand.ExecuteAsync(LibraryView.Collections);
 

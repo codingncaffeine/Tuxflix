@@ -35,8 +35,9 @@
             <views:RowsGrid />
             <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top"
                          Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
-            <TextBlock IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                       FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            <views:EmptyState IsVisible="{Binding HasError}" Icon="{StaticResource Icon.WarningCircle}" IsProblem="True"
+                              Text="{Binding ErrorMessage}" ActionText="TRY AGAIN" Command="{Binding RetryCommand}" />
+            <views:EmptyState IsVisible="{Binding IsEmpty}" Icon="{StaticResource Icon.Image}" Text="No photos here." />
         </Panel>
     </Grid>
 </UserControl>

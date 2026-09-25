@@ -173,6 +173,15 @@
     <CornerRadius x:Key="Radius.Tile">5</CornerRadius>
     <CornerRadius x:Key="Radius.Window">10</CornerRadius>
 
+    <!-- ===== Tiles: their usual sizes, which a library grid scales by its size slider
+         (Tile.Scale); everywhere else they stay these. ===== -->
+    <x:Double x:Key="Tile.Scale">1</x:Double>
+    <x:Double x:Key="Tile.Poster.Width">164</x:Double>
+    <x:Double x:Key="Tile.Poster.Height">246</x:Double>
+    <x:Double x:Key="Tile.Landscape.Width">344</x:Double>
+    <x:Double x:Key="Tile.Landscape.Height">194</x:Double>
+    <x:Double x:Key="Tile.Square">176</x:Double>
+
     <!-- The stock templates read these two for every control and popup they draw. -->
     <CornerRadius x:Key="ControlCornerRadius">7</CornerRadius>
     <CornerRadius x:Key="OverlayCornerRadius">10</CornerRadius>

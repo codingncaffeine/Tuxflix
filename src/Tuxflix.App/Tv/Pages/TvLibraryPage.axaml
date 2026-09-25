@@ -36,7 +36,7 @@
         </Grid>
 
         <LayoutTransformControl Grid.Row="1" LayoutTransform="scale(1.3)" Margin="50,0,50,0">
-            <views:RowsGrid Name="Grid" />
+            <views:RowsGrid Name="Grid" FollowsTileSize="False" />
         </LayoutTransformControl>
 
         <ProgressBar Grid.Row="1" IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top"

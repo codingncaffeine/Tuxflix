@@ -6,15 +6,15 @@
              x:DataType="vm:PhotoTileViewModel">
 
     <!-- A square picture: an album's first photo, or the photo itself. -->
-    <StackPanel Width="176" Spacing="9" Margin="0,0,22,26">
+    <StackPanel Width="{DynamicResource Tile.Square}" Spacing="9" Margin="0,0,22,26">
         <Button Classes="tile" Theme="{StaticResource TileButton}" Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}"
                 AutomationProperties.Name="{Binding Title}" ui:Tip.Text="{Binding OpenTip}">
-            <Panel Width="176" Height="176">
+            <Panel Width="{DynamicResource Tile.Square}" Height="{DynamicResource Tile.Square}">
                 <Border Name="Lift" CornerRadius="{StaticResource Radius.Tile}" Background="{DynamicResource Brush.Panel}" />
                 <Border CornerRadius="{StaticResource Radius.Tile}" ClipToBounds="True">
                     <Panel>
                         <PathIcon Data="{StaticResource Icon.Image}" Width="44" Height="44" Foreground="{DynamicResource Brush.Text.Disabled}" />
-                        <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="176" DecodeHeight="176" Stretch="UniformToFill" />
+                        <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="{DynamicResource Tile.Square}" DecodeHeight="{DynamicResource Tile.Square}" Stretch="UniformToFill" />
                     </Panel>
                 </Border>
                 <Border IsVisible="{Binding IsAlbum}" CornerRadius="0,0,8,8" VerticalAlignment="Bottom" Height="34"

@@ -130,6 +130,7 @@ public sealed partial class PlaylistPageViewModel
         Tracks.Clear();
         Videos.Clear();
         foreach (var item in items) Add(item);
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     private async Task<bool> EditAsync(Func<Task> send, bool reloadOnFailure)

@@ -127,7 +127,11 @@ public sealed partial class PhotosPageViewModel : PageViewModel, IGridPage
     [ObservableProperty]
     public partial bool HasPhotos { get; private set; }
 
-    public void Fit(double width) => _grid.Fit(width);
+    public void Fit(double width, double scale) => _grid.Fit(width, scale);
+
+    public bool IsEmpty => !IsLoading && _grid.Count == 0 && !HasError;
+
+    protected override IEnumerable<string> LoadingDependents => [nameof(IsEmpty)];
 
     [RelayCommand]
     private void Slideshow() => Open(0, slideshow: true, shuffle: _shell.Settings.Photos.SlideshowShuffle);

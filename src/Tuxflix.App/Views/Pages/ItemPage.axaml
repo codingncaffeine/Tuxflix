@@ -76,6 +76,16 @@
                             </Border>
                             <TextBlock Text="{Binding Meta}" FontSize="14" VerticalAlignment="Center"
                                        Foreground="{DynamicResource Brush.Text.Secondary}" />
+                            <ItemsControl ItemsSource="{Binding Badges}" IsVisible="{Binding HasBadges}" VerticalAlignment="Center">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Border Classes="rating"><TextBlock Text="{Binding}" /></Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                         <TextBlock Text="{Binding Tagline}" IsVisible="{Binding HasTagline}" FontSize="15" FontStyle="Italic"
                                    Foreground="{DynamicResource Brush.Text.Secondary}" />
@@ -421,5 +431,11 @@
             </ItemsControl>
         </StackPanel>
     </ScrollViewer>
+
+        <!-- It could not be loaded: said over what little is known, with a way to try again. -->
+        <Border IsVisible="{Binding HasError}" Background="{DynamicResource Brush.Canvas}">
+            <views:EmptyState Icon="{StaticResource Icon.WarningCircle}" IsProblem="True"
+                              Text="{Binding ErrorMessage}" ActionText="TRY AGAIN" Command="{Binding RetryCommand}" />
+        </Border>
     </Panel>
 </UserControl>

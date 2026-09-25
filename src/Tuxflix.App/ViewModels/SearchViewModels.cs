@@ -36,13 +36,19 @@ public sealed partial class SearchPageViewModel(ShellViewModel shell, ServerSess
     public bool HasTracks => Tracks.Count > 0;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNothing))]
+    [NotifyPropertyChangedFor(nameof(IsNothing), nameof(NothingText))]
     public partial bool IsSearching { get; private set; }
 
     /// <summary>A search ran and found nothing at all.</summary>
     public bool IsNothing => !IsSearching && Query.Length > 0 && Shelves.Count == 0 && Tracks.Count == 0 && !HasError;
 
+    /// <summary>What a search that found nothing says, with what was asked.</summary>
+    public string NothingText => $"Nothing in your libraries matches “{Query}”.";
+
     public bool IsBlank => Query.Length == 0;
+
+    /// <summary>TRY AGAIN after a failed search runs the search again.</summary>
+    protected override Task RetryCoreAsync() => SearchAsync(Query);
 
     /// <summary>Runs a search, replacing one still running.</summary>
     public async Task SearchAsync(string query)
@@ -165,7 +171,13 @@ public sealed partial class PersonPageViewModel(ShellViewModel shell, ServerSess
     [ObservableProperty]
     public partial string CountText { get; private set; } = string.Empty;
 
-    public void Fit(double width) => Grid.Fit(width);
+    public void Fit(double width, double scale) => Grid.Fit(width, scale);
+
+    public bool IsEmpty => !IsLoading && Grid.Count == 0 && !HasError;
+
+    public string EmptyText => $"Nothing on this server features {Name}.";
+
+    protected override IEnumerable<string> LoadingDependents => [nameof(IsEmpty)];
 
     protected override async Task LoadAsync(CancellationToken cancellation)
     {

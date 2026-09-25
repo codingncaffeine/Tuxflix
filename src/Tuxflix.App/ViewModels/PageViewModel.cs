@@ -78,6 +78,13 @@ public abstract partial class PageViewModel : ObservableObject
         }
     }
 
+    /// <summary>Loads the page again: the TRY AGAIN under a page that could not be loaded.</summary>
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private Task RetryAsync() => RetryCoreAsync();
+
+    /// <summary>What TRY AGAIN does: load the page again; a page whose failure came from elsewhere (a search) does that again.</summary>
+    protected virtual Task RetryCoreAsync() => ActivateAsync();
+
     /// <summary>Called when the router leaves this page; a page that holds something lets go of it here.</summary>
     public virtual void Deactivate() => _loading?.Cancel();
 

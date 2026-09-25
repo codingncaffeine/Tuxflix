@@ -25,8 +25,34 @@ public interface IGridPage
 {
     ObservableCollection<GridRowViewModel> Rows { get; }
 
-    /// <summary>The grid's width changed: as many columns as fit.</summary>
-    void Fit(double width);
+    /// <summary>The grid's width or its tiles' size changed: as many columns as fit.</summary>
+    /// <param name="scale">The tiles' size against their usual one (the grid size slider).</param>
+    void Fit(double width, double scale);
+}
+
+/// <summary>The size of each shape of tile at the usual grid size; the grid size slider scales them.</summary>
+public static class TileSizes
+{
+    public const double PosterWidth = 164;
+
+    public const double PosterHeight = 246;
+
+    public const double LandscapeWidth = 344;
+
+    public const double LandscapeHeight = 194;
+
+    public const double Square = 176;
+
+    /// <summary>The smallest and largest the slider goes, and its steps between.</summary>
+    public const double Smallest = 0.75;
+
+    public const double Largest = 1.5;
+
+    public const double Step = 0.125;
+
+    /// <summary>A scale the slider can take: within its ends, on one of its steps.</summary>
+    public static double Clamp(double scale) =>
+        double.IsFinite(scale) ? Math.Round(Math.Clamp(scale, Smallest, Largest) / Step) * Step : 1;
 }
 
 /// <summary>One row of a grid: as many tiles as fit across the page.</summary>
@@ -56,12 +82,15 @@ public sealed class TileGrid(TileShape shape)
     /// <summary>Square tiles carry their own margins; the others are spaced by the row.</summary>
     public double Spacing => Shape == TileShape.Square ? 0 : 18;
 
-    /// <summary>The width one column takes: a tile and the space after it.</summary>
+    /// <summary>The tiles' size against their usual one: the grid size slider.</summary>
+    public double Scale { get; private set; } = 1;
+
+    /// <summary>The width one column takes: a tile at the grid's size and the space after it.</summary>
     public double CellWidth => Shape switch
     {
-        TileShape.Square => 176 + 22,
-        TileShape.Landscape => 344 + 18,
-        _ => 164 + 18,
+        TileShape.Square => (TileSizes.Square * Scale) + 22,
+        TileShape.Landscape => (TileSizes.LandscapeWidth * Scale) + 18,
+        _ => (TileSizes.PosterWidth * Scale) + 18,
     };
 
     public int Columns { get; private set; } = 6;
@@ -70,9 +99,10 @@ public sealed class TileGrid(TileShape shape)
 
     public IReadOnlyList<object> Tiles => _tiles;
 
-    /// <summary>Fits the columns to the width the grid has; rows are laid out again only when the count changes.</summary>
-    public void Fit(double width)
+    /// <summary>Fits the columns to the width the grid has at the tiles' size; rows are laid out again only when the count changes.</summary>
+    public void Fit(double width, double scale = 1)
     {
+        Scale = scale;
         var columns = Math.Max(1, (int)((width + Spacing + (Shape == TileShape.Square ? 22 : 0)) / CellWidth));
         if (columns == Columns) return;
         Columns = columns;
@@ -155,6 +185,7 @@ public sealed partial class LibraryPageViewModel : PageViewModel, IGridPage
     private readonly List<MetadataItem> _items = [];
     private CancellationTokenSource? _listing;
     private double _width;
+    private double _scale = 1;
 
     public LibraryPageViewModel(ShellViewModel shell, ServerSession session, LibraryDirectory section)
     {
@@ -199,7 +230,10 @@ public sealed partial class LibraryPageViewModel : PageViewModel, IGridPage
 
     protected override IEnumerable<string> LoadingDependents => [nameof(IsEmpty)];
 
-    public string EmptyText => ActiveFilters.Count > 0 ? "Nothing here matches these filters." : "This library is empty.";
+    public string EmptyText => ActiveFilters.Count > 0 ? "Nothing here matches these filters." : "This library is empty. Titles appear here as the server adds them.";
+
+    /// <summary>What the empty grid offers: taking the filters off, when they are why it is empty.</summary>
+    public string? EmptyAction => ActiveFilters.Count > 0 ? "CLEAR FILTERS" : null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsTitles), nameof(ShowsAlbums), nameof(ShowsCollections), nameof(CountText), nameof(HasSorts), nameof(HasFilters), nameof(ShowsLetters))]
@@ -252,11 +286,23 @@ public sealed partial class LibraryPageViewModel : PageViewModel, IGridPage
     /// <summary>The view scrolls this row into sight: a letter was chosen.</summary>
     public event Action<int>? ScrollToRow;
 
-    /// <summary>The page's width changed: as many columns as fit.</summary>
-    public void Fit(double width)
+    /// <summary>The page's width or the tiles' size changed: as many columns as fit.</summary>
+    public void Fit(double width, double scale)
     {
         _width = width;
-        Grid.Fit(width);
+        _scale = scale;
+        Grid.Fit(width, scale);
+    }
+
+    /// <summary>The tiles' size in every library grid: the slider beside the sort.</summary>
+    public double GridScale
+    {
+        get => _shell.GridScale;
+        set
+        {
+            _shell.GridScale = value;
+            OnPropertyChanged();
+        }
     }
 
     [RelayCommand]
@@ -300,6 +346,7 @@ public sealed partial class LibraryPageViewModel : PageViewModel, IGridPage
         if (value is not null) ActiveFilters.Add(new ActiveFilterViewModel(this, filter, value.Key, filter.IsToggle ? filter.Title : $"{filter.Title}: {value.Title}"));
         OnPropertyChanged(nameof(HasActiveFilters));
         OnPropertyChanged(nameof(EmptyText));
+        OnPropertyChanged(nameof(EmptyAction));
         return ListSafelyAsync();
     }
 
@@ -316,6 +363,8 @@ public sealed partial class LibraryPageViewModel : PageViewModel, IGridPage
 
         ActiveFilters.Clear();
         OnPropertyChanged(nameof(HasActiveFilters));
+        OnPropertyChanged(nameof(EmptyText));
+        OnPropertyChanged(nameof(EmptyAction));
         return ListSafelyAsync();
     }
 
@@ -385,7 +434,7 @@ public sealed partial class LibraryPageViewModel : PageViewModel, IGridPage
         if (Grid.Shape != shape)
         {
             Grid = new TileGrid(shape);
-            if (_width > 0) Grid.Fit(_width);
+            if (_width > 0) Grid.Fit(_width, _scale);
             OnPropertyChanged(nameof(Grid));
             OnPropertyChanged(nameof(Rows));
         }
@@ -603,7 +652,11 @@ public sealed partial class CollectionPageViewModel(ShellViewModel shell, Server
     [ObservableProperty]
     public partial string CountText { get; private set; } = string.Empty;
 
-    public void Fit(double width) => Grid.Fit(width);
+    public void Fit(double width, double scale) => Grid.Fit(width, scale);
+
+    public bool IsEmpty => !IsLoading && Grid.Count == 0 && !HasError;
+
+    protected override IEnumerable<string> LoadingDependents => [nameof(IsEmpty)];
 
     private IReadOnlyList<MetadataItem> _members = [];
 

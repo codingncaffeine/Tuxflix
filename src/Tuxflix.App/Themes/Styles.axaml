@@ -170,6 +170,19 @@
         <Setter Property="Opacity" Value="1" />
     </Style>
 
+    <!-- The opposite: shown at rest, gone while the title is revealed (a poster's 4K and ATMOS). -->
+    <Style Selector="Button.tile :is(Control).conceal">
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Button.tile:pointerover :is(Control).conceal, Button.tile:focus-within :is(Control).conceal">
+        <Setter Property="Opacity" Value="0" />
+    </Style>
+
     <!-- The track that is playing reads in the accent wherever it is listed. -->
     <Style Selector="Button.playing TextBlock.track-title">
         <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
@@ -218,6 +231,18 @@
                 <DoubleTransition Property="Opacity" Duration="0:0:0.22" />
             </Transitions>
         </Setter>
+    </Style>
+
+    <!-- ===== The card beside a tile the pointer rests on: the art runs to its edges, and it
+         takes no pointer, so moving onto it is leaving the tile. ===== -->
+    <Style Selector="FlyoutPresenter.hover-card">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MaxWidth" Value="340" />
+        <Setter Property="Background" Value="{DynamicResource Brush.Raised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Line.Strong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource Radius.Card}" />
+        <Setter Property="IsHitTestVisible" Value="False" />
     </Style>
 
     <!-- ===== Badges on artwork ===== -->
@@ -291,6 +316,22 @@
         <Setter Property="FontSize" Value="11" />
         <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+    </Style>
+
+    <!-- A file's picture and sound on a poster (4K, ATMOS): dark glass over the artwork, like the watched mark. -->
+    <Style Selector="Border.badge-quality">
+        <Setter Property="Background" Value="#D9040712" />
+        <Setter Property="BorderBrush" Value="#40FFFFFF" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Padding" Value="5,1,5,2" />
+    </Style>
+
+    <Style Selector="Border.badge-quality > TextBlock">
+        <Setter Property="FontSize" Value="9.5" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="LetterSpacing" Value="1" />
+        <Setter Property="Foreground" Value="#E6FFFFFF" />
     </Style>
 
 </Styles>

@@ -54,7 +54,7 @@ public sealed partial class PlaylistsPageViewModel(ShellViewModel shell, ServerS
 
     protected override IEnumerable<string> LoadingDependents => [nameof(IsEmpty)];
 
-    public void Fit(double width) => Grid.Fit(width);
+    public void Fit(double width, double scale) => Grid.Fit(width, scale);
 
     protected override async Task LoadAsync(CancellationToken cancellation)
     {
@@ -90,7 +90,13 @@ public sealed partial class PlaylistPageViewModel(ShellViewModel shell, ServerSe
     public ObservableCollection<PlaylistVideoRowViewModel> Videos { get; } = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEmpty))]
     public partial bool IsLoadingMore { get; private set; }
+
+    /// <summary>Nothing in the playlist, once it has all been read (the last entry taken out, too).</summary>
+    public bool IsEmpty => !IsLoading && !IsLoadingMore && Tracks.Count == 0 && Videos.Count == 0 && !HasError;
+
+    protected override IEnumerable<string> LoadingDependents => [nameof(IsEmpty)];
 
     [RelayCommand]
     private Task Play() => Playlists.PlayAsync(shell, Playlist, shuffle: false, _items);

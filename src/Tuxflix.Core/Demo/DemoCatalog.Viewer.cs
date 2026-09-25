@@ -441,10 +441,21 @@ public sealed partial class DemoCatalog
         var id = part.Id * 10;
         var media = item.Media[0];
         var surround = media.AudioCodec?.ToUpperInvariant() is { } codec ? $"{(codec == "TRUEHD" ? "TrueHD" : codec)} {(media.AudioChannels >= 8 ? "7.1" : "5.1")}" : "EAC3 5.1";
+
+        // A 4K film is HDR10 as the server names it, every other one Dolby Vision too; its TrueHD is Atmos.
+        var uhd = media.VideoResolution == "4k";
+        var vision = uhd && n % 2 == 0;
+        var picture = uhd ? (vision ? "4K DoVi/HDR10" : "4K HDR10") : $"{media.VideoResolution}p";
         var streams = new List<MediaStream>
         {
-            new() { Id = id, StreamType = 1, Index = 0, Codec = media.VideoCodec, DisplayTitle = $"{media.VideoResolution}p ({media.VideoCodec?.ToUpperInvariant()})", Width = media.Width, Height = media.Height },
-            new() { Id = id + 1, StreamType = StreamChoice.Audio, Index = 1, Codec = media.AudioCodec, Language = "English", LanguageCode = "eng", Channels = media.AudioChannels, Selected = true, Default = true, DisplayTitle = $"English ({surround})", ExtendedDisplayTitle = $"English ({surround})" },
+            new()
+            {
+                Id = id, StreamType = 1, Index = 0, Codec = media.VideoCodec, Profile = uhd ? "main 10" : "high",
+                ColorTrc = uhd ? "smpte2084" : null, DolbyVision = vision, DolbyVisionProfile = vision ? 8 : null,
+                DisplayTitle = picture, ExtendedDisplayTitle = $"{picture} ({(uhd ? "HEVC Main 10" : media.VideoCodec?.ToUpperInvariant())})",
+                Width = media.Width, Height = media.Height,
+            },
+            new() { Id = id + 1, StreamType = StreamChoice.Audio, Index = 1, Codec = media.AudioCodec, Profile = media.AudioProfile, Language = "English", LanguageCode = "eng", Channels = media.AudioChannels, Selected = true, Default = true, DisplayTitle = $"English ({surround})", ExtendedDisplayTitle = $"English ({surround})" },
         };
 
         if (film)

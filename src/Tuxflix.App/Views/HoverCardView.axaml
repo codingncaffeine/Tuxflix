@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.HoverCardView"
+             x:DataType="vm:HoverCardViewModel">
+
+    <!-- A title's card, beside the tile the pointer rests on: its art, what it is, what it is
+         about, and how far the viewer got. -->
+    <StackPanel Width="320">
+        <Border Height="180" CornerRadius="7,7,0,0" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
+            <Panel>
+                <PathIcon Data="{StaticResource Icon.FilmSlate}" Width="30" Height="30" Foreground="{DynamicResource Brush.Text.Disabled}" />
+                <ui:RemoteImage Path="{Binding ArtPath}" DecodeWidth="320" DecodeHeight="180" />
+                <ProgressBar Theme="{StaticResource ThinProgress}" VerticalAlignment="Bottom"
+                             Value="{Binding Progress}" IsVisible="{Binding HasProgress}" />
+            </Panel>
+        </Border>
+        <StackPanel Margin="16,12,16,16" Spacing="6">
+            <TextBlock Classes="label" Text="{Binding Kicker}" IsVisible="{Binding HasKicker}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Meta}" FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            <TextBlock Text="{Binding Quality}" FontSize="12" Foreground="{DynamicResource Brush.Text.Tertiary}" IsVisible="{Binding HasQuality}" />
+            <TextBlock Text="{Binding Summary}" FontSize="12.5" LineHeight="18" TextWrapping="Wrap" MaxLines="4" TextTrimming="CharacterEllipsis"
+                       Margin="0,4,0,0" IsVisible="{Binding HasSummary}" />
+            <TextBlock Text="{Binding Status}" FontSize="12" FontWeight="SemiBold" Margin="0,4,0,0"
+                       Foreground="{DynamicResource Brush.Accent}" IsVisible="{Binding HasStatus}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

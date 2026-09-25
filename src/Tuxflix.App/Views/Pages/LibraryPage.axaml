@@ -9,7 +9,7 @@
     <Grid RowDefinitions="Auto,Auto,*">
 
         <!-- The library's name and size, its views, and how it is sorted and filtered -->
-        <Grid Margin="36,26,30,10" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+        <Grid Margin="36,26,30,10" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
             <StackPanel VerticalAlignment="Center" Spacing="3">
                 <TextBlock Classes="page-title" Text="{Binding Heading}" />
                 <TextBlock Classes="faint" FontSize="12.5" Text="{Binding CountText}" />
@@ -27,7 +27,16 @@
                         ui:Tip.Text="The collections in this library" />
             </StackPanel>
 
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" IsVisible="{Binding HasSorts}">
+            <!-- The tiles' size, smaller to larger, as Steam's library grid has it. -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Margin="0,0,18,0" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource Icon.SquaresFour}" Width="11" Height="11" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                <Slider Width="104" VerticalAlignment="Center" Minimum="{x:Static vm:TileSizes.Smallest}" Maximum="{x:Static vm:TileSizes.Largest}"
+                        TickFrequency="{x:Static vm:TileSizes.Step}" IsSnapToTickEnabled="True" Value="{Binding GridScale}"
+                        ui:Tip.Text="Tile size" AutomationProperties.Name="Tile size" />
+                <PathIcon Data="{StaticResource Icon.SquaresFour}" Width="16" Height="16" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" IsVisible="{Binding HasSorts}">
                 <Button Name="SortButton" Theme="{StaticResource IconButton}" Padding="10,6" Click="OnSortClick"
                         ui:Tip.Text="Choose the order">
                     <StackPanel Orientation="Horizontal" Spacing="7">
@@ -47,7 +56,7 @@
                 </Button>
             </StackPanel>
 
-            <Button Grid.Column="3" Name="FilterButton" Theme="{StaticResource IconButton}" Padding="10,6" Margin="8,0,0,0"
+            <Button Grid.Column="4" Name="FilterButton" Theme="{StaticResource IconButton}" Padding="10,6" Margin="8,0,0,0"
                     VerticalAlignment="Center" Click="OnFilterClick" IsVisible="{Binding HasFilters}"
                     ui:Tip.Text="Filter what is listed">
                 <StackPanel Orientation="Horizontal" Spacing="7">
@@ -57,7 +66,7 @@
             </Button>
 
             <!-- Nothing in particular in mind: something unwatched, picked at random. -->
-            <Button Grid.Column="4" Theme="{StaticResource GhostButton}" Padding="12,7" Margin="12,0,0,0" VerticalAlignment="Center"
+            <Button Grid.Column="5" Theme="{StaticResource GhostButton}" Padding="12,7" Margin="12,0,0,0" VerticalAlignment="Center"
                     IsVisible="{Binding CanPlaySomething}" Command="{Binding PlaySomethingCommand}" ui:Tip.Text="{Binding PlaySomethingTip}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <PathIcon Data="{StaticResource Icon.Shuffle}" Width="14" Height="14" />
@@ -119,16 +128,10 @@
             <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingMore}" VerticalAlignment="Top"
                          Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
 
-            <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-                <PathIcon Data="{StaticResource Icon.FunnelSimple}" Width="34" Height="34" Foreground="{DynamicResource Brush.Text.Disabled}" />
-                <TextBlock Text="{Binding EmptyText}" FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" />
-            </StackPanel>
-
-            <StackPanel IsVisible="{Binding HasError}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="420">
-                <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="40" Height="40" Foreground="{DynamicResource Brush.Accent}" />
-                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" TextAlignment="Center" FontSize="14"
-                           Foreground="{DynamicResource Brush.Text.Secondary}" />
-            </StackPanel>
+            <views:EmptyState IsVisible="{Binding IsEmpty}" Icon="{StaticResource Icon.FunnelSimple}" Text="{Binding EmptyText}"
+                              ActionText="{Binding EmptyAction}" Command="{Binding ClearFiltersCommand}" />
+            <views:EmptyState IsVisible="{Binding HasError}" Icon="{StaticResource Icon.WarningCircle}" IsProblem="True"
+                              Text="{Binding ErrorMessage}" ActionText="TRY AGAIN" Command="{Binding RetryCommand}" />
         </Panel>
     </Grid>
 </UserControl>

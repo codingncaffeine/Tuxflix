@@ -8,13 +8,13 @@
     <!-- Continue Watching: a wide card with the title over the art, how far along, and what is left;
          hover brings up a play glyph. -->
     <Button Classes="tile" Theme="{StaticResource TileButton}"
-            Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}"
+            Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}" ui:HoverCard.For="{Binding}"
             AutomationProperties.Name="{Binding AccessibleName}">
-        <Panel Width="344" Height="194">
+        <Panel Width="{DynamicResource Tile.Landscape.Width}" Height="{DynamicResource Tile.Landscape.Height}">
             <Border Name="Lift" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Panel}" />
             <Border CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True">
                 <Panel>
-                    <ui:RemoteImage Path="{Binding ImagePath}" DecodeWidth="344" DecodeHeight="194" />
+                    <ui:RemoteImage Path="{Binding ImagePath}" DecodeWidth="{DynamicResource Tile.Landscape.Width}" DecodeHeight="{DynamicResource Tile.Landscape.Height}" />
                     <Border Background="{DynamicResource Brush.Scrim.Card}" />
                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Bottom" Margin="16,0,16,17">
                         <StackPanel Spacing="3">

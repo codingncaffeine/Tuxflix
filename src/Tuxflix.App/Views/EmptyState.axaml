@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Tuxflix.App.Views.EmptyState"
+             HorizontalAlignment="Center" VerticalAlignment="Center">
+
+    <!-- What a page says when it has nothing to show, or could not be loaded: a picture, a
+         heading, a line of what to do, and the thing to press when there is one. -->
+    <StackPanel Spacing="12" MaxWidth="440">
+        <PathIcon Name="Picture" Width="40" Height="40" Foreground="{DynamicResource Brush.Text.Disabled}" />
+        <TextBlock Name="HeadingText" FontSize="17" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" IsVisible="False" />
+        <TextBlock Name="LineText" FontSize="14" TextAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" />
+        <Button Name="ActionButton" Theme="{StaticResource GhostButton}" Padding="16,8" Margin="0,6,0,0" HorizontalAlignment="Center" IsVisible="False" />
+    </StackPanel>
+</UserControl>

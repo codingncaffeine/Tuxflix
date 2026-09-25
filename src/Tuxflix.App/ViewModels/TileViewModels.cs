@@ -37,6 +37,17 @@ public abstract partial class MediaTileViewModel(ShellViewModel shell, MetadataI
     /// <summary>What a screen reader says for the tile.</summary>
     public string AccessibleName => string.IsNullOrEmpty(Subtitle) ? Title : $"{Title}, {Subtitle}";
 
+    /// <summary>What the listing says of a film's or an episode's file (4K, ATMOS): at most two.</summary>
+    private IReadOnlyList<string> Badges => field ??= Item.Type is "movie" or "episode" ? QualityBadges.Listed(Item.Media?.FirstOrDefault()) : [];
+
+    public string? FirstBadge => Badges.Count > 0 ? Badges[0] : null;
+
+    public string? SecondBadge => Badges.Count > 1 ? Badges[1] : null;
+
+    public bool HasFirstBadge => FirstBadge is not null;
+
+    public bool HasSecondBadge => SecondBadge is not null;
+
     [RelayCommand]
     private void Open() => shell.OpenItem(Item);
 

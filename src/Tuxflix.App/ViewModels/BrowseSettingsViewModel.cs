@@ -24,6 +24,21 @@ public sealed partial class BrowseSettingsViewModel(ShellViewModel shell) : Obse
         }
     }
 
+    /// <summary>The tiles' size in library grids, the same as the slider beside a library's sort.</summary>
+    public double GridScale
+    {
+        get => shell.GridScale;
+        set
+        {
+            shell.GridScale = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(GridScaleText));
+        }
+    }
+
+    /// <summary>"Usual size", "125 %".</summary>
+    public string GridScaleText => shell.GridScale == 1 ? "Usual size" : string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{shell.GridScale * 100:0} %");
+
     public bool HasServer => shell.Session is not null;
 
     public string HomeHeading => shell.Session is { } session ? $"Home shelves on {session.Name}" : "Home shelves";

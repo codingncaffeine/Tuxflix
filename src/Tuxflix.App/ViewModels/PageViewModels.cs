@@ -19,8 +19,13 @@ public sealed partial class ItemPageViewModel(ShellViewModel shell, ServerSessio
         nameof(PlayLabel), nameof(RemainingText), nameof(HasProgress), nameof(Progress), nameof(Runtime), nameof(LastWatched), nameof(AudienceRating),
         nameof(ContentRating), nameof(HasContentRating), nameof(Genres), nameof(Director), nameof(Studio), nameof(MediaSummary), nameof(Cast),
         nameof(IsSeries), nameof(Kicker), nameof(HasTagline), nameof(ProgressText), nameof(HasDirector), nameof(HasStudio), nameof(HasMediaSummary),
-        nameof(LogoPath), nameof(HasLogo), nameof(ShowTextTitle))]
+        nameof(LogoPath), nameof(HasLogo), nameof(ShowTextTitle), nameof(Badges), nameof(HasBadges))]
     public partial MetadataItem Item { get; set; } = summary;
+
+    /// <summary>The file's picture and sound from the full record: 4K, DOLBY VISION, HDR10, ATMOS.</summary>
+    public IReadOnlyList<string> Badges => Item.Type is "movie" or "episode" ? QualityBadges.Full(Item.Media?.FirstOrDefault()) : [];
+
+    public bool HasBadges => Badges.Count > 0;
 
     // Each feature follows the item shown from a file of its own: marks and choices, downloads.
     partial void OnItemChanged(MetadataItem value)

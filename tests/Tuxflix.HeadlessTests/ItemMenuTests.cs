@@ -287,7 +287,8 @@ public sealed class ItemMenuTests : IAsyncDisposable
         Assert.Equal("FILE", version.Label);
         var size = media.Part![0].Size!.Value / (double)(1L << 30);
         var length = TimeSpan.FromMilliseconds(media.Duration!.Value);
-        var video = (await Fresh(film.RatingKey)).Media![0].Part![0].Stream!.Single(s => s.StreamType == 1).DisplayTitle;
+        var picture = (await Fresh(film.RatingKey)).Media![0].Part![0].Stream!.Single(s => s.StreamType == 1);
+        var video = picture.ExtendedDisplayTitle ?? picture.DisplayTitle;
         Assert.Equal(
         [
             new InfoLine("File", $"{film.Title} ({film.Year}).mkv"),
@@ -304,6 +305,31 @@ public sealed class ItemMenuTests : IAsyncDisposable
             new InfoLine(string.Empty, "Français (PGS)"),
             new InfoLine(string.Empty, "Español (SRT External)  ·  separate file"),
         ], version.Lines);
+    }
+
+    [Fact]
+    public async Task APosterSaysWhatItsListingKnowsAndTheItemPageEverythingItsRecordDoes()
+    {
+        // The demo's 4K films are HDR10 with an Atmos soundtrack, those at even places Dolby Vision
+        // too: one of each, as the library lists it and as its page shows it.
+        var listing = (await Session.Client.GetSectionItemsAsync(DemoCatalog.MoviesSectionKey, "titleSort", CancellationToken.None)).Metadata!;
+        var uhd = Demo.Movies.Select((m, i) => (m, i)).Where(p => p.m.Media![0].VideoResolution == "4k").ToList();
+        foreach (var (film, index) in new[] { uhd.First(p => p.i % 2 == 0), uhd.First(p => p.i % 2 == 1) })
+        {
+            var listed = listing.Single(m => m.RatingKey == film.RatingKey);
+            var tile = new PosterTileViewModel(_shell, listed);
+            Assert.Equal("4K", tile.FirstBadge);
+            Assert.Equal("ATMOS", tile.SecondBadge);
+
+            var page = new ItemPageViewModel(_shell, Session, listed);
+            await page.ActivateAsync();
+            Assert.Equal(index % 2 == 0 ? ["4K", "DOLBY VISION", "HDR10", "ATMOS"] : ["4K", "HDR10", "ATMOS"], page.Badges);
+        }
+
+        // A 1080p film with nothing of note says nothing; a series has no file of its own.
+        var plain = Demo.Movies.First(m => m.Media![0].VideoResolution != "4k");
+        Assert.False(new PosterTileViewModel(_shell, plain).HasFirstBadge);
+        Assert.Empty(new ItemPageViewModel(_shell, Session, Demo.Shows[0]).Badges);
     }
 
     [Fact]

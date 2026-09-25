@@ -335,7 +335,7 @@ public sealed class ViewerTests : IDisposable
         var section = (await Session.Client.GetSectionsAsync(CancellationToken.None)).First(s => s.Type == "movie");
         _shell.OpenSection(section);
         var library = (LibraryPageViewModel)_shell.Router.Current!;
-        library.Fit(1200);
+        library.Fit(1200, 1);
         await Until(() => !library.IsLoading && !library.IsLoadingMore && library.Grid.Count == Demo.Movies.Count, "the library to list");
         var first = library.Grid.Tiles[0];
 

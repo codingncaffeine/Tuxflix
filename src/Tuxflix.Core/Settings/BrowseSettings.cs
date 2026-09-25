@@ -9,6 +9,9 @@ public sealed class BrowseSettings
     /// <summary>A series' or a film's theme music plays quietly while its page is open.</summary>
     public bool ThemeMusic { get; set; } = true;
 
+    /// <summary>The size of the tiles in library grids against their usual size, from 0.75 to 1.5.</summary>
+    public double GridScale { get; set; } = 1;
+
     /// <summary>The layout of one server's home shelves, begun empty the first time it is asked for.</summary>
     public ShelfLayout HomeOf(string server)
     {

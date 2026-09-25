@@ -355,6 +355,7 @@ public sealed partial class DemoCatalog
                         VideoResolution = is4K ? "4k" : "1080",
                         Container = "mkv",
                         VideoFrameRate = "24p",
+                        AudioProfile = is4K ? "dolby truehd + dolby atmos" : null,
                         Part =
                         [
                             new()

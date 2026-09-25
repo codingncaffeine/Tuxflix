@@ -8,9 +8,9 @@
     <!-- The capsule: art only at rest; on hover it lifts, its shadow deepens, a hairline ring
          appears and the title rises out of a scrim. -->
     <Button Classes="tile" Theme="{StaticResource TileButton}"
-            Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}"
+            Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}" ui:HoverCard.For="{Binding}"
             AutomationProperties.Name="{Binding AccessibleName}">
-        <Panel Width="164" Height="246">
+        <Panel Width="{DynamicResource Tile.Poster.Width}" Height="{DynamicResource Tile.Poster.Height}">
             <Border Name="Lift" CornerRadius="{StaticResource Radius.Tile}" Background="{DynamicResource Brush.Panel}" />
             <Border CornerRadius="{StaticResource Radius.Tile}" ClipToBounds="True">
                 <Panel>
@@ -21,12 +21,18 @@
                         <TextBlock Text="{Binding Title}" TextWrapping="Wrap" TextAlignment="Center" FontSize="13"
                                    FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Tertiary}" />
                     </StackPanel>
-                    <ui:RemoteImage Path="{Binding ImagePath}" DecodeWidth="164" DecodeHeight="246" />
+                    <ui:RemoteImage Path="{Binding ImagePath}" DecodeWidth="{DynamicResource Tile.Poster.Width}" DecodeHeight="{DynamicResource Tile.Poster.Height}" />
                     <Border Classes="reveal" Background="{DynamicResource Brush.Scrim.Bottom}" />
                     <StackPanel Classes="reveal" VerticalAlignment="Bottom" Margin="11,0,11,14" Spacing="2">
                         <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="{Binding Subtitle}" FontSize="11.5" TextTrimming="CharacterEllipsis"
                                    Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    </StackPanel>
+                    <!-- The file at rest (4K, ATMOS); the title takes their place on hover. -->
+                    <StackPanel Classes="conceal" Orientation="Horizontal" Spacing="4" Margin="8,0,0,10"
+                                HorizontalAlignment="Left" VerticalAlignment="Bottom" IsHitTestVisible="False">
+                        <Border Classes="badge-quality" IsVisible="{Binding HasFirstBadge}"><TextBlock Text="{Binding FirstBadge}" /></Border>
+                        <Border Classes="badge-quality" IsVisible="{Binding HasSecondBadge}"><TextBlock Text="{Binding SecondBadge}" /></Border>
                     </StackPanel>
                     <ProgressBar Theme="{StaticResource ThinProgress}" VerticalAlignment="Bottom"
                                  Value="{Binding Progress}" IsVisible="{Binding HasProgress}" />

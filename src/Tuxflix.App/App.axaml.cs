@@ -67,6 +67,7 @@ public sealed class App : Application
                 desktop.Exit += (_, _) => shell.Gamepads.Dispose();
             }
 
+            shell.ShowGridScale();
             var window = owner = new MainWindow(shell, settings);
             desktop.MainWindow = window;
 
