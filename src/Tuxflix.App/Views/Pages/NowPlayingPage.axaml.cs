@@ -34,6 +34,7 @@ public partial class NowPlayingPage : UserControl
         _chromeTimer = new DispatcherTimer(ChromeLinger, DispatcherPriority.Background, (_, _) => HideChrome());
         VisualizerLayer.PointerMoved += (_, _) => ShowChrome();
         Visualizer.PointerPressed += OnVisualizerPressed;
+        VisualizerTitleBand.PointerPressed += OnTitleBandPressed;
         FullScreenButton.Click += (_, _) => ToggleFullScreen();
 
         // A hand on the lyrics stops them following the music for a few seconds.
@@ -149,6 +150,21 @@ public partial class NowPlayingPage : UserControl
         if (Model?.Music is not { IsScrubbing: true } music) return;
         music.IsScrubbing = false;
         music.SeekTo(value);
+    }
+
+    // The band along the top is the title bar the visualizer hides: it moves the window and a double
+    // click maximises it. Full screen has no window to move, so there it is picture like the rest.
+    private void OnTitleBandPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_top is not Window { WindowState: not WindowState.FullScreen } window)
+        {
+            OnVisualizerPressed(sender, e);
+            return;
+        }
+
+        if (!e.GetCurrentPoint(window).Properties.IsLeftButtonPressed) return;
+        WindowFrame.MoveOrMaximise(window, e);
+        e.Handled = true;
     }
 
     // Clicking the picture moves on to the next mode, as clicking Winamp's analyser did.

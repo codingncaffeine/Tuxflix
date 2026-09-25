@@ -245,6 +245,8 @@
         <Panel Name="VisualizerLayer" IsVisible="{Binding IsVisualizerOn}" Background="Black">
             <views:VisualizerView Name="Visualizer" IsVisible="{Binding IsVisualizerOn}" Music="{Binding Music}"
                                   Mode="{Binding VisualizerMode}" Palette="{Binding Palette}" />
+            <!-- The top of the picture stands in for the title bar it hides: it moves the window. -->
+            <Border Name="VisualizerTitleBand" Height="120" VerticalAlignment="Top" Background="Transparent" />
             <Panel Name="VisualizerChrome">
                 <Border Height="120" VerticalAlignment="Top" IsHitTestVisible="False" Background="{DynamicResource Brush.Scrim.Top}" />
                 <Border Height="160" VerticalAlignment="Bottom" IsHitTestVisible="False" Background="{DynamicResource Brush.Scrim.Bottom}" />

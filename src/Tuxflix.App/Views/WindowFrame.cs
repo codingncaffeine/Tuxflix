@@ -50,17 +50,23 @@ internal static class WindowFrame
     {
         bar.PointerPressed += (_, e) =>
         {
-            if (!e.GetCurrentPoint(window).Properties.IsLeftButtonPressed || e.Handled) return;
+            if (e.Handled) return;
             if (e.Source is Visual source && IsInteractive(source, bar)) return;
-
-            if (e.ClickCount == 2)
-            {
-                window.WindowState = window.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-                return;
-            }
-
-            window.BeginMoveDrag(e);
+            MoveOrMaximise(window, e);
         };
+    }
+
+    /// <summary>What a left press on a title bar does: moves the window, or toggles maximise on a double-click.</summary>
+    public static void MoveOrMaximise(Window window, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(window).Properties.IsLeftButtonPressed) return;
+        if (e.ClickCount == 2)
+        {
+            window.WindowState = window.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+            return;
+        }
+
+        window.BeginMoveDrag(e);
     }
 
     private static bool IsInteractive(Visual source, Control bar)

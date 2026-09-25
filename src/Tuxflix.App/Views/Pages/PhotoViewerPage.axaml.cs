@@ -41,6 +41,20 @@ public partial class PhotoViewerPage : UserControl
             if (e.Property == BoundsProperty) ApplyZoom();
         };
         FullScreenButton.Click += (_, _) => ToggleFullScreen();
+
+        // The band along the top moves the window and a double click maximises it, as the title bar
+        // it hides did; its double click is not also a zoom. Full screen has no window to move.
+        TitleBand.PointerPressed += (_, e) =>
+        {
+            if (_top is not Window { WindowState: not WindowState.FullScreen } window) return;
+            if (!e.GetCurrentPoint(window).Properties.IsLeftButtonPressed) return;
+            WindowFrame.MoveOrMaximise(window, e);
+            e.Handled = true;
+        };
+        TitleBand.DoubleTapped += (_, e) =>
+        {
+            if (_top is Window { WindowState: not WindowState.FullScreen }) e.Handled = true;
+        };
     }
 
     /// <summary>How far the photo is zoomed: 1 fits the window.</summary>

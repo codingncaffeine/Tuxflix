@@ -20,13 +20,16 @@
         <Panel Name="Stage" Background="Black" ClipToBounds="True">
             <ui:RemoteImage Name="Picture" Path="{Binding Picture}" Stretch="Uniform" RenderTransformOrigin="0,0" />
 
+            <!-- The top of the photo stands in for the title bar it hides: it moves the window. -->
+            <Border Name="TitleBand" Height="110" VerticalAlignment="Top" Background="Transparent" />
+
             <Panel Name="Chrome">
                 <Border Height="110" VerticalAlignment="Top" IsHitTestVisible="False" Background="{DynamicResource Brush.Scrim.Top}" />
                 <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Top" Margin="22,18,22,0">
                     <Button Theme="{StaticResource IconButton}" Command="{Binding CloseCommand}" ui:Tip.Text="Back" ui:Tip.Keys="Esc">
                         <PathIcon Data="{StaticResource Icon.ArrowLeft}" Width="20" Height="20" />
                     </Button>
-                    <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center" Spacing="1">
+                    <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center" Spacing="1" IsHitTestVisible="False">
                         <TextBlock Text="{Binding Heading}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                         <TextBlock FontSize="12.5" Foreground="{DynamicResource Brush.Text.Secondary}">
                             <Run Text="{Binding Caption}" />
