@@ -100,6 +100,13 @@ public sealed class PlexServerClient
     public Task StopTranscodeAsync(string session, CancellationToken cancellation) =>
         SendAsync(HttpMethod.Get, "/video/:/transcode/universal/stop?session=" + Uri.EscapeDataString(session), cancellation);
 
+    /// <summary>A part's seek previews as the server keeps them (a BIF file); null when it made none.</summary>
+    public async Task<PreviewIndex?> GetPreviewIndexAsync(long partId, CancellationToken cancellation)
+    {
+        var bytes = await GetBytesAsync(Resolve(string.Create(CultureInfo.InvariantCulture, $"/library/parts/{partId}/indexes/sd")), cancellation).ConfigureAwait(false);
+        return PreviewIndex.Parse(bytes);
+    }
+
     /// <summary>The conversions the server is running now (the player probe checks its own starts and stops).</summary>
     public async Task<IReadOnlyList<TranscodeSessionInfo>> GetTranscodeSessionsAsync(CancellationToken cancellation) =>
         (await GetAsync("/transcode/sessions", cancellation).ConfigureAwait(false)).TranscodeSession ?? [];

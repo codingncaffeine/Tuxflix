@@ -91,8 +91,9 @@ public sealed class SignInFlowTests
                 await Task.Delay(50, TestContext.Current.CancellationToken);
             }
 
+            // Where sign-in stood at the deadline, so a failure (seen once in about 75 runs) says what happened.
+            Assert.True(shell.Session is not null, $"no session after 15 s; the page is {shell.Router.Current?.GetType().Name} \"{shell.Router.Current?.Title}\", error \"{(shell.Router.Current as PageViewModel)?.ErrorMessage}\", browser opened {browserOpened} times");
             Assert.Equal(1, browserOpened);
-            Assert.NotNull(shell.Session);
             Assert.Equal("Den", shell.Session.Name);
             Assert.IsType<HomePageViewModel>(shell.Router.Current);
             Assert.Equal("account-token", Assert.Single(secrets.Kept).Value);

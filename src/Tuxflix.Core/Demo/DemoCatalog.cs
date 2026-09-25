@@ -94,6 +94,7 @@ public sealed class DemoCatalog
     ];
 
     private readonly Dictionary<string, MetadataItem> _byKey = new(StringComparer.Ordinal);
+    private readonly Dictionary<long, MetadataItem> _byPart = [];
     private readonly Dictionary<string, List<MetadataItem>> _children = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (string Title, string? Subtitle, int Seed)> _art = new(StringComparer.Ordinal);
 
@@ -191,7 +192,27 @@ public sealed class DemoCatalog
         new() { Key = ShowsSectionKey, Type = "show", Title = "TV Shows", Agent = "tv.plex.agents.series", Language = "en-US", Uuid = "demo-shows" },
     ];
 
+    private static readonly string[] ChapterNames = ["Opening", "Arrival", "The Plan", "Complications", "The Turn", "Finale"];
+
+    /// <summary>Six named chapters with a picture each, as a film ripped from a disc has.</summary>
+    private List<Chapter> Chapters(string key, string title, int seed, long duration)
+    {
+        var length = duration / ChapterNames.Length;
+        var chapters = new List<Chapter>();
+        for (var n = 0; n < ChapterNames.Length; n++)
+        {
+            var thumb = $"/library/metadata/{key}/chapter/{n + 1}";
+            _art[thumb] = (title, ChapterNames[n], seed + n + 1);
+            chapters.Add(new Chapter { Id = n + 1, Index = n + 1, Tag = ChapterNames[n], StartTimeOffset = n * length, EndTimeOffset = (n + 1) * length, Thumb = thumb });
+        }
+
+        return chapters;
+    }
+
     public MetadataItem? Find(string ratingKey) => _byKey.GetValueOrDefault(ratingKey);
+
+    /// <summary>The film or episode a media part belongs to.</summary>
+    public MetadataItem? FindByPart(long partId) => _byPart.GetValueOrDefault(partId);
 
     public IReadOnlyList<MetadataItem> ChildrenOf(string ratingKey) =>
         _children.TryGetValue(ratingKey, out var children) ? children : [];
@@ -281,6 +302,7 @@ public sealed class DemoCatalog
                 Image = Images(key, thumb, art, spec.Title, seed),
                 UltraBlurColors = Blur(seed),
                 Role = Cast(seed),
+                Chapter = Chapters(key, spec.Title, seed, duration),
                 Media =
                 [
                     new()
@@ -307,6 +329,7 @@ public sealed class DemoCatalog
                                 File = $"/media/movies/{spec.Title} ({spec.Year}).mkv",
                                 Size = duration / 1000 * (is4K ? 4_750_000L : 1_225_000L),
                                 Container = "mkv",
+                                Indexes = "sd",
                             },
                         ],
                     },
@@ -314,6 +337,7 @@ public sealed class DemoCatalog
             };
 
             _byKey[key] = movie;
+            _byPart[7000 + i] = movie;
             movies.Add(movie);
         }
 

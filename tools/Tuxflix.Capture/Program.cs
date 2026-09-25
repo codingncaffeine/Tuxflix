@@ -261,6 +261,21 @@ void Capture(string pose)
         Settle(shell);
     }
 
+    if (pose == "player-preview")
+    {
+        // A demo film (its previews and named chapters come from the demo server), the pointer resting on the seek bar.
+        shell.Play(Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now).Movies[0], resume: false);
+        Settle(shell);
+        var seek = window.GetVisualDescendants().OfType<Slider>().FirstOrDefault(s => s.Name == "Seek")
+                   ?? throw new InvalidOperationException("No seek bar.");
+        var over = seek.TranslatePoint(new Point(seek.Bounds.Width * 0.42, seek.Bounds.Height / 2), window)
+                   ?? throw new InvalidOperationException("The seek bar is not in the window.");
+        window.MouseMove(over);
+        Pump(TimeSpan.FromMilliseconds(300));
+        window.MouseMove(over + new Point(1, 0));
+        Pump(TimeSpan.FromMilliseconds(1500));
+    }
+
     if (pose == "stream")
     {
         StreamCheck(shell);

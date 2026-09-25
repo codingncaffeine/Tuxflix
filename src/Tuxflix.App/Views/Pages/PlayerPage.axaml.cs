@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Tuxflix.App.ViewModels;
 
 namespace Tuxflix.App.Views.Pages;
@@ -36,6 +37,10 @@ public partial class PlayerPage : UserControl
         Seek.AddHandler(PointerPressedEvent, (_, _) => { if (Model is { } m) m.IsScrubbing = true; }, RoutingStrategies.Tunnel, handledEventsToo: true);
         Seek.AddHandler(PointerReleasedEvent, (_, _) => EndScrub(), RoutingStrategies.Tunnel, handledEventsToo: true);
         Seek.AddHandler(PointerCaptureLostEvent, (_, _) => EndScrub(), RoutingStrategies.Bubble, handledEventsToo: true);
+
+        // Over the bar, and while dragging it: what is at that place.
+        Seek.AddHandler(PointerMovedEvent, OnSeekPointer, RoutingStrategies.Tunnel, handledEventsToo: true);
+        Seek.AddHandler(PointerExitedEvent, (_, _) => { if (Model is { IsScrubbing: false } m) m.Previews?.Hide(); }, RoutingStrategies.Bubble, handledEventsToo: true);
     }
 
     private PlayerPageViewModel? Model => DataContext as PlayerPageViewModel;
@@ -250,10 +255,30 @@ public partial class PlayerPage : UserControl
         window.WindowState = window.WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
     }
 
+    /// <summary>Shows the preview for the place under the pointer, or the thumb's while it is dragged.</summary>
+    private void OnSeekPointer(object? sender, PointerEventArgs e)
+    {
+        if (Model is not { Previews: { } previews } model || Seek.GetVisualDescendants().OfType<Track>().FirstOrDefault() is not { } track) return;
+        var point = e.GetPosition(track);
+        var seconds = model.IsScrubbing ? model.SeekValue : Math.Clamp(track.ValueFromPoint(point), 0, model.SeekMaximum);
+        previews.Show(seconds);
+        PlacePreview(track, seconds / Math.Max(1, model.SeekMaximum));
+    }
+
+    /// <summary>Centres the preview over <paramref name="fraction"/> of the bar, kept inside the window, just above the bar.</summary>
+    internal void PlacePreview(Track track, double fraction)
+    {
+        var origin = track.TranslatePoint(default, this) ?? default;
+        var width = PreviewBox.Bounds.Width > 0 ? PreviewBox.Bounds.Width : 250;
+        var x = origin.X + (Math.Clamp(fraction, 0, 1) * track.Bounds.Width) - (width / 2);
+        PreviewBox.Margin = new Thickness(Math.Clamp(x, 12, Math.Max(12, Bounds.Width - width - 12)), 0, 0, Math.Max(0, Bounds.Height - origin.Y + 10));
+    }
+
     private void EndScrub()
     {
         if (Model is not { IsScrubbing: true } model) return;
         model.IsScrubbing = false;
+        if (!Seek.IsPointerOver) model.Previews?.Hide();
         model.SeekTo(Seek.Value);
     }
 

@@ -94,6 +94,10 @@ public sealed partial class PlayerPageViewModel
 
     public bool HasChapters => Chapters.Count > 1;
 
+    /// <summary>What the seek bar shows under the pointer; null until the full record is in.</summary>
+    [ObservableProperty]
+    public partial SeekPreviews? Previews { get; private set; }
+
     /// <summary>Where the chapters start, as fractions of the length: the ticks on the seek bar.</summary>
     [ObservableProperty]
     public partial IReadOnlyList<double> ChapterMarks { get; private set; } = [];
@@ -260,6 +264,8 @@ public sealed partial class PlayerPageViewModel
 
         ChapterMarks = [.. Chapters.Skip(1).Select(c => c.Chapter.StartTimeOffset / (double)length)];
         OnPropertyChanged(nameof(HasChapters));
+        Previews?.Dispose();
+        Previews = new SeekPreviews(session.Client, _item.Media?.FirstOrDefault()?.Part?.FirstOrDefault(), [.. Chapters.Select(c => c.Chapter)]);
         if (_item.Type == "episode" && _item.GrandparentRatingKey is { } show) _ = FindNextAsync(show);
     }
 
@@ -347,6 +353,7 @@ public sealed partial class PlayerPageViewModel
 
     private void StopSmart()
     {
+        Previews?.Dispose();
         StopCountdown();
         _sleep?.Stop();
         _sleep = null;

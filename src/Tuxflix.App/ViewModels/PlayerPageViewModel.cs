@@ -285,7 +285,8 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
                 if (!IsScrubbing) SeekValue = seconds;
                 OnPosition(seconds);
                 break;
-            case "duration" when change.Number is { } seconds && seconds > 0:
+            // The demo's endless pattern reports a length that grows as it plays: the film's own stands.
+            case "duration" when change.Number is { } seconds && seconds > 0 && !session.IsDemo:
                 Duration = seconds;
                 break;
             case "pause" when change.Flag is { } paused:

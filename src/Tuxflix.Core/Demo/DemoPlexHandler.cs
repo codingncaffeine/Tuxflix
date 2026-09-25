@@ -76,6 +76,7 @@ public sealed class DemoPlexHandler(DemoCatalog catalog, IDemoArtRenderer? art) 
                 : NotFound(),
             ["library", "metadata", var key, "children"] => Json(new MediaContainer { Size = catalog.ChildrenOf(key).Count, Metadata = [.. catalog.ChildrenOf(key)] }),
             ["photo", ":", "transcode"] => Image(query["url"], ParseInt(query["width"]), ParseInt(query["height"])),
+            ["library", "parts", var part, "indexes", "sd"] => Previews(part),
             ["services", "ultrablur", "colors"] => query["url"] is { } url && catalog.UltraBlurFor(url) is { } colours
                 ? Json(new MediaContainer { Size = 1, UltraBlurColors = [colours] })
                 : NotFound(),
@@ -154,6 +155,22 @@ public sealed class DemoPlexHandler(DemoCatalog catalog, IDemoArtRenderer? art) 
         var content = new ByteArrayContent(image.Bytes);
         content.Headers.ContentType = new MediaTypeHeaderValue(image.ContentType);
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+    }
+
+    /// <summary>A film's seek previews: a picture every so often, each naming its time, in one BIF file.</summary>
+    private HttpResponseMessage Previews(string part)
+    {
+        if (art is null || !long.TryParse(part, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) || catalog.FindByPart(id) is not { Duration: > 0 } item)
+        {
+            return NotFound();
+        }
+
+        const int Pictures = 60;
+        var interval = (uint)(item.Duration!.Value / Pictures);
+        var pictures = Enumerable.Range(0, Pictures)
+            .Select(n => art.Render(new DemoArtRequest(DemoArtKind.Still, item.Title, TimeSpan.FromMilliseconds(n * (double)interval).ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture), 11 * n, 240, 100)).Bytes)
+            .ToList();
+        return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(PreviewIndex.Build(pictures, interval)) };
     }
 
     private static HttpResponseMessage Json(MediaContainer container)

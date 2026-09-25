@@ -558,6 +558,10 @@ public sealed class MediaPart
     [JsonPropertyName("decision")]
     public string? Decision { get; init; }
 
+    /// <summary><c>sd</c> when the server made seek previews for this part (<c>/library/parts/{id}/indexes/sd</c>).</summary>
+    [JsonPropertyName("indexes")]
+    public string? Indexes { get; init; }
+
     [JsonPropertyName("Stream")]
     public List<MediaStream>? Stream { get; init; }
 }

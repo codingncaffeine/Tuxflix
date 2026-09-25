@@ -166,6 +166,24 @@
             </Border>
         </Panel>
 
+        <!-- ===== Over the seek bar: the time, chapter and picture under the pointer ===== -->
+        <Border x:Name="PreviewBox" HorizontalAlignment="Left" VerticalAlignment="Bottom" IsHitTestVisible="False"
+                IsVisible="{Binding Previews.IsShown, FallbackValue=False}"
+                Background="#EB0B1126" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="8" Padding="4">
+            <StackPanel Spacing="4">
+                <Border Width="240" Height="135" CornerRadius="5" ClipToBounds="True" Background="#0B1126"
+                        IsVisible="{Binding Previews.HasPictures, FallbackValue=False}">
+                    <Image Source="{Binding Previews.Picture}" Stretch="Uniform" />
+                </Border>
+                <StackPanel HorizontalAlignment="Center" Margin="8,0,8,2">
+                    <TextBlock Text="{Binding Previews.ChapterTitle}" IsVisible="{Binding Previews.ChapterTitle, Converter={x:Static ObjectConverters.IsNotNull}}"
+                               FontSize="12.5" FontWeight="SemiBold" Foreground="#E6FFFFFF" HorizontalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" MaxWidth="228" />
+                    <TextBlock Text="{Binding Previews.Time}" FontSize="13.5" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <!-- ===== Skip the intro or the credits: shown whether or not the controls are ===== -->
         <Button Classes="skip" IsVisible="{Binding ShowsSkip}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,42,168"
                 Padding="20,12" CornerRadius="8" Background="#CC0B1126" BorderBrush="#E6FFFFFF" BorderThickness="1.5"
