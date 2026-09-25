@@ -110,6 +110,10 @@ set -- "--setenv=TUXFLIX_SANDBOX=1" "--setenv=TUXFLIX_SANDBOX_WRITABLE=$DATA${WR
 # mincore is admitted by name: Mesa's EGL loader probes its own mappings with it while the window's
 # graphics come up, and @system-service does not carry it, so the filter killed the process with
 # SIGSYS before the first frame. It is a read-only question about the process's own memory.
+# /run is made read-only by name: ProtectSystem=strict should cover it, but in a user manager
+# (systemd 261, measured) ProtectKernelTunables and ProtectControlGroups each leave the /run mount
+# writable, and with it every drive the desktop mounts under /run/media. The runtime folder above
+# is carved back out.
 # A terminal launch gets a pty so Ctrl+C reaches the application; a desktop launch takes the pipe.
 IO=--pipe
 [ -t 0 ] && IO=--pty
@@ -119,6 +123,7 @@ exec systemd-run --user --quiet --collect --wait "$IO" \
     --working-directory="$HOME" \
     --property=NoNewPrivileges=yes \
     --property=ProtectSystem=strict \
+    --property=ReadOnlyPaths=/run \
     --property=ProtectHome=read-only \
     --property=ReadWritePaths="$DATA" \
     --property=ReadWritePaths="$CONFIG" \
