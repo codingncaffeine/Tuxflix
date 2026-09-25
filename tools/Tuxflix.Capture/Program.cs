@@ -158,6 +158,31 @@ void Capture(string pose)
         }
     }
 
+    if (pose == "museum")
+    {
+        // The Winamp Skin Museum window, reading the real museum (MUSEUM_QUERY searches it); nothing is added.
+        using var skins = new Tuxflix.App.Classic.SkinLibrary(Path.Combine(paths.Data, "skins"));
+        var model = new Tuxflix.App.Classic.SkinMuseumViewModel(new Tuxflix.App.Classic.SkinMuseum(), skins);
+        var museum = new Tuxflix.App.Classic.SkinMuseumWindow(model) { Width = 1060, Height = 780 };
+        museum.Show();
+        Pump(TimeSpan.FromSeconds(2));
+        if (Environment.GetEnvironmentVariable("MUSEUM_QUERY") is { Length: > 0 } query)
+        {
+            model.SearchText = query;
+            model.SearchCommand.Execute(null);
+        }
+
+        var until = Stopwatch.StartNew();
+        while ((model.IsLoading || model.Skins.Take(8).Any(s => s.Screenshot is null)) && until.Elapsed < TimeSpan.FromSeconds(20)) Pump(TimeSpan.FromMilliseconds(100));
+        Pump(TimeSpan.FromMilliseconds(400));
+        var shot = museum.CaptureRenderedFrame() ?? throw new InvalidOperationException("The museum rendered nothing.");
+        shot.Save(Path.Combine(output, "museum.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+        Console.WriteLine($"museum: {model.Skins.Count} skins, {model.Skins.Count(s => s.Screenshot is not null)} pictures; {model.Status}");
+        museum.Close();
+        window.Close();
+        return;
+    }
+
     if (!real && pose is "photos" or "photo-album" or "photo-viewer" or "photo-info")
     {
         // The demo's photo library, an album of it, and a photo full size (with its details for photo-info).

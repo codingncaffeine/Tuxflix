@@ -160,6 +160,13 @@ public sealed class ClassicPlayerWindow : Window
         return menu;
     }
 
+    /// <summary>The museum in a window of its own; a skin added there joins the Skins menu at once.</summary>
+    private void OpenMuseum()
+    {
+        var museum = new SkinMuseumWindow(new SkinMuseumViewModel(new SkinMuseum(), _skins, added => _ = RefreshSkinsAsync())) { Icon = Icon };
+        museum.Show();
+    }
+
     private MenuItem SkinsMenu()
     {
         var current = _shell.Settings.Classic.Skin ?? SkinLibrary.BaseFileName;
@@ -167,6 +174,7 @@ public sealed class ClassicPlayerWindow : Window
         items.AddRange(_skinFiles.Select(file => Radio(file.Label, file.FileName == current, () => _ = UseSkinAsync(file.FileName))));
         if (items.Count > 0) items.Add(new Separator());
         items.Add(Item("Load skin file…", () => _ = LoadSkinFileAsync()));
+        items.Add(Item("Browse the Winamp Skin Museum", OpenMuseum));
         items.Add(Item("Find more skins online…", () => _shell.OpenUrl(MuseumUrl)));
         return Submenu("Skins", items);
     }
