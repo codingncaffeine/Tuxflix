@@ -29,6 +29,9 @@ public sealed partial class DownloadManager : IAsyncDisposable
     private readonly List<PendingWrite> _pending = [];
     private readonly Dictionary<string, PlexServerClient> _servers = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Transfer> _active = new(StringComparer.Ordinal);
+
+    /// <summary>Folders whose files are being deleted: a download of the same item waits until they are gone.</summary>
+    private readonly HashSet<string> _deleting = new(StringComparer.Ordinal);
     private readonly SpeedLimiter _limiter;
     private readonly object _saveGate = new();
     private bool _unsaved;
@@ -360,6 +363,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
             if (record is null) return;
             _records.Remove(record);
             if (_active.TryGetValue(id, out active)) active.Mark(StopReason.Removed);
+            else _deleting.Add(record.Folder);
             sequence = ++_sequence;
         }
 
@@ -374,7 +378,12 @@ public sealed partial class DownloadManager : IAsyncDisposable
         else
         {
             var gone = record;
-            _ = Task.Run(() => DeleteFiles(gone));
+            _ = Task.Run(() =>
+            {
+                DeleteFiles(gone);
+                lock (_gate) _deleting.Remove(gone.Folder);
+                Pump();
+            });
         }
 
         SaveSoon();
@@ -437,7 +446,7 @@ public sealed partial class DownloadManager : IAsyncDisposable
             foreach (var record in _records)
             {
                 if (_active.Count >= limit) break;
-                if (record.State != DownloadState.Queued || _active.ContainsKey(record.Id)) continue;
+                if (record.State != DownloadState.Queued || _active.ContainsKey(record.Id) || _deleting.Contains(record.Folder)) continue;
                 if (!_servers.TryGetValue(record.ServerId, out var client)) continue;
                 var transfer = new Transfer(record);
                 _active[record.Id] = transfer;
@@ -530,9 +539,13 @@ public sealed partial class DownloadManager : IAsyncDisposable
         File.Move(temporary, path, overwrite: true);
     }
 
+    /// <summary>For tests: runs on the worker deleting a download's files, before it deletes them.</summary>
+    internal Action<string>? BeforeDelete { get; set; }
+
     /// <summary>Deletes what a download wrote, file by file by name, then its folder if that leaves it empty.</summary>
-    private static void DeleteFiles(DownloadRecord record)
+    private void DeleteFiles(DownloadRecord record)
     {
+        BeforeDelete?.Invoke(record.Folder);
         try
         {
             foreach (var file in new[] { record.MediaPath, record.PartialPath, record.MetadataPath, record.MetadataPath + ".new" }.Concat(ArtworkNames.Select(record.ArtworkPath)))

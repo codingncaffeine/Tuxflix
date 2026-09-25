@@ -14,7 +14,8 @@ namespace Tuxflix.Core.Downloads;
 /// replaces the one before it for the same item, unless something else about the item came in
 /// between. A write the server refuses as unknown (the item is gone) is dropped; one it cannot
 /// take now (unreachable, signed out) waits for the next time. What counts as watched is the
-/// player's call: played to the end, or stopped past 90%, the server's own default.
+/// player's call: played to the end, or stopped past 90%, the server's own default. Plezy (GPL-3.0,
+/// github.com/edde746/plezy) replays offline watching the same way: the place, then the scrobble.
 /// </remarks>
 public sealed partial class DownloadManager
 {

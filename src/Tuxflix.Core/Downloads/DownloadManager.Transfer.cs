@@ -82,6 +82,7 @@ public sealed partial class DownloadManager
         {
             _active.Remove(record.Id);
             removed = transfer.Reason == StopReason.Removed;
+            if (removed) _deleting.Add(record.Folder);
             if (!removed)
             {
                 if (state == DownloadState.Done)
@@ -115,6 +116,7 @@ public sealed partial class DownloadManager
         if (removed)
         {
             DeleteFiles(record);
+            lock (_gate) _deleting.Remove(record.Folder);
         }
         else
         {

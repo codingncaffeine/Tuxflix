@@ -285,6 +285,36 @@ public sealed class DownloadTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task ADownloadAskedForAgainWaitsUntilTheOldFilesAreGone()
+    {
+        var manager = NewManager();
+        var episode = Episodes("200403", 1)[0];
+        var record = manager.Enqueue(episode, Server, "Demo Library");
+        manager.Attach(Server, _client);
+        await WaitFor(manager, episode.RatingKey, r => r.State == DownloadState.Done);
+
+        // Deleting is held up; the same episode is asked for again meanwhile.
+        using var deleting = new SemaphoreSlim(0);
+        using var holding = new SemaphoreSlim(0);
+        manager.BeforeDelete = _ =>
+        {
+            holding.Release();
+            deleting.Wait(TimeSpan.FromSeconds(10));
+        };
+        manager.Remove(record.Id);
+        Assert.True(await holding.WaitAsync(TimeSpan.FromSeconds(10), Cancel), "the files were never deleted");
+        manager.Enqueue(episode, Server, "Demo Library");
+        await Task.Delay(300, Cancel);
+        Assert.Equal(DownloadState.Queued, manager.Find(Server, episode.RatingKey)!.State);
+        Assert.Single(_server.DownloadRequests);
+
+        deleting.Release();
+        var again = await WaitFor(manager, episode.RatingKey, r => r.State == DownloadState.Done);
+        Assert.Equal(DemoVideo.For(episode.RatingKey).ToArray(), await File.ReadAllBytesAsync(again.MediaPath, Cancel));
+        Assert.True(File.Exists(again.MetadataPath), "the new download lost its metadata to the old one's deletion");
+    }
+
+    [Fact]
     public async Task WatchChangesMadeOfflineWaitAndAreSentInOrderWhenTheServerIsBack()
     {
         var manager = NewManager();

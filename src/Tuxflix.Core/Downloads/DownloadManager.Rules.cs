@@ -9,11 +9,13 @@ namespace Tuxflix.Core.Downloads;
 /// </summary>
 /// <remarks>
 /// Watched means watched on the server or here (a change not yet sent counts), and an episode a
-/// rule has let go is never fetched again, whatever the server says. A series' rule
-/// leaves the specials out, as Plex's own apps do; a season's takes what the season holds. Only
-/// what a rule fetched is ever removed by one: a film or an episode downloaded by hand stays.
+/// rule has let go is never fetched again, whatever the server says. A series' rule leaves the
+/// specials out; a season's takes what the season holds. Only what a rule fetched is ever removed
+/// by one: a film or an episode downloaded by hand stays.
 /// A rule is brought up to date when its server opens, when it is made, and when something is
-/// watched while the server is open.
+/// watched while the server is open. The shape follows Plezy's sync rules (GPL-3.0,
+/// github.com/edde746/plezy): queue what is short of the count, and count a watch the server has
+/// not heard of yet.
 /// </remarks>
 public sealed partial class DownloadManager
 {

@@ -3,7 +3,7 @@
 //   dotnet run --project tools/Tuxflix.Capture -c Release -- <output-dir> [WIDTHxHEIGHT] [pose ...]
 //
 // Poses: home, home-hover, movie, series, welcome, discover, tooltip. With none given, all of them.
-// Also: downloads, downloads-options, movie-download (a film part-way down), offline (a start with no server in reach).
+// Also: downloads, downloads-options, movie-download (a film part-way down), series-download, offline (a start with no server in reach).
 // With --real also: artist, album, nowplaying, and classic (the compact player over a playing album;
 // CLASSIC_SKIN=path.wsz wears that skin, otherwise the base skin, fetched as the app fetches it;
 // CLASSIC_SCALE=1.5 sets its size).
@@ -252,7 +252,7 @@ void Capture(string pose)
         Idle(shell);
     }
 
-    if (pose is "downloads" or "downloads-options" or "movie-download" or "offline")
+    if (pose is "downloads" or "downloads-options" or "movie-download" or "series-download" or "offline")
     {
         // Demo downloads: a film kept, a series kept up to date, the one film the demo's "owner"
         // withholds, and episodes arriving under a speed limit so the progress shows part-way.
@@ -260,7 +260,7 @@ void Capture(string pose)
         var session = shell.Session ?? throw new InvalidOperationException("No server is open.");
         var downloads = shell.Downloads;
         Wait(downloads.Loaded);
-        if (pose != "movie-download")
+        if (pose is not ("movie-download" or "series-download"))
         {
             var film = downloads.Download(session, catalog.Movies[2]) ?? throw new InvalidOperationException("The film was not queued.");
             var episode = downloads.Download(session, catalog.ChildrenOf("200201")[0]) ?? throw new InvalidOperationException("The episode was not queued.");
@@ -275,6 +275,17 @@ void Capture(string pose)
             downloads.KeepNext(session, catalog.Shows[0], 3);
             Pump(TimeSpan.FromSeconds(2.5));
             shell.ShowDownloadsCommand.Execute(null);
+        }
+        else if (pose == "series-download")
+        {
+            // A series keeping its next three episodes: two in, the third on its way.
+            shell.Settings.Downloads.SpeedLimit = 0;
+            shell.OpenItem(catalog.Shows[0]);
+            Settle(shell);
+            var series = (ItemPageViewModel)shell.Router.Current!;
+            series.KeepNextCommand.Execute("3");
+            var clock = Stopwatch.StartNew();
+            while (series.SeriesDownloads?.KeptCount < 3 && clock.Elapsed < TimeSpan.FromSeconds(30)) Pump(TimeSpan.FromMilliseconds(100));
         }
         else if (pose == "movie-download")
         {
