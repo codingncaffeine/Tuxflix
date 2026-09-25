@@ -49,8 +49,11 @@ internal static class PlayerProbe
                 await Task.Delay(100);
             }
 
-            var item = (shell.Router.Current as HomePageViewModel)?.Shelves
-                .SelectMany(s => s.Tiles.OfType<MediaTileViewModel>()).Select(t => t.Item).FirstOrDefault(i => i.Type is "movie" or "episode");
+            // The spotlight first: the most recent thing in Continue Watching.
+            var home = shell.Router.Current as HomePageViewModel;
+            var item = new[] { home?.Hero?.Item }.OfType<MetadataItem>()
+                .Concat(home?.Shelves.SelectMany(s => s.Tiles.OfType<MediaTileViewModel>()).Select(t => t.Item) ?? [])
+                .FirstOrDefault(i => i.Type is "movie" or "episode");
 
             // TUXFLIX_PROBE_ITEM plays a chosen title instead (a 4K HEVC film, a file with sidecar subtitles).
             if (Environment.GetEnvironmentVariable("TUXFLIX_PROBE_ITEM") is { Length: > 0 } chosen && shell.Session is { } open)

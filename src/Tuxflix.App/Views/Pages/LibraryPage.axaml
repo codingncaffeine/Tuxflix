@@ -55,7 +55,24 @@
                     <TextBlock Classes="label" Text="FILTER" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
+
+            <!-- Nothing in particular in mind: something unwatched, picked at random. -->
+            <Button Grid.Column="4" Theme="{StaticResource GhostButton}" Padding="12,7" Margin="12,0,0,0" VerticalAlignment="Center"
+                    IsVisible="{Binding CanPlaySomething}" Command="{Binding PlaySomethingCommand}" ui:Tip.Text="{Binding PlaySomethingTip}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{StaticResource Icon.Shuffle}" Width="14" Height="14" />
+                    <TextBlock Text="PLAY SOMETHING" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
         </Grid>
+
+        <Border Grid.Row="1" IsVisible="{Binding HasPickNotice}" Margin="36,0,36,12" Padding="16,10" CornerRadius="8" HorizontalAlignment="Right"
+                Background="{DynamicResource Brush.Accent.Softer}" BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="1">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <PathIcon Data="{StaticResource Icon.Info}" Width="16" Height="16" Foreground="{DynamicResource Brush.Accent}" />
+                <TextBlock Text="{Binding PickNotice}" FontSize="13.5" VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
 
         <!-- The filters in force, each a chip that takes itself off -->
         <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="36,0,36,12" IsVisible="{Binding HasActiveFilters}">

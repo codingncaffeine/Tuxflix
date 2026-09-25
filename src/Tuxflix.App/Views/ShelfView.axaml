@@ -13,6 +13,25 @@
             <Border Grid.Column="2" Height="1" Margin="18,0,12,0" VerticalAlignment="Center"
                     Background="{DynamicResource Brush.Line.Hairline}" />
             <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2">
+                <!-- On the home screen: move the shelf, or hide it. -->
+                <Button Theme="{StaticResource IconButton}" Padding="7" IsVisible="{Binding CanArrange}"
+                        ui:Tip.Text="Arrange this shelf">
+                    <PathIcon Data="{StaticResource Icon.DotsThree}" Width="15" Height="15" />
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuItem Header="Move up" Command="{Binding Arrangement.MoveUpCommand}">
+                                <MenuItem.Icon><PathIcon Data="{StaticResource Icon.CaretUp}" Width="14" Height="14" /></MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Move down" Command="{Binding Arrangement.MoveDownCommand}">
+                                <MenuItem.Icon><PathIcon Data="{StaticResource Icon.CaretDown}" Width="14" Height="14" /></MenuItem.Icon>
+                            </MenuItem>
+                            <Separator />
+                            <MenuItem Header="Hide from home" Command="{Binding Arrangement.HideCommand}">
+                                <MenuItem.Icon><PathIcon Data="{StaticResource Icon.EyeSlash}" Width="14" Height="14" /></MenuItem.Icon>
+                            </MenuItem>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
                 <Button Name="LeftButton" Theme="{StaticResource IconButton}" Padding="7" Click="OnScrollLeft"
                         ui:Tip.Text="Scroll left">
                     <PathIcon Data="{StaticResource Icon.CaretLeft.Bold}" Width="13" Height="13" />

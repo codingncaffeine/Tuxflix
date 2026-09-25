@@ -3,6 +3,8 @@
 //   dotnet run --project tools/Tuxflix.Capture -c Release -- <output-dir> [WIDTHxHEIGHT] [pose ...]
 //
 // Poses: home, home-hover, movie, series, welcome, discover, tooltip. With none given, all of them.
+// Also: home-hidden (a shelf moved, one hidden, the page's foot), home-menu (a shelf's menu open),
+// movie-more (a film's page scrolled to its extras, critics and related shelves), library.
 // With --real also: artist, album, nowplaying, and classic (the compact player over a playing album;
 // CLASSIC_SKIN=path.wsz wears that skin, otherwise the base skin, fetched as the app fetches it;
 // CLASSIC_SCALE=1.5 sets its size).
@@ -255,7 +257,7 @@ void Capture(string pose)
     {
         // The overlay over a black picture: there is no OpenGL on the headless platform.
         var item = shell.Router.Current is HomePageViewModel home
-            ? home.Shelves.SelectMany(s => s.Tiles.OfType<MediaTileViewModel>()).First().Item
+            ? home.Hero?.Item ?? home.Shelves.SelectMany(s => s.Tiles.OfType<MediaTileViewModel>()).First().Item
             : throw new InvalidOperationException("No home page to pick from.");
         shell.Play(item, resume: true);
         Settle(shell);
@@ -304,6 +306,9 @@ void Capture(string pose)
         case "series":
             shell.OpenItem(Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now).Shows[0]);
             break;
+        case "movie-more":
+            shell.OpenItem(Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now).Movies[3]);
+            break;
         case "discover":
             shell.ShowDiscoverCommand.Execute(null);
             break;
@@ -333,6 +338,54 @@ void Capture(string pose)
         Pump(TimeSpan.FromMilliseconds(600));
     }
 
+    if (pose is "home-hidden" or "home-menu")
+    {
+        // The home screen after arranging: the Watchlist moved down, the last shelf hidden, and
+        // the foot of the page that offers it back; or a shelf's menu open.
+        var home = shell.Router.Current as HomePageViewModel ?? throw new InvalidOperationException("No home page.");
+        if (pose == "home-hidden")
+        {
+            home.Shelves[^1].Arrangement!.HideCommand.Execute(null);
+            home.Shelves[1].Arrangement!.MoveDownCommand.Execute(null);
+            Settle(shell);
+            ScrollToEnd(window);
+        }
+        else
+        {
+            var arrange = window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => Tuxflix.App.Controls.Tip.GetText(b) == "Arrange this shelf" && b.IsEffectivelyVisible)
+                          ?? throw new InvalidOperationException("No shelf menu.");
+            arrange.Flyout!.ShowAt(arrange);
+            Pump(TimeSpan.FromMilliseconds(500));
+        }
+    }
+
+    if (pose == "movie-more")
+    {
+        ScrollToEnd(window);
+    }
+
+    if (pose == "settings-browse")
+    {
+        // The browsing options on their own, as the settings page will hold them, the home arranged.
+        var home = shell.Router.Current as HomePageViewModel ?? throw new InvalidOperationException("No home page.");
+        home.Shelves[^1].Arrangement!.HideCommand.Execute(null);
+        var options = new Window
+        {
+            Width = 800,
+            Height = 220,
+            Background = Application.Current!.FindResource("Brush.Base") as IBrush,
+            Content = new Tuxflix.App.Views.Settings.BrowseSettingsView { DataContext = new BrowseSettingsViewModel(shell), Margin = new Thickness(36, 32) },
+        };
+        options.Show();
+        Pump(TimeSpan.FromMilliseconds(500));
+        var shot = options.CaptureRenderedFrame() ?? throw new InvalidOperationException("The options rendered nothing.");
+        shot.Save(Path.Combine(output, pose + ".png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+        Console.WriteLine($"{pose}: {Path.Combine(output, pose + ".png")}");
+        options.Close();
+        window.Close();
+        return;
+    }
+
     if (pose == "tooltip")
     {
         var downloads = window.GetVisualDescendants().OfType<Button>()
@@ -347,6 +400,19 @@ void Capture(string pose)
     frame.Save(file, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
     Console.WriteLine($"{pose}: {file} ({frame.PixelSize.Width}x{frame.PixelSize.Height})");
     window.Close();
+}
+
+// Scrolls the page to its foot, and lets the artwork that comes into view load.
+void ScrollToEnd(Window window)
+{
+    var page = window.GetVisualDescendants().OfType<UserControl>().FirstOrDefault(c => c is Tuxflix.App.Views.Pages.ItemPage or Tuxflix.App.Views.Pages.HomePage)
+               ?? throw new InvalidOperationException("No page to scroll.");
+    var scroller = page.GetVisualDescendants().OfType<ScrollViewer>().First();
+    scroller.Offset = new Vector(0, Math.Max(0, scroller.Extent.Height - scroller.Viewport.Height));
+    Pump(TimeSpan.FromMilliseconds(300));
+    var clock = Stopwatch.StartNew();
+    while (ImageLoader.Pending > 0 && clock.Elapsed < TimeSpan.FromSeconds(20)) Pump(TimeSpan.FromMilliseconds(50));
+    Pump(TimeSpan.FromMilliseconds(400));
 }
 
 // Waits for the current page to finish loading (a library's later pages too), then for its artwork.
@@ -439,7 +505,9 @@ static void StreamCheck(ShellViewModel shell)
 {
     var session = shell.Session ?? throw new InvalidOperationException("No server is open.");
     var home = shell.Router.Current as HomePageViewModel ?? throw new InvalidOperationException("No home page.");
-    var item = home.Shelves.SelectMany(s => s.Tiles.OfType<MediaTileViewModel>()).Select(t => t.Item).First(i => i.Type is "movie" or "episode");
+    var item = new[] { home.Hero?.Item }.OfType<MetadataItem>()
+        .Concat(home.Shelves.SelectMany(s => s.Tiles.OfType<MediaTileViewModel>()).Select(t => t.Item))
+        .First(i => i.Type is "movie" or "episode");
     var full = session.Client.GetMetadataAsync(item.RatingKey, CancellationToken.None).GetAwaiter().GetResult() ?? item;
     var part = full.Media?.FirstOrDefault()?.Part?.FirstOrDefault()?.Key ?? throw new InvalidOperationException("No part to play.");
     var headers = string.Join(",", session.Client.MediaHeaders(shell.Identity).Select(h => $"{h.Name}: {h.Value}"));

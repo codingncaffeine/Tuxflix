@@ -9,43 +9,6 @@ using Tuxflix.Core.Plex;
 
 namespace Tuxflix.App.ViewModels;
 
-/// <summary>Library home: Continue Watching first, then the server's promoted shelves.</summary>
-public sealed class HomePageViewModel(ShellViewModel shell, ServerSession session) : PageViewModel
-{
-    public override string Title => "Library home";
-
-    public ObservableCollection<ShelfViewModel> Shelves { get; } = [];
-
-    public bool IsEmpty => !IsLoading && Shelves.Count == 0 && !HasError;
-
-    protected override IEnumerable<string> LoadingDependents => [nameof(IsEmpty)];
-
-    protected override async Task LoadAsync(CancellationToken cancellation)
-    {
-        var hubs = await Task.Run(() => session.Client.GetHomeHubsAsync(cancellation), cancellation);
-        Shelves.Clear();
-
-        // Servers send Continue Watching and On Deck side by side, and they overlap almost entirely;
-        // an item shows on the first wide shelf that has it, and a shelf left empty is dropped, as
-        // Plex's own apps merge the two.
-        var shownWide = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var hub in hubs)
-        {
-            // Films and series for now; music, photo and clip shelves arrive with their own phases.
-            var items = hub.Metadata?.Where(i => i.Type is "movie" or "show" or "season" or "episode").ToList() ?? [];
-            var landscape = hub.HubIdentifier is { } id && (id.StartsWith("home.continue", StringComparison.Ordinal) || id.StartsWith("home.ondeck", StringComparison.Ordinal));
-            if (landscape) items = [.. items.Where(i => shownWide.Add(i.RatingKey))];
-            if (items.Count == 0) continue;
-            IEnumerable<MediaTileViewModel> tiles = landscape
-                ? items.Select(i => new LandscapeTileViewModel(shell, i))
-                : items.Select(i => new PosterTileViewModel(shell, i));
-            Shelves.Add(new ShelfViewModel(hub.Title, tiles));
-        }
-
-        OnPropertyChanged(nameof(IsEmpty));
-    }
-}
-
 /// <summary>A film, series, season or episode: Steam's game page, for something to watch.</summary>
 public sealed partial class ItemPageViewModel(ShellViewModel shell, ServerSession session, MetadataItem summary) : PageViewModel
 {
@@ -216,12 +179,13 @@ public sealed partial class ItemPageViewModel(ShellViewModel shell, ServerSessio
         var key = Item.Type == "season" ? Item.ParentRatingKey ?? Item.RatingKey : Item.RatingKey;
         var wantSeason = Item.Type == "season" ? Item.RatingKey : null;
 
-        if (await Task.Run(() => session.Client.GetMetadataAsync(key, cancellation), cancellation) is { } full)
+        if (await Task.Run(() => session.Client.GetItemDetailsAsync(key, cancellation), cancellation) is { } full)
         {
             Item = full;
         }
 
         OnPropertyChanged(nameof(HasCast));
+        Extend(cancellation);
 
         // Current servers send the colours with the item; older ones compute them on request.
         Blur = Item.UltraBlurColors

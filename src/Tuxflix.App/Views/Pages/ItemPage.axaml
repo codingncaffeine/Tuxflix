@@ -2,6 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Tuxflix.App.ViewModels"
              xmlns:ui="using:Tuxflix.App.Controls"
+             xmlns:views="using:Tuxflix.App.Views"
+             xmlns:tiles="using:Tuxflix.App.Views.Tiles"
              x:Class="Tuxflix.App.Views.Pages.ItemPage"
              x:DataType="vm:ItemPageViewModel">
 
@@ -85,13 +87,34 @@
             <Border Margin="44,0" Padding="18,16" CornerRadius="{StaticResource Radius.Card}"
                     Background="#B30A1024" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
                     BoxShadow="0 12 32 0 #73020510">
-                <Grid ColumnDefinitions="Auto,*">
-                    <Button Theme="{StaticResource PlayButton}" Command="{Binding PlayCommand}"
-                            ui:Tip.Text="Play from where you left off" ui:Tip.Keys="Space">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" />
-                            <TextBlock Text="{Binding PlayLabel}" VerticalAlignment="Center" />
-                        </StackPanel>
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Theme="{StaticResource PlayButton}" Command="{Binding PlayCommand}"
+                                ui:Tip.Text="Play from where you left off" ui:Tip.Keys="Space">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" />
+                                <TextBlock Text="{Binding PlayLabel}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <!-- The Plex Watchlist, shared with every Plex app. -->
+                        <Button Theme="{StaticResource GhostButton}" Command="{Binding ToggleWatchlistCommand}" IsVisible="{Binding CanWatchlist}"
+                                Classes.toggle-on="{Binding IsOnWatchlist}" ui:Tip.Text="{Binding WatchlistTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource Icon.BookmarkSimple}" Width="15" Height="15" IsVisible="{Binding !IsOnWatchlist}" />
+                                <PathIcon Data="{StaticResource Icon.BookmarkSimple.Fill}" Width="15" Height="15" IsVisible="{Binding IsOnWatchlist}" />
+                                <TextBlock Text="{Binding WatchlistLabel}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Theme music, on or off for every page. -->
+                    <Button Grid.Column="2" Theme="{StaticResource IconButton}" Padding="9" VerticalAlignment="Center"
+                            IsVisible="{Binding HasTheme}" Command="{Binding ToggleThemeMusicCommand}" ui:Tip.Text="{Binding ThemeTip}">
+                        <Panel>
+                            <PathIcon Data="{StaticResource Icon.MusicNotes}" Width="18" Height="18" IsVisible="{Binding IsThemeMusicOn}" />
+                            <PathIcon Data="{StaticResource Icon.SpeakerSlash}" Width="18" Height="18" IsVisible="{Binding !IsThemeMusicOn}"
+                                      Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                        </Panel>
                     </Button>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="40" Margin="38,0,0,0" VerticalAlignment="Center">
@@ -185,6 +208,20 @@
                         </ItemsControl>
                     </StackPanel>
 
+                    <StackPanel Spacing="16" IsVisible="{Binding HasExtras}">
+                        <TextBlock Classes="shelf-title" Text="EXTRAS" />
+                        <ItemsControl ItemsSource="{Binding Extras}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExtraTileViewModel">
+                                    <tiles:ExtraTile Margin="0,0,16,16" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
                     <StackPanel Spacing="16" IsVisible="{Binding HasCast}">
                         <TextBlock Classes="shelf-title" Text="CAST" />
                         <ItemsControl ItemsSource="{Binding Cast}">
@@ -209,6 +246,45 @@
                                         </StackPanel>
                                     </StackPanel>
                                     </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- Critics, as Plex's metadata brings them: the verdict, who, where, and a way to the whole review. -->
+                    <StackPanel Spacing="16" IsVisible="{Binding HasReviews}">
+                        <TextBlock Classes="shelf-title" Text="CRITICS" />
+                        <ItemsControl ItemsSource="{Binding Reviews}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ReviewViewModel">
+                                    <Border Margin="0,0,14,14" Padding="16,14" CornerRadius="10" Background="#660F162E"
+                                            BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1">
+                                        <StackPanel Spacing="9">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <Panel IsVisible="{Binding HasVerdict}" Width="8" Height="8" Margin="0,0,10,0" VerticalAlignment="Center">
+                                                    <Border CornerRadius="4" Background="{DynamicResource Brush.Success}" IsVisible="{Binding IsFresh}" />
+                                                    <Border CornerRadius="4" Background="{DynamicResource Brush.Danger}" IsVisible="{Binding IsRotten}" />
+                                                </Panel>
+                                                <StackPanel Grid.Column="1" Spacing="1">
+                                                    <TextBlock Text="{Binding Critic}" FontSize="13.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Source}" FontSize="12" Classes="faint" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" Classes="label" Text="{Binding Verdict}" VerticalAlignment="Top" Margin="10,2,0,0" />
+                                            </Grid>
+                                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="13.5" LineHeight="20"
+                                                       Foreground="{DynamicResource Brush.Text.Secondary}" />
+                                            <Button Theme="{StaticResource IconButton}" Padding="0,2" HorizontalAlignment="Left" IsVisible="{Binding HasLink}"
+                                                    Command="{Binding ReadCommand}" ui:Tip.Text="{Binding LinkTip}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Classes="label" Text="READ THE REVIEW" Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center" />
+                                                    <PathIcon Data="{StaticResource Icon.ArrowSquareOut}" Width="12" Height="12" Foreground="{DynamicResource Brush.Accent}" />
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -249,6 +325,18 @@
                     </StackPanel>
                 </Border>
             </Grid>
+
+            <!-- ===== Related: similar titles, more from the cast, its collections ===== -->
+            <ItemsControl ItemsSource="{Binding Related}" IsVisible="{Binding HasRelated}" Margin="8,0,8,20">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Spacing="18" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ShelfViewModel">
+                        <views:ShelfView />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </StackPanel>
     </ScrollViewer>
     </Panel>

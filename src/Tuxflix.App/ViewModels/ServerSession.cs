@@ -43,8 +43,20 @@ public sealed class ServerSession : IDisposable
         var catalog = DemoCatalog.Create(DateTimeOffset.Now);
         var http = identity.CreateHttpClient(new DemoPlexHandler(catalog, new ProceduralArt()));
         var client = new PlexServerClient(http, DemoPlexHandler.BaseUri, token: null, "Demo Library", isDemo: true);
-        return new ServerSession(http, client, "Built-in", diskCache: null, DemoCatalog.MachineIdentifier);
+
+        // The demo's Watchlist is its own, in the same catalogue as its library.
+        var discover = identity.CreateHttpClient(new DemoDiscoverHandler(catalog));
+        return new ServerSession(http, client, "Built-in", diskCache: null, DemoCatalog.MachineIdentifier)
+        {
+            _discoverHttp = discover,
+            Discover = new PlexDiscoverClient(discover, "demo", DemoDiscoverHandler.BaseUri),
+        };
     }
+
+    /// <summary>The demo's own Plex catalogue and Watchlist; null for a real server, which uses the account's.</summary>
+    public PlexDiscoverClient? Discover { get; private init; }
+
+    private HttpClient? _discoverHttp;
 
     /// <summary>A real server, over the connection the picker chose, with its artwork cached on disk.</summary>
     public static ServerSession CreateRemote(PlexClientIdentity identity, PlexResource server, ServerConnection connection, AppPaths paths, HttpMessageHandler? network = null)
@@ -60,7 +72,11 @@ public sealed class ServerSession : IDisposable
         return new ServerSession(http, client, connection.Describe(), cache, server.ClientIdentifier, isRemote: connection.Kind != ConnectionKind.Local);
     }
 
-    public void Dispose() => _http.Dispose();
+    public void Dispose()
+    {
+        _http.Dispose();
+        _discoverHttp?.Dispose();
+    }
 
     private static string Sanitise(string name) =>
         string.Concat(name.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '_'));

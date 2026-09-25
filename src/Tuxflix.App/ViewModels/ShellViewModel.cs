@@ -144,6 +144,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Log.Info("Signing out.");
         await Keyring.ClearAsync(KeyringAccount);
         IsSignedIn = false;
+        AccountDiscover = null;
         Servers = [];
         AccountName = "Guest";
         _settings.Current.LastServerId = null;
@@ -190,6 +191,7 @@ public sealed partial class ShellViewModel : ObservableObject
         var user = await Account.GetUserAsync(token, cancellation);
         AccountName = user.DisplayName;
         IsSignedIn = true;
+        AccountDiscover = new PlexDiscoverClient(_plexTv, token);
         Log.Info("Signed in to Plex.");
 
         if (remember && !await Keyring.StoreAsync(KeyringAccount, "Tuxflix: Plex sign-in", token))
@@ -380,14 +382,7 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void ShowDiscover()
     {
-        if (Router.Current?.Tab != TopTab.Discover)
-        {
-            Router.Navigate(new ComingSoonPageViewModel(
-                TopTab.Discover,
-                "Discover",
-                "Your Plex Watchlist, what is trending and what is new on your servers will live here.",
-                "Icon.Compass"));
-        }
+        if (Router.Current?.Tab != TopTab.Discover) Router.Navigate(new WatchlistPageViewModel(this, Session));
     }
 
     [RelayCommand]
