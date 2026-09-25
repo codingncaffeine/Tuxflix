@@ -17,7 +17,10 @@ press (or on their own), the next episode is offered as the credits roll, chapte
 their pictures, and a playback menu sets speed, picture fit and shape, subtitle size and timing,
 night-time sound and a sleep timer. The server is asked how to play every film and episode, and a
 lower quality (Plex's own table, from 20 Mbps down) has it convert the stream on the fly; switching
-carries on from the same place. The desktop's media controls and your keyboard's media keys
+carries on from the same place. The seek bar shows the time and chapter under the pointer (and the
+server's preview pictures when it makes them), picture in picture keeps a small window above the
+others, playlists and film collections play through in order or shuffled, and the server's owner
+can find subtitles online. The desktop's media controls and your keyboard's media keys
 drive whatever plays. Every library opens as a grid you can sort
 and filter the ways your server offers, with collections, playlists, a page for each actor and
 director, and a search across everything from the title bar. Music plays too: artists,
@@ -25,6 +28,10 @@ albums and a gapless, loudness-levelled queue, and a compact player that wears c
 (`.wsz`), with its equalizer, balance, playlist and spectrum analyser working, at any size from the
 original to double (drag its bottom right corner). The rest of the plan is still to come. A built-in demo library of invented titles, with artwork
 drawn in code, shows the interface without a server.
+
+Installed from a package, Tuxflix runs inside a hardened systemd user unit (see
+`packaging/tuxflix-launcher.sh`): its own folders and your media folders are writable, everything
+else read-only; `TUXFLIX_NO_SANDBOX=1` starts it without.
 
 ## Building
 
