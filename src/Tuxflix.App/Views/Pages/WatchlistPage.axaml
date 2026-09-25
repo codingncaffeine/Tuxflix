@@ -11,7 +11,7 @@
             <StackPanel Margin="36,26,18,40" Spacing="20">
                 <StackPanel Spacing="3">
                     <TextBlock Classes="page-title" Text="WATCHLIST" />
-                    <TextBlock Classes="faint" FontSize="12.5" Text="{Binding CountText}" IsVisible="{Binding !NeedsSignIn}" />
+                    <TextBlock Classes="faint" FontSize="12.5" Text="{Binding CountText}" IsVisible="{Binding HasList}" />
                 </StackPanel>
 
                 <!-- What a press did, when it could not do what was asked. -->
@@ -53,6 +53,15 @@
                        TextWrapping="Wrap" TextAlignment="Center" FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
             <Button Theme="{StaticResource PlayButton}" Content="SIGN IN WITH PLEX" HorizontalAlignment="Center" Margin="0,6,0,0"
                     Command="{Binding SignInCommand}" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding NeedsServer}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14" MaxWidth="440">
+            <PathIcon Data="{StaticResource Icon.HardDrives}" Width="40" Height="40" Foreground="{DynamicResource Brush.Accent}" />
+            <TextBlock Text="Choose a server" FontSize="17" FontWeight="SemiBold" TextAlignment="Center" />
+            <TextBlock Text="Your Watchlist is shown against a server's libraries, so you can see what it has and open it."
+                       TextWrapping="Wrap" TextAlignment="Center" FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+            <Button Theme="{StaticResource PlayButton}" Content="CHOOSE A SERVER" HorizontalAlignment="Center" Margin="0,6,0,0"
+                    Command="{Binding ChooseServerCommand}" />
         </StackPanel>
 
         <StackPanel IsVisible="{Binding HasError}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="420">

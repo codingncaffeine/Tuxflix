@@ -1,8 +1,10 @@
+using System.Net;
 using Tuxflix.App.Music;
 using Tuxflix.App.ViewModels;
 using Tuxflix.Core;
 using Tuxflix.Core.Demo;
 using Tuxflix.Core.Plex;
+using Tuxflix.Core.Security;
 using Tuxflix.Core.Settings;
 using Tuxflix.Player;
 using Xunit;
@@ -279,6 +281,85 @@ public sealed class HomeAndDiscoverTests : IAsyncLifetime
         var player = Assert.IsType<PlayerPageViewModel>(_shell.Router.Current);
         Assert.False(_catalog.Find(player.Item.RatingKey)!.IsWatched);
         _shell.Router.Back();
+    }
+}
+
+/// <summary>The Watchlist of a signed-in account, against a stand-in plex.tv.</summary>
+public sealed class AccountWatchlistTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "tuxflix-tests", "account-" + Guid.NewGuid().ToString("N")[..8]);
+
+    /// <summary>plex.tv with two servers (so none opens by itself) and a Watchlist that says whose token asked.</summary>
+    private sealed class StandIn : HttpMessageHandler
+    {
+        public List<(string Host, string? Token)> Discover { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var uri = request.RequestUri!;
+            var token = request.Headers.TryGetValues("X-Plex-Token", out var values) ? values.Single() : null;
+            if (uri.Host == "discover.provider.plex.tv") lock (Discover) Discover.Add((uri.Host, token));
+            return Task.FromResult((uri.Host, uri.AbsolutePath) switch
+            {
+                ("clients.plex.tv", "/api/v2/user") => Json("""{"id":7,"username":"viewer","title":"Viewer"}"""),
+                ("clients.plex.tv", "/api/v2/resources") => Json("""
+                    [{"name":"Den","provides":"server","clientIdentifier":"machine-1","owned":true,"accessToken":"server-token","connections":[]},
+                     {"name":"Cabin","provides":"server","clientIdentifier":"machine-2","owned":true,"accessToken":"server-token-2","connections":[]}]
+                    """),
+                ("discover.provider.plex.tv", "/library/sections/watchlist/all") => Json("""{"MediaContainer":{"size":1,"totalSize":1,"Metadata":[{"ratingKey":"abc","guid":"plex://movie/abc","type":"movie","title":"An Invented Film"}]}}"""),
+                _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+            });
+        }
+
+        private static HttpResponseMessage Json(string json) =>
+            new(HttpStatusCode.OK) { Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json") };
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            Directory.Delete(_root, recursive: true);
+        }
+        catch (IOException)
+        {
+            // A settings write still landing; the next run's temporary folder takes it.
+        }
+    }
+
+    [Fact]
+    public async Task SignedOutThereIsNoWatchlistAndSignedInItIsTheAccountsAskedWithItsOwnToken()
+    {
+        HeadlessSkia.Ensure();
+        var paths = AppPaths.Resolve(_root, Environment.GetEnvironmentVariable);
+        paths.EnsureCreated();
+        var network = new StandIn();
+        var shell = new ShellViewModel(SettingsStore.Load(paths.SettingsFile), paths, network) { Keyring = new ReadOnlySecretStore(new NoSecrets()) };
+
+        var signedOut = new WatchlistPageViewModel(shell, null);
+        await signedOut.ActivateAsync();
+        Assert.True(signedOut.NeedsSignIn);
+        Assert.False(signedOut.IsEmpty);
+
+        await shell.CompleteSignInAsync("account-token", remember: false, TestContext.Current.CancellationToken);
+        Assert.Null(shell.Session);
+        var noServer = new WatchlistPageViewModel(shell, null);
+        await noServer.ActivateAsync();
+        Assert.False(noServer.NeedsSignIn);
+        Assert.True(noServer.NeedsServer);
+
+        var titles = await shell.Discover!.GetWatchlistAsync(TestContext.Current.CancellationToken);
+        Assert.Equal("An Invented Film", Assert.Single(titles).Title);
+        Assert.Equal([("discover.provider.plex.tv", "account-token")], network.Discover);
+    }
+
+    private sealed class NoSecrets : Tuxflix.Core.Security.ISecretStore
+    {
+        public Task<string?> LookupAsync(string account) => Task.FromResult<string?>(null);
+
+        public Task<bool> StoreAsync(string account, string label, string secret) => Task.FromResult(false);
+
+        public Task ClearAsync(string account) => Task.CompletedTask;
     }
 }
 

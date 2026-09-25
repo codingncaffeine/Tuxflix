@@ -27,7 +27,19 @@ public sealed partial class WatchlistPageViewModel(ShellViewModel shell, ServerS
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
     public partial bool NeedsSignIn { get; private set; }
 
-    public bool IsEmpty => !IsLoading && !HasError && !NeedsSignIn && Titles.Count == 0;
+    /// <summary>Signed in with no server open: the Watchlist is shown against a server's library.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEmpty))]
+    public partial bool NeedsServer { get; private set; }
+
+    public bool IsEmpty => !IsLoading && !HasError && !NeedsSignIn && !NeedsServer && Titles.Count == 0;
+
+    /// <summary>There is a Watchlist to list: signed in, or the demo, with a server open.</summary>
+    public bool HasList => !NeedsSignIn && !NeedsServer;
+
+    partial void OnNeedsSignInChanged(bool value) => OnPropertyChanged(nameof(HasList));
+
+    partial void OnNeedsServerChanged(bool value) => OnPropertyChanged(nameof(HasList));
 
     protected override IEnumerable<string> LoadingDependents => [nameof(IsEmpty)];
 
@@ -51,16 +63,19 @@ public sealed partial class WatchlistPageViewModel(ShellViewModel shell, ServerS
     [RelayCommand]
     private void SignIn() => shell.SignInCommand.Execute(null);
 
+    [RelayCommand]
+    private void ChooseServer() => shell.ShowServersCommand.Execute(null);
+
     protected override async Task LoadAsync(CancellationToken cancellation)
     {
+        NeedsSignIn = shell.Discover is null;
+        NeedsServer = !NeedsSignIn && shell.Watchlist is null;
         if (shell.Watchlist is not { } watchlist)
         {
             Titles.Clear();
-            NeedsSignIn = true;
             return;
         }
 
-        NeedsSignIn = false;
         var titles = await watchlist.GetAsync(cancellation);
         Titles.Clear();
         foreach (var title in titles) Titles.Add(new WatchlistTileViewModel(shell, watchlist, title) { Said = Say, Removed = Remove });
