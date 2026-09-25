@@ -15,6 +15,7 @@ public sealed class SeekPreviewTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tuxflix-tests", "preview-" + Guid.NewGuid().ToString("N")[..8]);
     private readonly ServerSession _session;
+    private readonly SettingsStore _settings;
     private readonly DemoCatalog _catalog = DemoCatalog.Create(DateTimeOffset.Now);
 
     public SeekPreviewTests()
@@ -22,14 +23,15 @@ public sealed class SeekPreviewTests : IDisposable
         HeadlessSkia.Ensure();
         var paths = AppPaths.Resolve(_root, Environment.GetEnvironmentVariable);
         paths.EnsureCreated();
-        var shell = new ShellViewModel(SettingsStore.Load(paths.SettingsFile), paths);
+        _settings = SettingsStore.Load(paths.SettingsFile);
+        var shell = new ShellViewModel(_settings, paths);
         _session = ServerSession.CreateDemo(shell.Identity);
     }
 
     public void Dispose()
     {
         _session.Dispose();
-        Directory.Delete(_root, recursive: true);
+        TestFolder.Delete(_root, _settings);
     }
 
     [Fact]

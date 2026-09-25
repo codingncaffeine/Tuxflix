@@ -15,6 +15,7 @@ public sealed class LibraryBrowseTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tuxflix-tests", "browse-" + Guid.NewGuid().ToString("N")[..8]);
     private readonly ShellViewModel _shell;
+    private readonly SettingsStore _settings;
     private readonly ServerSession _session;
     private readonly DemoCatalog _catalog = DemoCatalog.Create(DateTimeOffset.Now);
 
@@ -24,14 +25,15 @@ public sealed class LibraryBrowseTests : IDisposable
         HeadlessSkia.Ensure();
         var paths = AppPaths.Resolve(_root, Environment.GetEnvironmentVariable);
         paths.EnsureCreated();
-        _shell = new ShellViewModel(SettingsStore.Load(paths.SettingsFile), paths);
+        _settings = SettingsStore.Load(paths.SettingsFile);
+        _shell = new ShellViewModel(_settings, paths);
         _session = ServerSession.CreateDemo(_shell.Identity);
     }
 
     public void Dispose()
     {
         _session.Dispose();
-        Directory.Delete(_root, recursive: true);
+        TestFolder.Delete(_root, _settings);
     }
 
     [Fact]

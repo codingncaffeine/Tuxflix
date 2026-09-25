@@ -32,9 +32,7 @@ public sealed class SettingsTests : IDisposable
         _shell.Router.Current?.Deactivate();
         _shell.Session?.Dispose();
 
-        // Settings are written on a worker: the last write lands before the folder goes.
-        _store.Flush(TimeSpan.FromSeconds(5));
-        Directory.Delete(_root, recursive: true);
+        TestFolder.Delete(_root, _store);
     }
 
     [Fact]

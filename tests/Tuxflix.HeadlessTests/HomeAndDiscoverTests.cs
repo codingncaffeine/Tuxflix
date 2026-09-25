@@ -54,8 +54,7 @@ public sealed class HomeAndDiscoverTests : IAsyncLifetime
         _shell.Router.Current?.Deactivate();
         Session.Dispose();
         // The settings are written on a worker: the last write lands before the folder goes.
-        Assert.True(_settings.Flush(TimeSpan.FromSeconds(10)));
-        Directory.Delete(_root, recursive: true);
+        TestFolder.Delete(_root, _settings);
         return ValueTask.CompletedTask;
     }
 
@@ -288,6 +287,7 @@ public sealed class HomeAndDiscoverTests : IAsyncLifetime
 public sealed class AccountWatchlistTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tuxflix-tests", "account-" + Guid.NewGuid().ToString("N")[..8]);
+    private SettingsStore? _settings;
 
     /// <summary>plex.tv with two servers (so none opens by itself) and a Watchlist that says whose token asked.</summary>
     private sealed class StandIn : HttpMessageHandler
@@ -317,14 +317,7 @@ public sealed class AccountWatchlistTests : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            Directory.Delete(_root, recursive: true);
-        }
-        catch (IOException)
-        {
-            // A settings write still landing; the next run's temporary folder takes it.
-        }
+        if (Directory.Exists(_root)) TestFolder.Delete(_root, _settings is { } settings ? [settings] : []);
     }
 
     [Fact]
@@ -334,7 +327,8 @@ public sealed class AccountWatchlistTests : IDisposable
         var paths = AppPaths.Resolve(_root, Environment.GetEnvironmentVariable);
         paths.EnsureCreated();
         var network = new StandIn();
-        var shell = new ShellViewModel(SettingsStore.Load(paths.SettingsFile), paths, network) { Keyring = new ReadOnlySecretStore(new NoSecrets()) };
+        _settings = SettingsStore.Load(paths.SettingsFile);
+        var shell = new ShellViewModel(_settings, paths, network) { Keyring = new ReadOnlySecretStore(new NoSecrets()) };
 
         var signedOut = new WatchlistPageViewModel(shell, null);
         await signedOut.ActivateAsync();

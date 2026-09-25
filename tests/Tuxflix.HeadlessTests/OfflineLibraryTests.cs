@@ -21,6 +21,7 @@ public sealed class OfflineLibraryTests : IAsyncDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tuxflix-tests", "offline-" + Guid.NewGuid().ToString("N")[..8]);
     private readonly ConcurrentQueue<Action> _ui = new();
     private readonly List<ShellViewModel> _shells = [];
+    private readonly List<SettingsStore> _settings = [];
     private readonly AppPaths _paths;
     private readonly DemoCatalog _catalog = DemoCatalog.Create(DateTimeOffset.Now);
 
@@ -40,7 +41,7 @@ public sealed class OfflineLibraryTests : IAsyncDisposable
             shell.Session?.Dispose();
         }
 
-        Directory.Delete(_root, recursive: true);
+        TestFolder.Delete(_root, _settings);
     }
 
     [Fact]
@@ -228,7 +229,9 @@ public sealed class OfflineLibraryTests : IAsyncDisposable
 
     private ShellViewModel NewShell(HttpMessageHandler? network = null, ISecretStore? keyring = null)
     {
-        var shell = new ShellViewModel(SettingsStore.Load(_paths.SettingsFile), _paths, network)
+        var settings = SettingsStore.Load(_paths.SettingsFile);
+        _settings.Add(settings);
+        var shell = new ShellViewModel(settings, _paths, network)
         {
             PostToUi = _ui.Enqueue,
             Keyring = keyring ?? new MemorySecrets(),

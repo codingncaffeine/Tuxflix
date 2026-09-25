@@ -11,6 +11,7 @@ public sealed class VideoQueuePlaybackTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "tuxflix-tests", "queue-" + Guid.NewGuid().ToString("N")[..8]);
     private readonly ShellViewModel _shell;
+    private readonly SettingsStore _settings;
     private readonly DemoCatalog _catalog = DemoCatalog.Create(DateTimeOffset.Now);
 
     public VideoQueuePlaybackTests()
@@ -19,14 +20,15 @@ public sealed class VideoQueuePlaybackTests : IDisposable
         HeadlessSkia.Ensure();
         var paths = AppPaths.Resolve(_root, Environment.GetEnvironmentVariable);
         paths.EnsureCreated();
-        _shell = new ShellViewModel(SettingsStore.Load(paths.SettingsFile), paths) { ReportsPlayback = false };
+        _settings = SettingsStore.Load(paths.SettingsFile);
+        _shell = new ShellViewModel(_settings, paths) { ReportsPlayback = false };
     }
 
     public void Dispose()
     {
         _shell.Router.Current?.Deactivate();
         _shell.Session?.Dispose();
-        Directory.Delete(_root, recursive: true);
+        TestFolder.Delete(_root, _settings);
     }
 
     [Fact]

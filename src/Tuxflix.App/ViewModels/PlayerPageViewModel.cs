@@ -110,6 +110,12 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
 
         LoadSmart();
 
+        // The quality chosen in the settings for this kind of network, whether or not it can play
+        // here; a kept copy is the file itself.
+        Quality = Download is not null
+            ? StreamQuality.Original
+            : StreamQuality.FromKbps(session.IsRemote ? shell.Settings.Playback.RemoteQualityKbps : shell.Settings.Playback.HomeQualityKbps);
+
         var part = _item.Media?.FirstOrDefault()?.Part?.FirstOrDefault();
         if (part?.Key is null && Download is null)
         {
@@ -124,11 +130,6 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         }
 
         _part = part;
-
-        // The quality chosen in the settings for this kind of network; a kept copy is the file itself.
-        Quality = Download is not null
-            ? StreamQuality.Original
-            : StreamQuality.FromKbps(session.IsRemote ? shell.Settings.Playback.RemoteQualityKbps : shell.Settings.Playback.HomeQualityKbps);
 
         if (Download is { } kept)
         {

@@ -71,13 +71,15 @@ public sealed class SignInFlowTests
     public async Task SigningInOpensTheOnlyServerRatherThanCancellingItsOwnConnection()
     {
         var root = Path.Combine(Path.GetTempPath(), "tuxflix-headless", Guid.NewGuid().ToString("N"));
+        SettingsStore? settings = null;
         try
         {
             var paths = AppPaths.Resolve(root, Environment.GetEnvironmentVariable);
             paths.EnsureCreated();
             var secrets = new MemorySecrets();
             var browserOpened = 0;
-            var shell = new ShellViewModel(SettingsStore.Load(paths.SettingsFile), paths, new StandIn())
+            settings = SettingsStore.Load(paths.SettingsFile);
+            var shell = new ShellViewModel(settings, paths, new StandIn())
             {
                 Keyring = secrets,
                 OpenUrl = _ => browserOpened++,
@@ -100,14 +102,7 @@ public sealed class SignInFlowTests
         }
         finally
         {
-            try
-            {
-                Directory.Delete(root, recursive: true);
-            }
-            catch (IOException)
-            {
-                // A test folder under the temporary directory; nothing else lives in it.
-            }
+            if (Directory.Exists(root)) TestFolder.Delete(root, settings is { } kept ? [kept] : []);
         }
     }
 }
