@@ -16,6 +16,8 @@ public sealed class SubtitleFinderTests : IDisposable
 
     public SubtitleFinderTests()
     {
+        // The demo draws its art with the application's fonts, which the headless platform provides.
+        HeadlessSkia.Ensure();
         var paths = AppPaths.Resolve(_root, Environment.GetEnvironmentVariable);
         paths.EnsureCreated();
         var shell = new ShellViewModel(SettingsStore.Load(paths.SettingsFile), paths);

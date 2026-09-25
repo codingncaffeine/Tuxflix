@@ -26,7 +26,7 @@
                             <TextBlock Text="PLAY" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button Theme="{StaticResource GhostButton}" Padding="18,10" Command="{Binding ShuffleCommand}" IsVisible="{Binding IsMusic}"
+                    <Button Theme="{StaticResource GhostButton}" Padding="18,10" Command="{Binding ShuffleCommand}"
                             ui:Tip.Text="Play the playlist in a random order">
                         <StackPanel Orientation="Horizontal" Spacing="9">
                             <PathIcon Data="{StaticResource Icon.Shuffle}" Width="15" Height="15" />

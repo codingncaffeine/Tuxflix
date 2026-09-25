@@ -63,7 +63,13 @@ public sealed partial class PlayerPageViewModel
     [ObservableProperty]
     public partial int UpNextSeconds { get; private set; }
 
-    public string UpNextHeading => _next is { } next ? $"{Format.EpisodeCode(next)} · {next.Title}" : string.Empty;
+    public string UpNextHeading => _next switch
+    {
+        { Type: "episode" } next => $"{Format.EpisodeCode(next)} · {next.Title}",
+        { Year: { } year } next => $"{next.Title} · {year}",
+        { } next => next.Title,
+        null => string.Empty,
+    };
 
     public string UpNextCaption => Playback.AutoPlayNext ? $"Starts in {UpNextSeconds}" : "Up next";
 
@@ -77,7 +83,7 @@ public sealed partial class PlayerPageViewModel
         if (_next is not { } next) return;
         StopCountdown();
         Log.Info($"Playing the next episode, {Format.EpisodeCode(next)}.");
-        Owner.Router.Replace(new PlayerPageViewModel(Owner, Server, next, resume: next.ViewOffset is > 0));
+        Owner.Router.Replace(new PlayerPageViewModel(Owner, Server, next, resume: next.ViewOffset is > 0, queue?.Advance()));
     }
 
     [RelayCommand]
@@ -302,7 +308,18 @@ public sealed partial class PlayerPageViewModel
         OnPropertyChanged(nameof(HasChapters));
         Previews?.Dispose();
         Previews = new SeekPreviews(session.Client, _item.Media?.FirstOrDefault()?.Part?.FirstOrDefault(), [.. Chapters.Select(c => c.Chapter)]);
-        if (_item.Type == "episode" && _item.GrandparentRatingKey is { } show) _ = FindNextAsync(show);
+        // A queue (a playlist, a collection) says what follows; an episode on its own goes on through its show.
+        if (queue is not null)
+        {
+            _next = queue.Next;
+            OnPropertyChanged(nameof(HasNext));
+            OnPropertyChanged(nameof(UpNextHeading));
+            OnPropertyChanged(nameof(UpNextStill));
+        }
+        else if (_item.Type == "episode" && _item.GrandparentRatingKey is { } show)
+        {
+            _ = FindNextAsync(show);
+        }
     }
 
     private async Task FindNextAsync(string show)

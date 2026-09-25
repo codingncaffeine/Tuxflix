@@ -21,7 +21,7 @@ namespace Tuxflix.App.ViewModels;
 /// lets go of the player when it is left, and the video view lets go when it is taken off the
 /// screen: whichever is last destroys it.
 /// </remarks>
-public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSession session, MetadataItem item, bool resume) : PageViewModel
+public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSession session, MetadataItem item, bool resume, VideoQueue? queue = null) : PageViewModel
 {
     private static readonly TimeSpan ReportEvery = TimeSpan.FromSeconds(10);
 

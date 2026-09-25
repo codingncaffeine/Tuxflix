@@ -485,14 +485,15 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     /// <summary>Plays a film or an episode, from where it was left when <paramref name="resume"/>.</summary>
-    public void Play(MetadataItem item, bool resume)
+    /// <param name="queue">What plays after it (a playlist, a collection); an episode without one goes on through its show.</param>
+    public void Play(MetadataItem item, bool resume, VideoQueue? queue = null)
     {
         ArgumentNullException.ThrowIfNull(item);
         if (Session is not { } session) return;
 
         // A film takes over the sound: the music waits where it was.
         Music?.Pause();
-        Router.Navigate(new PlayerPageViewModel(this, session, item, resume));
+        Router.Navigate(new PlayerPageViewModel(this, session, item, resume, queue));
     }
 
     public void SaveSettings() => _settings.Save();

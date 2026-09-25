@@ -20,6 +20,21 @@
                 <TextBlock Text="{Binding CountText}" Classes="faint" FontSize="13" />
                 <TextBlock Text="{Binding Summary}" IsVisible="{Binding HasSummary}" TextWrapping="Wrap" MaxLines="3"
                            FontSize="13.5" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,4,0,0" />
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,8,0,0" IsVisible="{Binding CanPlay}">
+                    <Button Theme="{StaticResource PlayButton}" Command="{Binding PlayCommand}" ui:Tip.Text="Play the films in the collection's order">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" />
+                            <TextBlock Text="PLAY" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Theme="{StaticResource GhostButton}" Padding="18,10" Command="{Binding ShuffleCommand}"
+                            ui:Tip.Text="Play the films in a random order">
+                        <StackPanel Orientation="Horizontal" Spacing="9">
+                            <PathIcon Data="{StaticResource Icon.Shuffle}" Width="15" Height="15" />
+                            <TextBlock Text="SHUFFLE" VerticalAlignment="Center" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </StackPanel>
         </StackPanel>
 

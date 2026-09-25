@@ -20,6 +20,8 @@ public sealed class LibraryBrowseTests : IDisposable
 
     public LibraryBrowseTests()
     {
+        // The demo draws its art with the application's fonts, which the headless platform provides.
+        HeadlessSkia.Ensure();
         var paths = AppPaths.Resolve(_root, Environment.GetEnvironmentVariable);
         paths.EnsureCreated();
         _shell = new ShellViewModel(SettingsStore.Load(paths.SettingsFile), paths);

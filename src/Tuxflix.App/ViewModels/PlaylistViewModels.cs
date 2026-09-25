@@ -162,7 +162,7 @@ internal static class Playlists
         return string.Join("  ·  ", new[] { string.Create(CultureInfo.CurrentCulture, $"{count:N0} {noun}"), length }.Where(s => !string.IsNullOrEmpty(s)));
     }
 
-    /// <summary>Music plays in the music player; a video playlist starts at its first item.</summary>
+    /// <summary>Music plays in the music player; a video playlist plays through, in order or shuffled.</summary>
     public static async Task PlayAsync(ShellViewModel shell, MetadataItem playlist, bool shuffle, IReadOnlyList<MetadataItem>? loaded = null)
     {
         if (shell.Session is not { } session) return;
@@ -173,9 +173,9 @@ internal static class Playlists
         {
             if (shell.Music is { } music) await music.PlayAsync([.. items.Where(i => i.Type == "track")], 0, shuffle);
         }
-        else if (items.FirstOrDefault(i => i.Type is "movie" or "episode") is { } first)
+        else if (VideoQueue.Of(items, shuffle) is { } queue)
         {
-            shell.Play(first, resume: true);
+            shell.Play(queue.Current, resume: !shuffle, queue);
         }
     }
 }

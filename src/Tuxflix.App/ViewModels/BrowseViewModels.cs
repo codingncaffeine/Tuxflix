@@ -605,11 +605,30 @@ public sealed partial class CollectionPageViewModel(ShellViewModel shell, Server
 
     public void Fit(double width) => Grid.Fit(width);
 
+    private IReadOnlyList<MetadataItem> _members = [];
+
+    /// <summary>A collection of films plays through, in its order or shuffled.</summary>
+    public bool CanPlay => _members.Any(m => m.Type == "movie");
+
     protected override async Task LoadAsync(CancellationToken cancellation)
     {
         var members = await Task.Run(() => session.Client.GetCollectionItemsAsync(Collection.RatingKey, cancellation), cancellation);
+        _members = members;
+        OnPropertyChanged(nameof(CanPlay));
         Grid.Clear();
         Grid.Add(members.Select(m => Tiles.For(shell, m)));
         CountText = members.Count == 1 ? "1 title" : $"{members.Count} titles";
+    }
+
+    [RelayCommand]
+    private void Play()
+    {
+        if (VideoQueue.Of(_members, shuffle: false) is { } queue) shell.Play(queue.Current, resume: true, queue);
+    }
+
+    [RelayCommand]
+    private void Shuffle()
+    {
+        if (VideoQueue.Of(_members, shuffle: true) is { } queue) shell.Play(queue.Current, resume: false, queue);
     }
 }
