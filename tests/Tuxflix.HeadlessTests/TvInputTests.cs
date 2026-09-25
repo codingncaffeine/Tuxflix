@@ -100,11 +100,12 @@ public sealed class TvInputTests
         var pressed = await pads.NextAsync();
         Assert.Equal(new TvInput(TvAction.Right, TvPhase.Press), pressed.Input);
 
-        // The first repeat comes after the delay, within one repeat interval of it.
+        // The first repeat never comes before the delay; how soon after it is a band, measured
+        // alone on a desktop (TvRepeatBandTests): a shared build machine can stall a thread longer.
         var repeat = await pads.NextAsync();
         Assert.Equal(TvPhase.Repeat, repeat.Input.Phase);
         var after = repeat.At - pressed.At;
-        Assert.InRange(after.TotalMilliseconds, GamepadInput.RepeatDelay.TotalMilliseconds - 5, GamepadInput.RepeatDelay.TotalMilliseconds + GamepadInput.RepeatEvery.TotalMilliseconds);
+        Assert.True(after.TotalMilliseconds >= GamepadInput.RepeatDelay.TotalMilliseconds - 5, $"The first repeat came {after.TotalMilliseconds:0} ms after the press, before the delay.");
 
         pads.Source.Push(PadEvent.Up(PadButton.DPadRight));
         await pads.UntilAsync(i => i.Phase == TvPhase.Release);
@@ -169,7 +170,7 @@ public sealed class TvInputTests
     }
 
     /// <summary>A controller thread over a fake pad, every action it hands on kept with its time.</summary>
-    private sealed class Recorded : IDisposable
+    internal sealed class Recorded : IDisposable
     {
         private readonly ConcurrentQueue<(TvInput Input, TimeSpan At)> _got = new();
         private readonly SemaphoreSlim _arrived = new(0);
