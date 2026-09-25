@@ -84,6 +84,9 @@ public static class HoverCard
     /// <summary>The tile the card showing now belongs to.</summary>
     internal static Control? ShowingAt => _card?.IsOpen == true ? _showingAt : null;
 
+    /// <summary>How many times a card has shown: a test can tell a card that came and went from none.</summary>
+    internal static int ShownCount { get; private set; }
+
     private static void Rest(Control tile)
     {
         if (GetFor(tile) is not { Shell.IsTv: false }) return;
@@ -108,6 +111,7 @@ public static class HoverCard
         if (_card.IsOpen) _card.Hide();
         _showingAt = tile;
         _card.ShowAt(tile);
+        ShownCount++;
     }
 
     private static void Leave(Control tile)

@@ -107,17 +107,23 @@ public sealed class HoverCardTests : IDisposable
             Button ButtonOf(PosterTile tile) => tile.GetLogicalChildren().OfType<Button>().Single();
             Point Middle(PosterTile tile) => tile.TranslatePoint(new Point(tile.Bounds.Width / 2, tile.Bounds.Height / 2), window)!.Value;
 
-            // Timed from before the pointer moves, so the move's own work counts as waiting.
-            async Task<TimeSpan> MoveUntil(PosterTile tile, Action? then = null)
+            // Timed from before the pointer moves, so the move's own work counts as waiting. The
+            // headless move draws the window twenty times over, which on a slow machine can outlast
+            // the shorter delay, so the latest a card may show is counted from the end of the move.
+            async Task<(TimeSpan Shown, TimeSpan Moved)> MoveUntil(PosterTile tile, Action? then = null)
             {
                 var clock = Stopwatch.StartNew();
                 window.MouseMove(Middle(tile));
+                var moved = clock.Elapsed;
                 then?.Invoke();
                 bool Shown() => HoverCard.ShowingAt is { } at && ReferenceEquals(at, ButtonOf(tile));
                 while (!Shown() && clock.Elapsed < TimeSpan.FromSeconds(3)) await Task.Delay(5, TestContext.Current.CancellationToken);
                 Assert.True(Shown(), "The card did not show within three seconds.");
-                return clock.Elapsed;
+                return (clock.Elapsed, moved);
             }
+
+            void InBand((TimeSpan Shown, TimeSpan Moved) took, TimeSpan delay) =>
+                Assert.InRange(took.Shown.TotalMilliseconds, delay.TotalMilliseconds - 5, Math.Max(took.Moved.TotalMilliseconds, delay.TotalMilliseconds) + 250);
 
             // The first card makes its view and compiles its code: shown once, uncounted, then
             // the pointer rests away from the tiles long enough for the next card to wait in full.
@@ -132,12 +138,13 @@ public sealed class HoverCardTests : IDisposable
             var rest = await MoveUntil(first);
             Assert.Equal(((PosterTileViewModel)first.DataContext!).Title, HoverCard.Showing!.Title);
 
-            // On to the next tile while the card is up: the card goes at once, and comes back
-            // there after the short delay.
-            var between = await MoveUntil(second, () => Assert.Null(HoverCard.Showing));
-            _output.WriteLine($"rest {rest.TotalMilliseconds:0} ms, between {between.TotalMilliseconds:0} ms");
-            Assert.InRange(rest.TotalMilliseconds, HoverCard.ShowDelay.TotalMilliseconds - 5, HoverCard.ShowDelay.TotalMilliseconds + 250);
-            Assert.InRange(between.TotalMilliseconds, HoverCard.BetweenDelay.TotalMilliseconds - 5, HoverCard.BetweenDelay.TotalMilliseconds + 250);
+            // On to the next tile while the card is up: the first tile's card goes at once, and
+            // the card comes back for the next after the short delay. (By the end of a slow move
+            // the next tile's may already be up, rightly: what must not be up is the first's.)
+            var between = await MoveUntil(second, () => Assert.False(ReferenceEquals(HoverCard.ShowingAt, ButtonOf(first)), "the first tile's card stayed"));
+            _output.WriteLine($"rest {rest.Shown.TotalMilliseconds:0} ms (move {rest.Moved.TotalMilliseconds:0}), between {between.Shown.TotalMilliseconds:0} ms (move {between.Moved.TotalMilliseconds:0})");
+            InBand(rest, HoverCard.ShowDelay);
+            InBand(between, HoverCard.BetweenDelay);
 
             // A press is a choice made: the card goes, and stays gone while the pointer stays,
             // even when the end of the press reports the pointer leaving the tile and coming back
@@ -149,12 +156,16 @@ public sealed class HoverCardTests : IDisposable
             window.MouseMove(Middle(second) + new Vector(3, 3));
             Assert.True(pressed.IsPointerOver);
             var pointer = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+            var shownBefore = HoverCard.ShownCount;
             foreach (var crossing in new[] { InputElement.PointerExitedEvent, InputElement.PointerEnteredEvent })
             {
                 pressed.RaiseEvent(new PointerEventArgs(crossing, pressed, pointer, window, Middle(second), 0, PointerPointProperties.None, KeyModifiers.None));
             }
 
+            // Counted, not only looked for at the end: after other tests in the same run, a card
+            // that wrongly came back was gone again by then (found by a planted fault).
             await Task.Delay(HoverCard.ShowDelay + TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
+            Assert.Equal(shownBefore, HoverCard.ShownCount);
             Assert.Null(HoverCard.Showing);
 
             // A scroll over the tile, or a key anywhere in the window: the card goes too. Each is
