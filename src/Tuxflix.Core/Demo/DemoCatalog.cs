@@ -104,6 +104,7 @@ public sealed partial class DemoCatalog
         Movies = BuildMovies();
         Shows = BuildShows();
         Collections = BuildCollections();
+        Personalise();
     }
 
     public DateTimeOffset Now { get; }
