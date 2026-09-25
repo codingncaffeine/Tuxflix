@@ -37,6 +37,8 @@
         <DataTemplate DataType="vm:CollectionPageViewModel"><pages:CollectionPage /></DataTemplate>
         <DataTemplate DataType="vm:PlaylistsPageViewModel"><pages:PlaylistsPage /></DataTemplate>
         <DataTemplate DataType="vm:PlaylistPageViewModel"><pages:PlaylistPage /></DataTemplate>
+        <DataTemplate DataType="vm:PhotosPageViewModel"><pages:PhotosPage /></DataTemplate>
+        <DataTemplate DataType="vm:PhotoViewerPageViewModel"><pages:PhotoViewerPage /></DataTemplate>
 
         <!-- Artwork tiles -->
         <DataTemplate DataType="vm:PosterTileViewModel"><tiles:PosterTile /></DataTemplate>
@@ -44,6 +46,7 @@
         <DataTemplate DataType="vm:AlbumTileViewModel"><tiles:AlbumTile /></DataTemplate>
         <DataTemplate DataType="vm:PersonTileViewModel"><tiles:PersonTile /></DataTemplate>
         <DataTemplate DataType="vm:PlaylistTileViewModel"><tiles:PlaylistTile /></DataTemplate>
+        <DataTemplate DataType="vm:PhotoTileViewModel"><tiles:PhotoTile /></DataTemplate>
 
         <!-- A tooltip's text, with its shortcut drawn as keycaps -->
         <DataTemplate DataType="ui:TipContent">

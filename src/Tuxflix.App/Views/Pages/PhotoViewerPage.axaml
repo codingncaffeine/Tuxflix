@@ -1,0 +1,86 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.PhotoViewerPage"
+             x:DataType="vm:PhotoViewerPageViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Panel#Chrome">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" />
+                </Transitions>
+            </Setter>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- A photo filling the window; its controls show while the pointer moves, its details beside it. -->
+    <Grid ColumnDefinitions="*,Auto" Background="Black">
+        <Panel Name="Stage" Background="Black" ClipToBounds="True">
+            <ui:RemoteImage Name="Picture" Path="{Binding Picture}" Stretch="Uniform" RenderTransformOrigin="0,0" />
+
+            <Panel Name="Chrome">
+                <Border Height="110" VerticalAlignment="Top" IsHitTestVisible="False" Background="{DynamicResource Brush.Scrim.Top}" />
+                <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Top" Margin="22,18,22,0">
+                    <Button Theme="{StaticResource IconButton}" Command="{Binding CloseCommand}" ui:Tip.Text="Back" ui:Tip.Keys="Esc">
+                        <PathIcon Data="{StaticResource Icon.ArrowLeft}" Width="20" Height="20" />
+                    </Button>
+                    <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center" Spacing="1">
+                        <TextBlock Text="{Binding Heading}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock FontSize="12.5" Foreground="{DynamicResource Brush.Text.Secondary}">
+                            <Run Text="{Binding Caption}" />
+                            <Run Text="   " />
+                            <Run Text="{Binding PositionText}" />
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                        <Button Theme="{StaticResource IconButton}" Classes.toggle-on="{Binding IsShuffled}" Command="{Binding ToggleShuffleCommand}"
+                                ui:Tip.Text="{Binding ShuffleTip}">
+                            <PathIcon Data="{StaticResource Icon.Shuffle}" Width="20" Height="20" />
+                        </Button>
+                        <Button Theme="{StaticResource IconButton}" Command="{Binding ToggleSlideshowCommand}" ui:Tip.Text="{Binding SlideshowTip}" ui:Tip.Keys="Space">
+                            <Panel>
+                                <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="19" Height="19" IsVisible="{Binding !IsPlaying}" />
+                                <PathIcon Data="{StaticResource Icon.Pause.Fill}" Width="19" Height="19" IsVisible="{Binding IsPlaying}" />
+                            </Panel>
+                        </Button>
+                        <Button Theme="{StaticResource IconButton}" Classes.toggle-on="{Binding IsInfoOpen}" Command="{Binding ToggleInfoCommand}"
+                                ui:Tip.Text="Details" ui:Tip.Keys="I">
+                            <PathIcon Data="{StaticResource Icon.Info}" Width="20" Height="20" />
+                        </Button>
+                        <Button Theme="{StaticResource IconButton}" Name="FullScreenButton" ui:Tip.Text="Full screen" ui:Tip.Keys="F">
+                            <PathIcon Data="{StaticResource Icon.CornersOut}" Width="20" Height="20" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+                <Button Theme="{StaticResource IconButton}" Command="{Binding PreviousCommand}" HorizontalAlignment="Left" VerticalAlignment="Center"
+                        Margin="18,0,0,0" ui:Tip.Text="Previous photo" ui:Tip.Keys="Left">
+                    <PathIcon Data="{StaticResource Icon.CaretLeft.Bold}" Width="30" Height="30" />
+                </Button>
+                <Button Theme="{StaticResource IconButton}" Command="{Binding NextCommand}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Margin="0,0,18,0" ui:Tip.Text="Next photo" ui:Tip.Keys="Right">
+                    <PathIcon Data="{StaticResource Icon.CaretRight.Bold}" Width="30" Height="30" />
+                </Button>
+            </Panel>
+        </Panel>
+
+        <!-- The photo's details: when, which camera, how it was set. -->
+        <Border Grid.Column="1" Width="320" IsVisible="{Binding IsInfoOpen}" Background="{DynamicResource Brush.Panel}"
+                BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1,0,0,0">
+            <StackPanel Margin="24,26,24,24" Spacing="16">
+                <TextBlock Classes="shelf-title" Text="DETAILS" />
+                <ItemsControl ItemsSource="{Binding Info}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PhotoInfoRow">
+                            <StackPanel Spacing="3" Margin="0,0,0,14">
+                                <TextBlock Text="{Binding Label}" FontSize="12" Classes="faint" />
+                                <TextBlock Text="{Binding Value}" FontSize="14" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

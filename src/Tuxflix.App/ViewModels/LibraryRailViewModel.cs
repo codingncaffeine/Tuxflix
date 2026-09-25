@@ -61,7 +61,7 @@ public sealed partial class LibraryRailViewModel(ShellViewModel shell) : Observa
         {
             var sections = await Task.Run(() => session.Client.GetSectionsAsync(CancellationToken.None));
             var loaded = new List<RailSection>();
-            foreach (var directory in sections.Where(s => s.Type is "movie" or "show" or "artist"))
+            foreach (var directory in sections.Where(s => s.Type is "movie" or "show" or "artist" or "photo"))
             {
                 var container = await Task.Run(() => session.Client.GetSectionItemsAsync(directory.Key, "titleSort", CancellationToken.None));
                 loaded.Add(new RailSection(this, directory, container.Metadata ?? []));
@@ -163,6 +163,7 @@ public sealed partial class LibraryRailViewModel(ShellViewModel shell) : Observa
             {
                 "show" => "Icon.TelevisionSimple",
                 "artist" => "Icon.MusicNotes",
+                "photo" => "Icon.Image",
                 _ => "Icon.FilmStrip",
             });
         }

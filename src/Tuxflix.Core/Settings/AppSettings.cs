@@ -37,6 +37,9 @@ public sealed class AppSettings
 
     /// <summary>The music pages: the visualizer and the lyrics.</summary>
     public MusicSettings Music { get; set; } = new();
+
+    /// <summary>Photos: the slideshow.</summary>
+    public PhotoSettings Photos { get; set; } = new();
 }
 
 public sealed class PlaybackSettings

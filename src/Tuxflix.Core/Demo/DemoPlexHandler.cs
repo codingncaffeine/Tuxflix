@@ -18,6 +18,9 @@ public enum DemoArtKind
 
     /// <summary>The title as a transparent logo, as a server's clearLogo image is.</summary>
     Logo,
+
+    /// <summary>A photograph: a scene, with nothing written on it.</summary>
+    Photo,
 }
 
 public sealed record DemoArtRequest(DemoArtKind Kind, string Title, string? Subtitle, int Seed, int Width, int Height);
@@ -174,6 +177,7 @@ public sealed partial class DemoPlexHandler(DemoCatalog catalog, IDemoArtRendere
         }
 
         var kind = path.StartsWith("/demo/person/", StringComparison.Ordinal) ? DemoArtKind.Person
+            : path.StartsWith("/demo/photo/", StringComparison.Ordinal) ? DemoArtKind.Photo
             : path.Contains("/clearLogo/", StringComparison.Ordinal) ? DemoArtKind.Logo
             : path.Contains("/art/", StringComparison.Ordinal) ? DemoArtKind.Backdrop
             : subject.Subtitle is { } sub && !sub.StartsWith("Season ", StringComparison.Ordinal) && !int.TryParse(sub, out _) ? DemoArtKind.Still

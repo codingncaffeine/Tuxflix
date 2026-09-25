@@ -158,6 +158,25 @@ void Capture(string pose)
         }
     }
 
+    if (!real && pose is "photos" or "photo-album" or "photo-viewer" or "photo-info")
+    {
+        // The demo's photo library, an album of it, and a photo full size (with its details for photo-info).
+        var session = shell.Session ?? throw new InvalidOperationException("No server is open.");
+        var section = Result(session.Client.GetSectionsAsync(CancellationToken.None)).First(s => s.Type == "photo");
+        var catalog = Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now);
+        if (pose == "photos") shell.OpenSection(section);
+        else if (pose == "photo-album") shell.OpenItem(catalog.PhotoAlbums[0]);
+        else
+        {
+            var photos = Result(session.Client.GetChildrenAsync(catalog.PhotoAlbums[0].RatingKey, CancellationToken.None));
+            shell.ShowPhotos(photos, 2);
+            Settle(shell);
+            if (pose == "photo-info") (shell.Router.Current as PhotoViewerPageViewModel)?.ToggleInfoCommand.Execute(null);
+        }
+
+        Settle(shell);
+    }
+
     if (!real && pose.StartsWith("music-", StringComparison.Ordinal))
     {
         // The demo's music: an album playing (MUSIC_ALBUM picks which, 0 on), then the Now Playing page
