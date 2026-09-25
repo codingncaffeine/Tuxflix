@@ -111,6 +111,10 @@ internal static class ClassicProbe
             Log.Info($"Probe: at 1.5 times the window is {betweenSize.Width:0.##}x{betweenSize.Height:0.##}, drawn at {view.DrawScale} and smoothed: "
                      + $"{(between ? "yes" : "NO")}; back at double size, sharp again: {(wholeAgain ? "yes" : "NO")}.");
 
+            // Keeping itself on top is offered only where the window can do it (never on Wayland).
+            var honest = view.CanStayOnTop == !WindowingBackend.IsWayland(classic);
+            Log.Info($"Probe: always on top {(view.CanStayOnTop ? "offered" : "not offered")} on {(WindowingBackend.IsWayland(classic) ? "Wayland" : "X11")}: {(honest ? "right" : "WRONG")}.");
+
             view.Shaded = true;
             await Task.Delay(700);
             var rolled = Near(classic.ClientSize, new Size(ClassicSprites.MainWidth * unit, Size(view.ShowEqualizer, view.ShowPlaylist, shaded: true) * unit));
@@ -166,7 +170,7 @@ internal static class ClassicProbe
             var remembered = !shell.Settings.Equalizer.On && shell.Settings.Equalizer.Bands[0] == 6 && !shell.Settings.Classic.Shaded;
             Log.Info($"Probe: closed; the main window is {(back ? "back" : "NOT BACK")}; settings {(remembered ? "kept" : "NOT KEPT")}.");
 
-            ExitCode = stepped && sized && between && wholeAgain && rolled && unrolled && built && cleared.Length == 0 && kept && answered && back && same && remembered && _runs == 1 ? 0 : 1;
+            ExitCode = stepped && sized && between && wholeAgain && honest && rolled && unrolled && built && cleared.Length == 0 && kept && answered && back && same && remembered && _runs == 1 ? 0 : 1;
             Log.Info(ExitCode == 0 ? "Probe: the compact player opens, plays, rolls up and gives the window back." : "Probe: FAILED.");
         }
         catch (Exception ex)

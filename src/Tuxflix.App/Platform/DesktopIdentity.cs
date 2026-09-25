@@ -28,7 +28,7 @@ internal static class DesktopIdentity
     {
         try
         {
-            var impl = typeof(TopLevel).GetProperty("PlatformImpl", Members)?.GetValue(window);
+            var impl = window.PlatformImpl;
             if (impl?.GetType().FullName != "Avalonia.Wayland.WindowImpl") return;
 
             var proxy = Field(impl, "_surfaceProxy");

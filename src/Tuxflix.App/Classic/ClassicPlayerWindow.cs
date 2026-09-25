@@ -87,6 +87,7 @@ public sealed class ClassicPlayerWindow : Window
     {
         base.OnOpened(e);
         Platform.DesktopIdentity.Apply(this);
+        _view.CanStayOnTop = !WindowingBackend.IsWayland(this);
         _view.Focus();
         _ = RefreshSkinsAsync();
     }
@@ -153,7 +154,7 @@ public sealed class ClassicPlayerWindow : Window
             Radio("Off", _view.Visualizer == ClassicVis.Off, () => _view.Visualizer = ClassicVis.Off),
         ]));
         menu.Items.Add(Check("Show time remaining", _view.ShowRemaining, () => _view.ShowRemaining = !_view.ShowRemaining));
-        menu.Items.Add(Check("Always on top", _view.AlwaysOnTop, () => _view.AlwaysOnTop = !_view.AlwaysOnTop));
+        if (_view.CanStayOnTop) menu.Items.Add(Check("Always on top", _view.AlwaysOnTop, () => _view.AlwaysOnTop = !_view.AlwaysOnTop));
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("Quit Tuxflix", () => QuitRequested?.Invoke()));
         return menu;

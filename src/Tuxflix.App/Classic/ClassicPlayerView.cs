@@ -100,6 +100,9 @@ public sealed class ClassicPlayerView : Control
     /// <summary>A setting changed here (size, a window shown, the analyser, the time): the host saves it.</summary>
     public event Action? SettingsChanged;
 
+    /// <summary>Whether the window can keep itself above others: not on Wayland, where only the desktop can.</summary>
+    public bool CanStayOnTop { get; set; } = true;
+
     public bool AlwaysOnTop
     {
         get => _settings.AlwaysOnTop;
@@ -302,7 +305,7 @@ public sealed class ClassicPlayerView : Control
         Draw(c, Pressed(Region.Close) ? S.CloseButtonDown : S.CloseButton, S.CloseArea);
 
         Draw(c, S.ClutterBar, S.ClutterArea);
-        if (AlwaysOnTop) Draw(c, S.ClutterA, S.ClutterAArea);
+        if (AlwaysOnTop && CanStayOnTop) Draw(c, S.ClutterA, S.ClutterAArea);
         if (Scale >= MaxScale - 0.01) Draw(c, S.ClutterD, S.ClutterDArea);
 
         var playing = _music.HasCurrent && !_music.IsPaused;
@@ -773,7 +776,8 @@ public sealed class ClassicPlayerView : Control
             case Region.Minimize: MinimizeRequested?.Invoke(); break;
             case Region.Options or Region.ClutterO or Region.ClutterI: MenuRequested?.Invoke(); break;
             case Region.Shade: Shaded = !Shaded; break;
-            case Region.ClutterA: AlwaysOnTop = !AlwaysOnTop; break;
+            case Region.ClutterA when CanStayOnTop: AlwaysOnTop = !AlwaysOnTop; break;
+            case Region.ClutterA: Flash("On top: use the window menu", 3); break;
             case Region.ClutterD: Scale = Scale >= MaxScale - 0.01 ? MinScale : MaxScale; break;
             case Region.ClutterV or Region.Visualizer: CycleVisualizer(); break;
             case Region.Time: ShowRemaining = !ShowRemaining; break;

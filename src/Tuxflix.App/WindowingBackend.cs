@@ -104,10 +104,14 @@ internal static class WindowingBackend
 #pragma warning restore AVALONIA_WAYLAND_FORCE_CSD
     }
 
+    /// <summary>Whether the window is on the native Wayland backend, where a client cannot keep itself above others.</summary>
+    public static bool IsWayland(TopLevel window) =>
+        window.PlatformImpl?.GetType().Namespace?.StartsWith("Avalonia.Wayland", StringComparison.Ordinal) == true;
+
     private static string Describe(TopLevel window)
     {
         var implementation = window.PlatformImpl?.GetType().Namespace ?? string.Empty;
-        return implementation.StartsWith("Avalonia.Wayland", StringComparison.Ordinal) ? "native Wayland"
+        return IsWayland(window) ? "native Wayland"
             : implementation.StartsWith("Avalonia.X11", StringComparison.Ordinal)
                 ? (InWaylandSession ? "X11 through XWayland" : "X11")
             : implementation.Length > 0 ? implementation : "unknown";
