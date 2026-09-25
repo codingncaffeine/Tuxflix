@@ -58,6 +58,9 @@ public partial class PlayerPage : ITvPage
 
     bool ITvInputTarget.Handle(TvInput input) => HandleTv(input);
 
+    /// <summary>The picture, not a control: the controls rest hidden until the D-pad asks for them.</summary>
+    Control? ITvPage.InitialFocus() => this;
+
     /// <summary>Carries out a controller's action in the player; false leaves it to the general handling.</summary>
     internal bool HandleTv(TvInput input)
     {
@@ -96,7 +99,7 @@ public partial class PlayerPage : ITvPage
             case TvAction.Up or TvAction.Down or TvAction.Left or TvAction.Right:
                 ShowControls();
                 return false;
-            case TvAction.Back when inControls:
+            case TvAction.Back when ControlsShown:
                 HideControlsNow();
                 return true;
             case TvAction.Back:

@@ -43,7 +43,9 @@ public sealed class TvInputTests
         var source = new Rect(0, 0, 100, 100);
         Rect[] candidates = [new Rect(400, 0, 100, 100), new Rect(130, 140, 100, 100)];
 
+        // Whichever is looked at first.
         Assert.Equal(0, SpatialNavigator.Pick(source, NavDirection.Right, candidates));
+        Assert.Equal(1, SpatialNavigator.Pick(source, NavDirection.Right, [candidates[1], candidates[0]]));
     }
 
     [Fact]

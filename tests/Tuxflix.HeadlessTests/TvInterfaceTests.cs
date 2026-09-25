@@ -43,7 +43,11 @@ public sealed class TvInterfaceTests
         tv.Key(Key.Down);
         Assert.Contains(tv.Focused!.DataContext, home.Shelves[1].Tiles);
 
-        // Back up, focus returns to the third tile it left, not the one nearest.
+        // Along the second shelf until another tile of the first stands nearest above...
+        for (var i = 0; i < 3; i++) tv.Key(Key.Right);
+        Assert.Contains(tv.Focused!.DataContext, home.Shelves[1].Tiles);
+
+        // ...and back up, focus returns to the tile it left, not the one nearest.
         tv.Key(Key.Up);
         Assert.Same(first[2], tv.Focused!.DataContext);
 
