@@ -82,14 +82,15 @@ public sealed partial class DemoPlexHandler(DemoCatalog catalog, IDemoArtRendere
             ["library", "sections", _, "sorts"] => Json(new MediaContainer { Directory = [.. Sorts] }),
             ["library", "sections", var section, "filters"] => Json(new MediaContainer { Directory = [.. Filters(section)] }),
             ["library", "sections", var section, "collections"] => Json(new MediaContainer { Size = catalog.CollectionsOf(section).Count, Metadata = [.. catalog.CollectionsOf(section)] }),
-            ["library", "sections", var section, var filter] => Json(new MediaContainer { Directory = [.. catalog.FilterValues(section, filter)] }),
+            ["library", "sections", var section, var filter] when filter is "genre" or "decade" or "contentRating" => Json(new MediaContainer { Directory = [.. catalog.FilterValues(section, filter)] }),
             ["library", "collections", var key, "children"] => Json(new MediaContainer { Size = catalog.ChildrenOf(key).Count, Metadata = [.. catalog.ChildrenOf(key)] }),
             ["hubs", "search"] => Json(new MediaContainer { Hub = [.. catalog.Search(query["query"] ?? string.Empty, ParseInt(query["limit"], 10))] }),
             ["playlists"] => Json(new MediaContainer { Size = 0, Metadata = [] }),
             ["hubs"] => Json(new MediaContainer { Size = catalog.HomeHubs().Count, Hub = [.. catalog.HomeHubs()] }),
             ["hubs", "continueWatching"] => Json(new MediaContainer { Hub = [catalog.HomeHubs()[0]] }),
-            ["library", "metadata", var key] => catalog.Find(key) is { } item
-                ? Json(new MediaContainer { Size = 1, Metadata = [item] })
+            // Many at once, comma-separated, as the server takes them.
+            ["library", "metadata", var key] => key.Split(',').Select(catalog.Find).OfType<MetadataItem>().ToList() is { Count: > 0 } found
+                ? Json(new MediaContainer { Size = found.Count, Metadata = found })
                 : NotFound(),
             ["library", "metadata", var key, "children"] => Json(new MediaContainer { Size = catalog.ChildrenOf(key).Count, Metadata = [.. catalog.ChildrenOf(key)] }),
             ["photo", ":", "transcode"] => Image(query["url"], ParseInt(query["width"]), ParseInt(query["height"])),
@@ -135,7 +136,7 @@ public sealed partial class DemoPlexHandler(DemoCatalog catalog, IDemoArtRendere
     /// <summary>A section listing with the server's sort and filter parameters, as far as the demo has the data.</summary>
     private HttpResponseMessage SectionItems(string section, System.Collections.Specialized.NameValueCollection query, int? start, int? size)
     {
-        IEnumerable<MetadataItem> items = catalog.SectionItems(section);
+        IEnumerable<MetadataItem> items = catalog.SectionItems(section, query["type"]);
         if (query["genre"] is { } genre) items = items.Where(i => i.Genre?.Any(g => Same(g.Id, genre)) == true);
         if (query["decade"] is { } decade) items = items.Where(i => i.Year is { } year && (year / 10 * 10).ToString(CultureInfo.InvariantCulture) == decade);
         if (query["contentRating"] is { } rating) items = items.Where(i => i.ContentRating == rating);

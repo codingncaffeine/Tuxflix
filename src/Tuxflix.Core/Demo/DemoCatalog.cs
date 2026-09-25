@@ -17,6 +17,21 @@ public sealed partial class DemoCatalog
     public const string ShowsSectionKey = "2";
     public const string MachineIdentifier = "tuxflix-demo";
 
+    // Libraries beyond the films and the series: a feature adds one from a file of its own, as
+    // `private static readonly bool Registered = AddLibrary(catalog => catalog.BuildMusic());`, its builder
+    // filling the catalogue's indexes and answering with the library and its listing.
+    private static List<Func<DemoCatalog, DemoLibrary>>? _libraries;
+    private readonly List<DemoLibrary> _extra = [];
+
+    /// <summary>A library a feature added: its directory entry, and its items for a listing's <c>type</c>.</summary>
+    private sealed record DemoLibrary(LibraryDirectory Directory, Func<string?, IReadOnlyList<MetadataItem>> Items);
+
+    private static bool AddLibrary(Func<DemoCatalog, DemoLibrary> build)
+    {
+        (_libraries ??= []).Add(build);
+        return true;
+    }
+
     private static readonly (string Title, int Year, string G1, string G2, int Minutes, string Rating, string Tagline, string Summary, string Director)[] MovieSpecs =
     [
         ("The Glass Meridian", 2023, "Science Fiction", "Drama", 128, "PG-13", "Every clock stops somewhere.", "A cartographer charting a line across the open ocean discovers that time runs differently on either side of it.", "Ines Marlow"),
@@ -104,6 +119,7 @@ public sealed partial class DemoCatalog
         Movies = BuildMovies();
         Shows = BuildShows();
         Collections = BuildCollections();
+        foreach (var build in _libraries ?? []) _extra.Add(build(this));
     }
 
     public DateTimeOffset Now { get; }
@@ -131,11 +147,12 @@ public sealed partial class DemoCatalog
         return (hash & 0x7FFFFFFF) + 1;
     }
 
-    public IReadOnlyList<MetadataItem> SectionItems(string sectionKey) => sectionKey switch
+    /// <param name="type">The listing's <c>type</c>: a music library lists artists, or albums (9) or tracks (10) when asked.</param>
+    public IReadOnlyList<MetadataItem> SectionItems(string sectionKey, string? type = null) => sectionKey switch
     {
         MoviesSectionKey => Movies,
         ShowsSectionKey => Shows,
-        _ => [],
+        _ => _extra.FirstOrDefault(l => l.Directory.Key == sectionKey)?.Items(type) ?? [],
     };
 
     public IReadOnlyList<MetadataItem> CollectionsOf(string sectionKey) => sectionKey == MoviesSectionKey ? Collections : [];
@@ -190,6 +207,7 @@ public sealed partial class DemoCatalog
     [
         new() { Key = MoviesSectionKey, Type = "movie", Title = "Movies", Agent = "tv.plex.agents.movie", Language = "en-US", Uuid = "demo-movies" },
         new() { Key = ShowsSectionKey, Type = "show", Title = "TV Shows", Agent = "tv.plex.agents.series", Language = "en-US", Uuid = "demo-shows" },
+        .. _extra.Select(l => l.Directory),
     ];
 
     private static readonly string[] ChapterNames = ["Opening", "Arrival", "The Plan", "Complications", "The Turn", "Finale"];
