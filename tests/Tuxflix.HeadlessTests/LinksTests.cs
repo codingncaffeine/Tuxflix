@@ -50,6 +50,25 @@ public sealed class LinksTests : IAsyncLifetime
         Assert.Equal(["https://app.plex.tv/auth#?clientID=test&code=abc"], portal.Opened);
     }
 
+    [Fact]
+    public async Task OnlyWebAddressesReachThePortal()
+    {
+        if (_address.Length == 0) Assert.Skip("dbus-daemon is not installed here.");
+        using var bus = new DBusConnection(_address);
+        await bus.ConnectAsync();
+        var portal = new StandInPortal();
+        bus.AddMethodHandler(portal);
+        await bus.RequestNameAsync("org.freedesktop.portal.Desktop", RequestNameOptions.None);
+
+        // A server's answer can name any of these as a review's link; the last one shows the portal answers.
+        foreach (var link in new[] { "file:///etc/passwd", "smb://nas/share", "javascript:alert(1)", "/home/someone/.bashrc", "https://www.rogerebert.com/reviews/x" })
+        {
+            await Links.OpenAsync(link, _address, orXdgOpen: false);
+        }
+
+        Assert.Equal(["https://www.rogerebert.com/reviews/x"], portal.Opened);
+    }
+
     private sealed class StandInPortal : IPathMethodHandler
     {
         public List<string> Opened { get; } = [];

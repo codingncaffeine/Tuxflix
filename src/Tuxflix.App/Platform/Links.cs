@@ -8,14 +8,28 @@ namespace Tuxflix.App.Platform;
 /// outside whatever sandbox Tuxflix is in (a browser started from inside the hardened unit would
 /// inherit its read-only home); <c>xdg-open</c> where there is no portal. On a worker.
 /// </summary>
+/// <remarks>
+/// Only web addresses: a link can come from a server's answer (a review's), and the desktop hands
+/// any other scheme to whatever claims it, a local file to its default application included.
+/// </remarks>
 internal static class Links
 {
     private const string Portal = "org.freedesktop.portal.Desktop";
+
+    /// <summary>Whether <paramref name="url"/> is a web address, the only kind opened.</summary>
+    public static bool IsWebAddress(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http";
 
     /// <param name="bus">The session bus to ask on; the desktop's own when null (a test gives its private one).</param>
     /// <param name="orXdgOpen">Whether to fall back to <c>xdg-open</c>; a test says no, so that nothing it does can open a real browser.</param>
     public static async Task OpenAsync(string url, string? bus = null, bool orXdgOpen = true)
     {
+        if (!IsWebAddress(url))
+        {
+            Log.Warn("A link that is not a web address was not opened.");
+            return;
+        }
+
         if ((bus ?? DBusAddress.Session) is { } address && await ThroughPortalAsync(address, url).ConfigureAwait(false)) return;
         if (!orXdgOpen) return;
         try
