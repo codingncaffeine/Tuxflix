@@ -158,6 +158,48 @@ void Capture(string pose)
         }
     }
 
+    if (!real && pose.StartsWith("music-", StringComparison.Ordinal))
+    {
+        // The demo's music: an album playing (MUSIC_ALBUM picks which, 0 on), then the Now Playing page
+        // after MUSIC_WAIT seconds (3), with its lyrics, or its visualizer (VIS_MODE, VIS_PALETTE).
+        var catalog = Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now);
+        var which = int.TryParse(Environment.GetEnvironmentVariable("MUSIC_ALBUM"), out var n) ? n : 0;
+        shell.OpenItem(catalog.Albums[which % catalog.Albums.Count]);
+        Settle(shell);
+        var album = shell.Router.Current as AlbumPageViewModel ?? throw new InvalidOperationException("No album page.");
+        if (pose != "music-album")
+        {
+            album.PlayCommand.Execute(null);
+            var wait = double.TryParse(Environment.GetEnvironmentVariable("MUSIC_WAIT"), System.Globalization.CultureInfo.InvariantCulture, out var seconds) ? seconds : 3;
+            var started = Stopwatch.StartNew();
+            while (shell.Music?.Position is null or < 0.5 && started.Elapsed < TimeSpan.FromSeconds(20)) Pump(TimeSpan.FromMilliseconds(100));
+            shell.ShowNowPlayingCommand.Execute(null);
+            Settle(shell);
+            var now = shell.Router.Current as NowPlayingPageViewModel ?? throw new InvalidOperationException("No Now Playing page.");
+            if (pose == "music-lyrics") now.ShowLyricsPanelCommand.Execute(null);
+            if (pose == "music-queue") now.ShowQueuePanelCommand.Execute(null);
+            if (pose == "music-visualizer")
+            {
+                if (Enum.TryParse<Tuxflix.App.Music.VisualizerMode>(Environment.GetEnvironmentVariable("VIS_MODE"), out var mode)) now.ChooseMode(mode);
+                if (Environment.GetEnvironmentVariable("VIS_PALETTE") is { Length: > 0 } palette) now.ChoosePalette(palette);
+                now.SetVisualizer(true);
+            }
+
+            Pump(TimeSpan.FromSeconds(wait));
+            if (pose == "music-visualizer" && wait < 2)
+            {
+                // Its controls show for three seconds after it opens, then leave the picture alone.
+                window.CaptureRenderedFrame()?.Save(Path.Combine(output, "music-visualizer-controls.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+            }
+
+            Settle(shell);
+            if (pose == "music-visualizer" && window.GetVisualDescendants().OfType<VisualizerView>().FirstOrDefault()?.Renderer is { } renderer)
+            {
+                Console.WriteLine(System.FormattableString.Invariant($"{pose}: {renderer.Times.Count} frames drawn, 95 % under {renderer.Times.Percentile(0.95):0.0} ms, slowest {renderer.Times.Max:0.0} ms"));
+            }
+        }
+    }
+
     if (pose == "classic")
     {
         var skinFile = Environment.GetEnvironmentVariable("CLASSIC_SKIN");

@@ -76,6 +76,23 @@ public sealed partial class ArtistPageViewModel(ShellViewModel shell, ServerSess
     [RelayCommand]
     private Task ShuffleAsync() => shell.Music is { } music ? music.PlayArtistAsync(Artist, shuffle: true) : Task.CompletedTask;
 
+    /// <summary>The artist's station: their songs and those that sound like them, as long as it is listened to.</summary>
+    [RelayCommand]
+    private async Task RadioAsync()
+    {
+        if (shell.Music is not { } music) return;
+        try
+        {
+            var stations = await Task.Run(() => session.Client.GetArtistStationsAsync(Artist.RatingKey, CancellationToken.None));
+            if (stations.FirstOrDefault() is { } station) await music.PlayStationAsync(station);
+            else Log.Info("Artist: the server offers no station for this artist.");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or PlexUnauthorizedException)
+        {
+            Log.Warn("Artist: the station could not be read.", ex);
+        }
+    }
+
     public override void Deactivate()
     {
         base.Deactivate();
@@ -292,7 +309,19 @@ public sealed partial class TrackRowViewModel : ObservableObject
         if (_shell.Music is { } music) music.TrackChanged -= Refresh;
     }
 
-    private void Refresh() => IsPlaying = _shell.Music?.Current?.Track.RatingKey == Track.RatingKey;
+    private void Refresh()
+    {
+        IsPlaying = _shell.Music?.Current?.Track.RatingKey == Track.RatingKey;
+        OnPropertyChanged(nameof(CanSonicAdventure));
+    }
+
+    /// <summary>A sonic adventure can run from the track playing to this one: the server analysed both, and they differ.</summary>
+    public bool CanSonicAdventure =>
+        _shell.Music?.Current?.Track is { MusicAnalysisVersion: > 0 } playing && Track.MusicAnalysisVersion > 0 && playing.RatingKey != Track.RatingKey;
+
+    [RelayCommand]
+    private Task SonicAdventureAsync() =>
+        _shell.Music is { Current.Track: { } playing } music ? music.PlaySonicAdventureAsync(playing, Track) : Task.CompletedTask;
 }
 
 /// <summary>
@@ -310,6 +339,8 @@ public sealed partial class NowPlayingPageViewModel : PageViewModel
         _session = session;
         Music = music;
         Music.TrackChanged += OnTrackChanged;
+        Music.TrackChanged += LoadTrackExtras;
+        InitialiseExtras();
     }
 
     public override string Title => "Now playing";
@@ -350,11 +381,14 @@ public sealed partial class NowPlayingPageViewModel : PageViewModel
     {
         base.Deactivate();
         Music.TrackChanged -= OnTrackChanged;
+        Music.TrackChanged -= LoadTrackExtras;
+        StopExtras();
     }
 
     protected override Task LoadAsync(CancellationToken cancellation)
     {
         OnTrackChanged();
+        LoadTrackExtras();
         return Task.CompletedTask;
     }
 

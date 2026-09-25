@@ -78,6 +78,13 @@
                                         <TextBlock Text="SHUFFLE" VerticalAlignment="Center" FontWeight="SemiBold" LetterSpacing="0.6" />
                                     </StackPanel>
                                 </Button>
+                                <Button Theme="{StaticResource GhostButton}" Padding="18,10" Command="{Binding RadioCommand}"
+                                        ui:Tip.Text="The artist's station: their songs, and songs like theirs">
+                                    <StackPanel Orientation="Horizontal" Spacing="9">
+                                        <PathIcon Data="{StaticResource Icon.Radio}" Width="16" Height="16" />
+                                        <TextBlock Text="RADIO" VerticalAlignment="Center" FontWeight="SemiBold" LetterSpacing="0.6" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </StackPanel>
                     </Grid>
@@ -96,6 +103,7 @@
                                                 <MenuItem Header="Play from here" Command="{Binding PlayCommand}" />
                                                 <MenuItem Header="Play next" Command="{Binding PlayNextCommand}" />
                                                 <MenuItem Header="Add to the queue" Command="{Binding AddToQueueCommand}" />
+                                                <MenuItem Header="Sonic adventure from the track playing" Command="{Binding SonicAdventureCommand}" IsVisible="{Binding CanSonicAdventure}" />
                                             </MenuFlyout>
                                         </Button.ContextFlyout>
                                         <Grid ColumnDefinitions="44,*,Auto">

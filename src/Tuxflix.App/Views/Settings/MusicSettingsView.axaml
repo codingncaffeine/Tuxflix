@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             x:Class="Tuxflix.App.Views.Settings.MusicSettingsView"
+             x:DataType="vm:MusicSettingsViewModel">
+
+    <!-- Music: how the visualizer opens, and whether the lyrics stand in for the queue. -->
+    <StackPanel Spacing="16" MaxWidth="640" HorizontalAlignment="Left">
+        <TextBlock Classes="shelf-title" Text="MUSIC" />
+        <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+            <TextBlock Text="Visualizer" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" MinWidth="200" ItemsSource="{Binding Modes}" SelectedItem="{Binding VisualizerMode}"
+                      AutomationProperties.Name="Visualizer mode" />
+            <TextBlock Grid.Row="1" Text="Visualizer colours" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="1" Grid.Column="1" MinWidth="200" ItemsSource="{Binding Palettes}" SelectedItem="{Binding VisualizerPalette}"
+                      AutomationProperties.Name="Visualizer colours" />
+            <TextBlock Grid.Row="2" Text="Lyrics" VerticalAlignment="Center" />
+            <CheckBox Grid.Row="2" Grid.Column="1" IsChecked="{Binding ShowLyrics}"
+                      Content="Show a track's lyrics in place of the queue when it has them" />
+        </Grid>
+    </StackPanel>
+</UserControl>

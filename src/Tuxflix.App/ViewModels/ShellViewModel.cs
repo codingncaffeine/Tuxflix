@@ -509,6 +509,13 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnAccountNameChanged(string value) => OnPropertyChanged(nameof(AccountInitials));
 
+    /// <summary>The page went into or out of its own full-window view (the visualizer) without a page change.</summary>
+    internal void ImmersionChanged()
+    {
+        OnPropertyChanged(nameof(IsImmersive));
+        OnPropertyChanged(nameof(ShowNowPlayingBar));
+    }
+
     private void OnRouterChanged(object? sender, PropertyChangedEventArgs e)
     {
         OnPropertyChanged(nameof(CurrentTab));
