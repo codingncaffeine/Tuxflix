@@ -13,8 +13,10 @@ internal static class HeadlessSkia
         var context = SynchronizationContext.Current;
         try
         {
+            // The Inter font the application ships with: the demo draws its artwork with it.
             AppBuilder.Configure<Application>()
                 .UseSkia()
+                .WithInterFont()
                 .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
                 .SetupWithoutStarting();
         }
