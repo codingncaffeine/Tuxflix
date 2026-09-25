@@ -20,6 +20,7 @@ public sealed class LibraryBrowseTests : IDisposable
 
     public LibraryBrowseTests()
     {
+        HeadlessSkia.Ensure();
         var paths = AppPaths.Resolve(_root, Environment.GetEnvironmentVariable);
         paths.EnsureCreated();
         _shell = new ShellViewModel(SettingsStore.Load(paths.SettingsFile), paths);

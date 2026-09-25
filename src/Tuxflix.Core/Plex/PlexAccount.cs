@@ -140,9 +140,15 @@ public sealed class PlexAccountClient(HttpClient http)
 {
     private static readonly Uri Api = new("https://clients.plex.tv/api/v2/");
 
-    public async Task<PlexPin> CreatePinAsync(CancellationToken cancellation)
+    public Task<PlexPin> CreatePinAsync(CancellationToken cancellation) => CreatePinAsync(strong: true, cancellation);
+
+    /// <summary>
+    /// A new PIN: a strong one for Plex's sign-in page, or (<paramref name="strong"/> false) a
+    /// four-character code the viewer types at plex.tv/link on a phone, as Plex's TV apps ask.
+    /// </summary>
+    public async Task<PlexPin> CreatePinAsync(bool strong, CancellationToken cancellation)
     {
-        using var response = await http.PostAsync(new Uri(Api, "pins?strong=true"), content: null, cancellation).ConfigureAwait(false);
+        using var response = await http.PostAsync(new Uri(Api, strong ? "pins?strong=true" : "pins"), content: null, cancellation).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync(PlexJsonContext.Default.PlexPin, cancellation).ConfigureAwait(false)
                ?? throw new HttpRequestException("plex.tv answered the sign-in request with nothing.");

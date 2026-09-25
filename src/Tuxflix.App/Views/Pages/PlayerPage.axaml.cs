@@ -54,6 +54,7 @@ public partial class PlayerPage : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        UseTvLayout();
         _top = TopLevel.GetTopLevel(this);
 
         // Keys are taken before any focused button sees them: Space must pause, not press the last
@@ -68,7 +69,7 @@ public partial class PlayerPage : UserControl
     {
         _top?.RemoveHandler(KeyDownEvent, OnKey);
         _idle.Stop();
-        if (_top is Window { WindowState: WindowState.FullScreen } window) window.WindowState = WindowState.Normal;
+        if (!_tvLayout && _top is Window { WindowState: WindowState.FullScreen } window) window.WindowState = WindowState.Normal;
         _top = null;
         base.OnDetachedFromVisualTree(e);
     }
@@ -111,7 +112,7 @@ public partial class PlayerPage : UserControl
             case Key.Enter when model.ShowsSkip:
                 model.SkipCommand.Execute(null);
                 break;
-            case Key.Escape when _top is Window { WindowState: WindowState.FullScreen } window:
+            case Key.Escape when !_tvLayout && _top is Window { WindowState: WindowState.FullScreen } window:
                 window.WindowState = WindowState.Normal;
                 break;
             case Key.Escape:

@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="using:Tuxflix.App.Views.Settings"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Settings.TvSettingsView"
+             x:DataType="settings:TvSettingsViewModel">
+
+    <!-- The TV interface's section of the settings page. -->
+    <StackPanel Spacing="14">
+        <TextBlock Classes="shelf-title" Text="TV AND CONTROLLER" />
+        <CheckBox IsChecked="{Binding StartsInTv}" Content="Start in the TV interface, full screen" />
+        <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Theme="{StaticResource GhostButton}" Content="OPEN THE TV INTERFACE" Command="{Binding OpenTvCommand}"
+                    ui:Tip.Text="Full screen, for a remote or a controller; the menu leads back here" />
+            <Button Theme="{StaticResource GhostButton}" Content="CONTROLLER BUTTONS" Command="{Binding EditButtonsCommand}"
+                    ui:Tip.Text="What each button does, changed with the controller in hand" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <PathIcon Data="{StaticResource Icon.GameController}" Width="16" Height="16" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+            <TextBlock Text="{Binding ControllerStatus}" Classes="faint" FontSize="12.5" TextWrapping="Wrap" VerticalAlignment="Center" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:tv="using:Tuxflix.App.Tv"
+             xmlns:pages="using:Tuxflix.App.Tv.Pages"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Tv.Pages.TvHomePage"
+             x:DataType="vm:HomePageViewModel">
+
+    <!-- Home for a room, as Plex's TV apps and Android TV lay it out: the title with focus fills
+         the screen behind a large hero (its art, its name, what it is about), and the shelves sit
+         under it, the row in use always in the same place. -->
+    <Panel>
+        <Panel Name="Backdrop" IsHitTestVisible="False" x:DataType="pages:TvHeroViewModel">
+            <ui:RemoteImage Path="{Binding BackdropPath}" DecodeWidth="1920" DecodeHeight="1080" />
+            <Border Background="{StaticResource Tv.Scrim.Left}" />
+            <Border Background="{StaticResource Tv.Scrim.Bottom}" />
+        </Panel>
+
+        <Grid RowDefinitions="486,*">
+            <StackPanel Name="Hero" x:DataType="pages:TvHeroViewModel" Margin="96,140,96,0" MaxWidth="1150"
+                        HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="12">
+                <TextBlock Classes="tv-kicker" Text="{Binding Kicker}" />
+                <ui:RemoteImage Path="{Binding LogoPath}" Format="Png" IsVisible="{Binding HasLogo}"
+                                DecodeWidth="620" DecodeHeight="200" MaxWidth="620" MaxHeight="150"
+                                Stretch="Uniform" HorizontalAlignment="Left" Margin="0,2,0,4" />
+                <TextBlock Classes="tv-title" Text="{Binding Title}" IsVisible="{Binding !HasLogo}" />
+                <TextBlock Classes="tv-meta" Text="{Binding Meta}" />
+                <TextBlock Classes="tv-body" Text="{Binding Summary}" MaxLines="3" MaxWidth="1050" HorizontalAlignment="Left" />
+            </StackPanel>
+
+            <!-- A row scrolled up past the one in use fades out under the hero rather than ending in a hard line. -->
+            <ScrollViewer Grid.Row="1" Name="Shelves" tv:TvFocus.PinsRows="True"
+                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+                <ScrollViewer.OpacityMask>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="Transparent" />
+                        <GradientStop Offset="0.07" Color="Black" />
+                    </LinearGradientBrush>
+                </ScrollViewer.OpacityMask>
+                <ItemsControl ItemsSource="{Binding Shelves}" Margin="0,0,0,560">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Spacing="6" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShelfViewModel">
+                            <pages:TvShelf />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top" Margin="0,112,0,0"
+                     Height="3" MinHeight="3" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+
+        <StackPanel IsVisible="{Binding HasError}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18" MaxWidth="760">
+            <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="60" Height="60" Foreground="{DynamicResource Brush.Accent}" />
+            <TextBlock Classes="tv-body" Text="{Binding ErrorMessage}" TextAlignment="Center" />
+        </StackPanel>
+
+        <TextBlock Classes="tv-body" IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Text="Nothing to show yet: this server's libraries are empty." />
+    </Panel>
+</UserControl>

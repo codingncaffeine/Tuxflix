@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:tv="using:Tuxflix.App.Tv"
+             x:Class="Tuxflix.App.Tv.Pages.TvSignInPage"
+             x:DataType="vm:SignInPageViewModel">
+
+    <!-- Signing in from the sofa, as Plex's TV apps do: a code to type at plex.tv/link on a phone or a
+         computer, and the TV signs itself in when it is entered. No password is typed with a remote. -->
+    <Panel>
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="1000" Padding="72,60" Margin="0,60,0,0"
+                CornerRadius="24" Background="#CC0F162E" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
+                BoxShadow="0 30 80 0 #B3020510, 0 0 120 0 #26A96BEA">
+            <StackPanel Spacing="30">
+                <TextBlock Text="Sign in with Plex" FontSize="46" FontWeight="Bold" HorizontalAlignment="Center" />
+
+                <!-- The code, once plex.tv has given one -->
+                <StackPanel Spacing="26" IsVisible="{Binding UseLinkCode}">
+                    <StackPanel Spacing="10" IsVisible="{Binding IsWaiting}">
+                        <TextBlock Classes="tv-body" HorizontalAlignment="Center" TextAlignment="Center"
+                                   Text="On your phone or computer, go to" />
+                        <TextBlock Text="plex.tv/link" FontSize="48" FontWeight="Bold" HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.Accent}" />
+                        <TextBlock Classes="tv-body" HorizontalAlignment="Center" Text="and enter this code:" />
+                    </StackPanel>
+                    <Border HorizontalAlignment="Center" Padding="48,18" CornerRadius="16" IsVisible="{Binding IsWaiting}"
+                            Background="{DynamicResource Brush.Fill.Input}" BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="2">
+                        <TextBlock Name="Code" Text="{Binding LinkCode}" FontSize="92" FontWeight="Bold" LetterSpacing="10" />
+                    </Border>
+                </StackPanel>
+
+                <!-- Plex's page in a browser, when this sign-in began on the desktop -->
+                <StackPanel Spacing="14" IsVisible="{Binding !UseLinkCode}">
+                    <TextBlock Classes="tv-body" HorizontalAlignment="Center" TextAlignment="Center"
+                               Text="Plex's sign-in page is open in your browser. Sign in there, and Tuxflix connects by itself." />
+                    <TextBlock Text="{Binding SignInLink}" FontSize="16" TextWrapping="Wrap" TextAlignment="Center"
+                               Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                </StackPanel>
+
+                <StackPanel Spacing="14" IsVisible="{Binding IsLoading}">
+                    <TextBlock Classes="tv-meta" HorizontalAlignment="Center" Text="Waiting for the code to be entered…" IsVisible="{Binding IsWaiting}" />
+                    <TextBlock Classes="tv-meta" HorizontalAlignment="Center" Text="Signed in. Finding your servers…" IsVisible="{Binding IsFinishing}" />
+                    <ProgressBar IsIndeterminate="True" Height="4" MinHeight="4" Width="320" HorizontalAlignment="Center"
+                                 Foreground="{DynamicResource Brush.Accent}" Background="{DynamicResource Brush.Fill.Input}" />
+                </StackPanel>
+
+                <TextBlock Classes="tv-body" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" HorizontalAlignment="Center" TextAlignment="Center" />
+
+                <StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center" tv:TvFocus.IsGroup="True">
+                    <Button Theme="{StaticResource TvButton}" Classes="play" Content="TRY AGAIN" Command="{Binding TryAgainCommand}"
+                            IsVisible="{Binding HasError}" tv:TvFocus.IsDefault="True" />
+                    <Button Theme="{StaticResource TvButton}" Content="CANCEL" Command="{Binding CancelCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

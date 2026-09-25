@@ -1,30 +1,12 @@
-using Avalonia;
-using Avalonia.Headless;
-
 namespace Tuxflix.HeadlessTests;
 
-/// <summary>Avalonia's headless platform with Skia, set up once for tests that decode pictures.</summary>
+/// <summary>
+/// Avalonia's headless platform with Skia (and the Inter font), set up once for tests that decode
+/// pictures. It is the same set-up the window tests use (<see cref="HeadlessApp"/>), on that
+/// thread: the platform can only be set up once in a process, and setting it up on the test's
+/// own thread would leave Avalonia's synchronization context there for an async test to hang on.
+/// </summary>
 internal static class HeadlessSkia
 {
-    private static readonly Lazy<bool> Ready = new(() =>
-    {
-        // Setting it up installs Avalonia's synchronization context on this thread, and a test
-        // awaiting under it would wait for a dispatcher nobody runs: the test's own context goes back.
-        var context = SynchronizationContext.Current;
-        try
-        {
-            AppBuilder.Configure<Application>()
-                .UseSkia()
-                .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
-                .SetupWithoutStarting();
-        }
-        finally
-        {
-            SynchronizationContext.SetSynchronizationContext(context);
-        }
-
-        return true;
-    });
-
-    public static void Ensure() => _ = Ready.Value;
+    public static void Ensure() => HeadlessApp.Ensure();
 }

@@ -1,0 +1,196 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tv="using:Tuxflix.App.Tv"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Tv.TvShell"
+             x:DataType="tv:TvShellViewModel">
+
+    <UserControl.Styles>
+        <StyleInclude Source="/Tv/TvStyles.axaml" />
+    </UserControl.Styles>
+
+    <!-- Laid out for 1080 lines and scaled to the screen, as a TV skin is: the same room-sized
+         layout on a 720p set, a 1080p one or a 4K one. -->
+    <LayoutTransformControl Name="Scale" ClipToBounds="True">
+        <Panel Name="Canvas" Background="{DynamicResource Brush.Base}">
+            <Border Background="{DynamicResource Brush.Canvas}" />
+            <Border Background="{DynamicResource Brush.Canvas.Glow}" IsHitTestVisible="False" />
+
+            <!-- ===== The page: full bleed, under the bar ===== -->
+            <TransitioningContentControl Name="Pages" Content="{Binding Shell.Router.Current}">
+                <TransitioningContentControl.PageTransition>
+                    <CrossFade Duration="0:0:0.16" />
+                </TransitioningContentControl.PageTransition>
+            </TransitioningContentControl>
+
+            <!-- ===== The bar: the mark, the tabs, the clock and the menu, clear of a TV's overscan ===== -->
+            <Panel Name="Bar" VerticalAlignment="Top" IsVisible="{Binding !Shell.IsImmersive}">
+                <Border Height="150" IsHitTestVisible="False">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                            <GradientStop Offset="0" Color="#E6070B18" />
+                            <GradientStop Offset="1" Color="#00070B18" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+                <Grid ColumnDefinitions="Auto,*,Auto" Margin="80,34,80,0" VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                        <Border Width="46" Height="46" CornerRadius="11" ClipToBounds="True" BoxShadow="{StaticResource Shadow.Mark}">
+                            <Image Source="/Assets/brand-mark-96.png" Stretch="UniformToFill" />
+                        </Border>
+                        <TextBlock Text="TUXFLIX" FontSize="22" FontWeight="Bold" LetterSpacing="3" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <ItemsControl Grid.Column="1" Name="Tabs" ItemsSource="{Binding Tabs}" HorizontalAlignment="Center"
+                                  tv:TvFocus.IsGroup="True">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="tv:TvTabViewModel">
+                                <Button Theme="{StaticResource TvTab}" Content="{Binding Title}" Classes.selected="{Binding IsSelected}"
+                                        Command="{Binding OpenCommand}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="20" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Clock}" FontSize="24" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        <Button Name="MenuButton" Theme="{StaticResource TvTab}" Padding="14" Click="OnMenu"
+                                ui:Tip.Text="Menu: controller, desktop interface, quit">
+                            <PathIcon Data="{StaticResource Icon.List}" Width="26" Height="26" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Panel>
+
+            <!-- ===== Focus: one frame, above everything, that moves to whatever has focus ===== -->
+            <Canvas Name="FocusLayer" IsHitTestVisible="False">
+                <Border Name="FocusFrame" BorderThickness="4" CornerRadius="11" IsVisible="False"
+                        BorderBrush="{DynamicResource Brush.Accent}" BoxShadow="0 0 30 2 #99FF9150" />
+            </Canvas>
+
+            <!-- ===== The legend: what the buttons do here, as Big Picture shows it ===== -->
+            <Border Name="LegendBacking" Margin="0,0,64,30" Padding="22,12" CornerRadius="30" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Background="#E6070B18" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1" BoxShadow="0 10 30 0 #99020510"
+                    IsHitTestVisible="False" IsVisible="{Binding !Shell.IsImmersive}">
+            <StackPanel Name="Legend" Orientation="Horizontal" Spacing="28">
+                <StackPanel Orientation="Horizontal" Spacing="28" IsVisible="{Binding HasPads}">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Border Classes="pad-glyph" Background="#3DBF6A"><TextBlock Text="A" /></Border>
+                        <TextBlock Classes="legend" Text="SELECT" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Border Classes="pad-glyph" Background="#E0463F"><TextBlock Text="B" /></Border>
+                        <TextBlock Classes="legend" Text="BACK" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Border Classes="pad-glyph" Background="#3A7FE0"><TextBlock Text="X" /></Border>
+                        <TextBlock Classes="legend" Text="PLAY" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Border Classes="pad-glyph" Background="#E3A81E"><TextBlock Text="Y" /></Border>
+                        <TextBlock Classes="legend" Text="SEARCH" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Border Classes="pad-glyph" Background="{DynamicResource Brush.Raised}">
+                            <PathIcon Data="{StaticResource Icon.List}" Width="15" Height="15" Foreground="White" />
+                        </Border>
+                        <TextBlock Classes="legend" Text="MENU" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="28" IsVisible="{Binding HasNoPads}">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Border Classes="keycap tv"><TextBlock Text="ENTER" /></Border>
+                        <TextBlock Classes="legend" Text="SELECT" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Border Classes="keycap tv"><TextBlock Text="ESC" /></Border>
+                        <TextBlock Classes="legend" Text="BACK" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Border Classes="keycap tv"><TextBlock Text="F10" /></Border>
+                        <TextBlock Classes="legend" Text="MENU" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+            </Border>
+
+            <!-- ===== In front: the menu, or the keyboard for a text field ===== -->
+            <Panel Name="Overlay" IsVisible="False" Background="#99040712">
+                <Border Name="MenuPanel" HorizontalAlignment="Right" Width="560" Padding="48,56"
+                        Background="{DynamicResource Brush.Rail}" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1,0,0,0"
+                        BoxShadow="-24 0 60 0 #B3020510" IsVisible="False">
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="tv-kicker" Text="MENU" Margin="26,0,0,18" />
+                        <Button Theme="{StaticResource TvRow}" Command="{Binding Shell.GoHomeCommand}" Click="OnMenuChoice">
+                            <StackPanel Orientation="Horizontal" Spacing="18">
+                                <PathIcon Data="{StaticResource Icon.House}" Width="26" Height="26" />
+                                <TextBlock Text="Library home" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource TvRow}" Command="{Binding Shell.OpenSearchCommand}" Click="OnMenuChoice">
+                            <StackPanel Orientation="Horizontal" Spacing="18">
+                                <PathIcon Data="{StaticResource Icon.MagnifyingGlass}" Width="26" Height="26" />
+                                <TextBlock Text="Search" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource TvRow}" Command="{Binding Shell.ShowControllerCommand}" Click="OnMenuChoice">
+                            <StackPanel Orientation="Horizontal" Spacing="18">
+                                <PathIcon Data="{StaticResource Icon.GameController}" Width="26" Height="26" />
+                                <TextBlock Text="Controller buttons" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource TvRow}" Command="{Binding ToggleStartsInTvCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="18">
+                                <PathIcon Data="{StaticResource Icon.TelevisionSimple}" Width="26" Height="26" />
+                                <TextBlock Text="{Binding StartLabel}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource TvRow}" Command="{Binding Shell.ShowServersCommand}" Click="OnMenuChoice"
+                                IsVisible="{Binding Shell.IsSignedIn}">
+                            <StackPanel Orientation="Horizontal" Spacing="18">
+                                <PathIcon Data="{StaticResource Icon.HardDrives}" Width="26" Height="26" />
+                                <TextBlock Text="Switch server" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource TvRow}" Command="{Binding Shell.SignInCommand}" Click="OnMenuChoice"
+                                IsVisible="{Binding Shell.IsSignedOut}">
+                            <StackPanel Orientation="Horizontal" Spacing="18">
+                                <PathIcon Data="{StaticResource Icon.UserCircle}" Width="26" Height="26" />
+                                <TextBlock Text="Sign in with Plex" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Border Height="1" Background="{DynamicResource Brush.Line.Hairline}" Margin="26,10" />
+                        <Button Theme="{StaticResource TvRow}" Command="{Binding Shell.ToggleTvCommand}" Click="OnMenuChoice">
+                            <StackPanel Orientation="Horizontal" Spacing="18">
+                                <PathIcon Data="{StaticResource Icon.MonitorPlay}" Width="26" Height="26" />
+                                <TextBlock Text="Desktop interface" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource TvRow}" Click="OnQuit">
+                            <StackPanel Orientation="Horizontal" Spacing="18">
+                                <PathIcon Data="{StaticResource Icon.X}" Width="26" Height="26" />
+                                <TextBlock Text="Quit Tuxflix" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <Border Name="KeyboardPanel" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,60" Padding="40,32"
+                        CornerRadius="18" Background="{DynamicResource Brush.Rail}" BorderBrush="{DynamicResource Brush.Line.Hairline}"
+                        BorderThickness="1" BoxShadow="0 24 60 0 #B3020510" IsVisible="False">
+                    <StackPanel Spacing="22">
+                        <TextBlock Name="KeyboardLabel" Classes="tv-kicker" />
+                        <Border CornerRadius="12" Padding="22,14" Background="{DynamicResource Brush.Fill.Input}"
+                                BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="2">
+                            <TextBlock Name="KeyboardPreview" FontSize="30" FontWeight="SemiBold" MinHeight="40" />
+                        </Border>
+                        <tv:OnScreenKeyboard Name="Keyboard" />
+                    </StackPanel>
+                </Border>
+            </Panel>
+        </Panel>
+    </LayoutTransformControl>
+</UserControl>

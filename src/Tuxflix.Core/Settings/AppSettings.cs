@@ -34,6 +34,21 @@ public sealed class AppSettings
 
     /// <summary>How films and episodes play: skipping, what comes next, subtitles, sound.</summary>
     public PlaybackSettings Playback { get; set; } = new();
+
+    /// <summary>The 10-foot interface for a television, and the controller's buttons.</summary>
+    public TvSettings Tv { get; set; } = new();
+}
+
+public sealed class TvSettings
+{
+    /// <summary>Start in the TV interface, full screen, as <c>--tv</c> does for one run.</summary>
+    public bool StartInTv { get; set; }
+
+    /// <summary>
+    /// What each controller button does, by button name (<c>South</c>, <c>LeftTrigger</c>) to action
+    /// name (<c>Select</c>, <c>SeekBack</c>); empty for the standard layout.
+    /// </summary>
+    public Dictionary<string, string> Gamepad { get; set; } = [];
 }
 
 public sealed class PlaybackSettings

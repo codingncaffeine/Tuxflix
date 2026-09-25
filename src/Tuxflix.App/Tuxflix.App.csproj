@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Tuxflix.HeadlessTests" />
+    <InternalsVisibleTo Include="Tuxflix.Capture" />
   </ItemGroup>
 
   <ItemGroup>

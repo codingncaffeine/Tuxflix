@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tv="using:Tuxflix.App.Tv"
+             x:Class="Tuxflix.App.Tv.Pages.TvControllerPage"
+             x:DataType="tv:TvControllerPageViewModel">
+
+    <!-- The controller's buttons: every action with the buttons that do it. Choose one, then press
+         the button that should do it; a button taken from the only action it served swaps. -->
+    <Grid RowDefinitions="Auto,Auto,*" Margin="96,128,96,110">
+        <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="10">
+                <TextBlock Classes="tv-heading" Text="Controller buttons" />
+                <TextBlock Classes="tv-meta" Text="{Binding Status}" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1" Theme="{StaticResource TvButton}" Content="STANDARD LAYOUT" VerticalAlignment="Bottom"
+                    Command="{Binding RestoreDefaultsCommand}" />
+        </Grid>
+
+        <Border Grid.Row="1" IsVisible="{Binding HasNotice}" Margin="0,24,0,0" Padding="24,14" CornerRadius="12" HorizontalAlignment="Left"
+                Background="{DynamicResource Brush.Accent.Softer}" BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="1">
+            <TextBlock Classes="tv-meta" Text="{Binding Notice}" Foreground="{DynamicResource Brush.Text.Primary}" />
+        </Border>
+
+        <ScrollViewer Grid.Row="2" Margin="0,24,0,0" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+            <ItemsControl ItemsSource="{Binding Rows}" tv:TvFocus.IsGroup="True">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="tv:ControllerRowViewModel">
+                        <Button Theme="{StaticResource TvRow}" Classes.selected="{Binding IsWaiting}" Command="{Binding AssignCommand}"
+                                Margin="0,0,24,10" Padding="24,14" AutomationProperties.Name="{Binding Title}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding Title}" FontSize="23" FontWeight="Bold" />
+                                    <TextBlock Text="{Binding Description}" FontSize="16" TextWrapping="Wrap" Opacity="0.75" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="{Binding Buttons}" FontSize="21" FontWeight="Bold" Margin="18,0,0,0"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -31,6 +31,7 @@ internal static class Program
 
                   --demo            Open the built-in demo library instead of a server.
                   --portable DIR    Keep settings, cache and logs in DIR instead of the XDG folders.
+                  --tv              Open in the TV interface, full screen, for a remote or a controller.
                   --version         Print the version, build time and licence, then exit.
                 """);
             return 0;
@@ -84,7 +85,7 @@ internal static class Program
 }
 
 /// <summary>What the command line asked for.</summary>
-internal sealed record LaunchOptions(bool Demo, string? PortableRoot, bool ProbeVideo = false, bool ProbePlayer = false, bool ProbeClassic = false, bool ProbeGrid = false, bool ProbeMusic = false)
+internal sealed record LaunchOptions(bool Demo, string? PortableRoot, bool ProbeVideo = false, bool ProbePlayer = false, bool ProbeClassic = false, bool ProbeGrid = false, bool ProbeMusic = false, bool Tv = false)
 {
     public static LaunchOptions Parse(IReadOnlyList<string> args)
     {
@@ -103,7 +104,7 @@ internal sealed record LaunchOptions(bool Demo, string? PortableRoot, bool Probe
             }
         }
 
-        return new LaunchOptions(demo, portable, args.Contains(Player.VideoProbe.Switch), args.Contains(Player.PlayerProbe.Switch), args.Contains(Classic.ClassicProbe.Switch), args.Contains(Probes.GridProbe.Switch), args.Contains(Probes.MusicProbe.Switch));
+        return new LaunchOptions(demo, portable, args.Contains(Player.VideoProbe.Switch), args.Contains(Player.PlayerProbe.Switch), args.Contains(Classic.ClassicProbe.Switch), args.Contains(Probes.GridProbe.Switch), args.Contains(Probes.MusicProbe.Switch), args.Contains("--tv"));
     }
 }
 

@@ -30,12 +30,30 @@ public sealed partial class SignInPageViewModel(ShellViewModel shell) : PageView
     [ObservableProperty]
     public partial string? SignInLink { get; private set; }
 
+    /// <summary>
+    /// Sign in from another device instead: a short code to type at plex.tv/link on a phone or a
+    /// computer, as Plex's own TV apps do. Nobody types a password with a remote.
+    /// </summary>
+    public bool UseLinkCode { get; init; }
+
+    /// <summary>The code for plex.tv/link, spaced for reading across a room; null until plex.tv gives one.</summary>
+    [ObservableProperty]
+    public partial string? LinkCode { get; private set; }
+
     protected override async Task LoadAsync(CancellationToken cancellation)
     {
         Stage = SignInStage.Starting;
-        var pin = await shell.Account.CreatePinAsync(cancellation);
-        SignInLink = PlexAccountClient.SignInPage(shell.Identity.ClientIdentifier, pin).ToString();
-        OpenBrowser();
+        var pin = await shell.Account.CreatePinAsync(strong: !UseLinkCode, cancellation);
+        if (UseLinkCode)
+        {
+            LinkCode = string.Join(' ', pin.Code.ToUpperInvariant().ToCharArray());
+        }
+        else
+        {
+            SignInLink = PlexAccountClient.SignInPage(shell.Identity.ClientIdentifier, pin).ToString();
+            OpenBrowser();
+        }
+
         Stage = SignInStage.Waiting;
 
         var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(pin.ExpiresIn ?? 1800);
@@ -50,7 +68,9 @@ public sealed partial class SignInPageViewModel(ShellViewModel shell) : PageView
             return;
         }
 
-        ErrorMessage = "The sign-in link expired before it was used. Try again for a new one.";
+        ErrorMessage = UseLinkCode
+            ? "The code expired before it was entered. Try again for a new one."
+            : "The sign-in link expired before it was used. Try again for a new one.";
     }
 
     [RelayCommand]

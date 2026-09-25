@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tv="using:Tuxflix.App.Tv"
+             x:Class="Tuxflix.App.Tv.OnScreenKeyboard">
+
+    <!-- Letters in alphabetical order, as TV keyboards lay them out (a remote has no reason to
+         learn QWERTY), then digits and the few marks titles use; the wide keys along the foot. -->
+    <StackPanel Spacing="10">
+        <ItemsControl Name="Keys" tv:TvFocus.IsGroup="True">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="4,0">
+            <Button Name="Shift" Theme="{StaticResource TvKey}" Width="116" Margin="0,0,10,0" Click="OnShift" AutomationProperties.Name="Capitals">
+                <TextBlock Name="ShiftLabel" Text="ABC" FontSize="20" FontWeight="Bold" />
+            </Button>
+            <Button Grid.Column="1" Theme="{StaticResource TvKey}" HorizontalAlignment="Stretch" Click="OnSpace" AutomationProperties.Name="Space">
+                <TextBlock Text="SPACE" FontSize="18" FontWeight="Bold" LetterSpacing="2" />
+            </Button>
+            <Button Grid.Column="2" Theme="{StaticResource TvKey}" Width="96" Margin="10,0,0,0" Click="OnDelete" AutomationProperties.Name="Delete">
+                <PathIcon Data="{StaticResource Icon.ArrowLeft.Bold}" Width="24" Height="24" />
+            </Button>
+            <Button Grid.Column="3" Theme="{StaticResource TvKey}" Width="96" Margin="10,0,0,0" Click="OnClear" AutomationProperties.Name="Clear">
+                <TextBlock Text="CLEAR" FontSize="16" FontWeight="Bold" LetterSpacing="1.5" />
+            </Button>
+            <Button Grid.Column="4" Name="DoneKey" Theme="{StaticResource TvKey}" Width="110" Margin="10,0,0,0" Classes="play" Click="OnDone" AutomationProperties.Name="Done">
+                <TextBlock Text="DONE" FontSize="16" FontWeight="Bold" LetterSpacing="1.5" />
+            </Button>
+        </Grid>
+    </StackPanel>
+</UserControl>

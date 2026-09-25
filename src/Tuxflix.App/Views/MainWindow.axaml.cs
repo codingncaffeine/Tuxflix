@@ -71,6 +71,8 @@ public partial class MainWindow : Window
                 ExitPictureInPicture();
             }
         };
+
+        AttachTv(shell);
     }
 
     public bool IsPictureInPicture => _beforePip is not null;
@@ -311,7 +313,8 @@ public partial class MainWindow : Window
 
     private void RememberPlacement()
     {
-        if (_settings is null) return;
+        // Full screen for the TV interface is not a size to come back to.
+        if (_settings is null || IsTvShowing) return;
 
         // Closed while small: the next start opens as the window was before.
         if (_beforePip is { } before)
