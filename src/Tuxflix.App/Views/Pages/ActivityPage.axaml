@@ -1,0 +1,210 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.ActivityPage"
+             x:DataType="vm:ActivityPageViewModel">
+
+    <!-- Activity: what plays on the viewer's other devices and what the server is busy with, kept
+         current by the server's notifications; the history beside how much was watched. -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <Grid ColumnDefinitions="*,380" Margin="36,26,36,48">
+            <StackPanel Spacing="30">
+                <StackPanel Spacing="3">
+                    <TextBlock Classes="page-title" Text="ACTIVITY" />
+                    <TextBlock Classes="faint" FontSize="12.5" Text="What is playing, your history and how much you watch" />
+                </StackPanel>
+
+                <!-- ===== Playing on the viewer's other devices ===== -->
+                <StackPanel Spacing="14">
+                    <TextBlock Classes="shelf-title" Text="PLAYING ON YOUR OTHER DEVICES" />
+                    <TextBlock Text="Nothing is playing on your other devices." FontSize="13.5" Foreground="{DynamicResource Brush.Text.Secondary}"
+                               IsVisible="{Binding !Live.Playing.Count}" />
+                    <ItemsControl ItemsSource="{Binding Live.Playing}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:NowPlayingViewModel">
+                                <Button Classes="tile" Theme="{StaticResource TileButton}" Margin="0,0,18,18" Command="{Binding OpenCommand}"
+                                        ui:Tip.Text="{Binding DeviceLine}" AutomationProperties.Name="{Binding Heading}">
+                                    <Panel Width="344" Height="194">
+                                        <Border Name="Lift" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Panel}" />
+                                        <Border CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True">
+                                            <Panel>
+                                                <ui:RemoteImage Path="{Binding StillPath}" DecodeWidth="344" DecodeHeight="194" />
+                                                <Border Background="{DynamicResource Brush.Scrim.Card}" />
+                                                <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12" Background="#B3040712">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <PathIcon Data="{StaticResource Icon.MonitorPlay}" Width="12" Height="12" />
+                                                        <TextBlock Text="{Binding Device}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <StackPanel VerticalAlignment="Bottom" Margin="16,0,16,17" Spacing="3">
+                                                    <TextBlock Classes="label" Text="{Binding StateText}" Foreground="{DynamicResource Brush.Accent}" />
+                                                    <TextBlock Text="{Binding Heading}" FontSize="16" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="#D9EDF1FB" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding TimeText}" FontSize="11.5" Classes="faint" Margin="12,0,0,0" />
+                                                    </Grid>
+                                                </StackPanel>
+                                                <ProgressBar Theme="{StaticResource ThinProgress}" VerticalAlignment="Bottom" Value="{Binding Progress}" />
+                                            </Panel>
+                                        </Border>
+                                        <Border Name="Ring" CornerRadius="{StaticResource Radius.Card}" />
+                                    </Panel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- ===== What the server is busy with ===== -->
+                <StackPanel Spacing="12" IsVisible="{Binding Live.HasActivity}">
+                    <TextBlock Classes="shelf-title" Text="ON THE SERVER" />
+                    <ItemsControl ItemsSource="{Binding Live.Activities}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ServerActivityViewModel">
+                                <Border Margin="0,0,0,8" Padding="16,12" MaxWidth="760" HorizontalAlignment="Left" CornerRadius="8"
+                                        Background="{DynamicResource Brush.Fill.Subtle}" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1">
+                                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
+                                        <PathIcon Grid.RowSpan="2" Data="{StaticResource Icon.ArrowsClockwise}" Width="16" Height="16" Margin="0,0,14,0"
+                                                  Foreground="{DynamicResource Brush.Sky}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Line}" FontSize="14" FontWeight="SemiBold" />
+                                        <StackPanel Grid.Column="1" Grid.Row="1" Spacing="6" Margin="0,4,0,0">
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="12.5" Classes="faint" TextTrimming="CharacterEllipsis" />
+                                            <Border CornerRadius="2" ClipToBounds="True" Width="320" HorizontalAlignment="Left" IsVisible="{Binding HasProgress}">
+                                                <ProgressBar Theme="{StaticResource ThinProgress}" Value="{Binding Fraction}" Background="#26FFFFFF" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- ===== History ===== -->
+                <StackPanel Spacing="12">
+                    <TextBlock Classes="shelf-title" Text="YOUR HISTORY" />
+                    <TextBlock Text="Nothing watched yet." FontSize="13.5" Foreground="{DynamicResource Brush.Text.Secondary}" IsVisible="{Binding HistoryIsEmpty}" />
+                    <ItemsControl ItemsSource="{Binding History}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:HistoryRowViewModel">
+                                <Button Theme="{StaticResource RailRow}" Padding="10,8" Margin="0,0,0,2" Command="{Binding OpenCommand}"
+                                        AutomationProperties.Name="{Binding Heading}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <Border Width="112" Height="63" CornerRadius="4" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
+                                            <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="112" DecodeHeight="63" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="{Binding Heading}" FontSize="14.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Detail}" FontSize="12.5" Classes="faint" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding When}" FontSize="12.5" Classes="faint" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Theme="{StaticResource GhostButton}" Content="SHOW MORE" HorizontalAlignment="Left" Command="{Binding ShowMoreCommand}"
+                            IsVisible="{Binding CanShowMore}" ui:Tip.Text="The next fifty from your history" />
+                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingHistory}" Height="2" MinHeight="2" Width="240" HorizontalAlignment="Left"
+                                 Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+                    <TextBlock IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- ===== How much was watched: one series, so no legend; this week and this month in the accent ===== -->
+            <Border Grid.Column="1" Margin="32,62,0,0" VerticalAlignment="Top" Padding="22,20" CornerRadius="10"
+                    Background="#8C0F162E" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
+                    BoxShadow="{StaticResource Shadow.Raised}">
+                <StackPanel Spacing="22">
+                    <TextBlock Classes="shelf-title" Text="YOUR WATCHING" />
+                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding !HasStats}" Height="2" MinHeight="2"
+                                 Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+                    <UniformGrid Columns="3" IsVisible="{Binding HasStats}">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="THIS WEEK" />
+                            <TextBlock Text="{Binding ThisWeekText}" FontSize="22" FontWeight="Bold" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="THIS MONTH" />
+                            <TextBlock Text="{Binding ThisMonthText}" FontSize="22" FontWeight="Bold" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="SIX MONTHS" />
+                            <TextBlock Text="{Binding SixMonthsText}" FontSize="22" FontWeight="Bold" />
+                        </StackPanel>
+                    </UniformGrid>
+
+                    <StackPanel Spacing="10" IsVisible="{Binding HasStats}">
+                        <TextBlock Classes="label" Text="HOURS A WEEK" />
+                        <ItemsControl ItemsSource="{Binding Weeks}" AutomationProperties.Name="Hours watched a week, the last eight weeks">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:StatBarViewModel">
+                                    <StackPanel Spacing="5" ui:Tip.Text="{Binding Tip}" Background="Transparent" AutomationProperties.Name="{Binding Tip}">
+                                        <Panel Height="112">
+                                            <TextBlock Text="{Binding Value}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                       Margin="0,0,0,98" IsVisible="{Binding IsCurrent}" />
+                                            <Border Width="22" Height="{Binding Height}" VerticalAlignment="Bottom" CornerRadius="4,4,0,0"
+                                                    Background="{Binding Fill}" />
+                                        </Panel>
+                                        <TextBlock Text="{Binding Label}" FontSize="10.5" Classes="faint" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="10" IsVisible="{Binding HasStats}">
+                        <TextBlock Classes="label" Text="HOURS A MONTH" />
+                        <ItemsControl ItemsSource="{Binding Months}" AutomationProperties.Name="Hours watched a month, the last six months">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:StatBarViewModel">
+                                    <StackPanel Spacing="5" ui:Tip.Text="{Binding Tip}" Background="Transparent" AutomationProperties.Name="{Binding Tip}">
+                                        <Panel Height="112">
+                                            <TextBlock Text="{Binding Value}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                       Margin="0,0,0,98" IsVisible="{Binding IsCurrent}" />
+                                            <Border Width="30" Height="{Binding Height}" VerticalAlignment="Bottom" CornerRadius="4,4,0,0"
+                                                    Background="{Binding Fill}" />
+                                        </Panel>
+                                        <TextBlock Text="{Binding Label}" FontSize="10.5" Classes="faint" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8" IsVisible="{Binding HasTopShows}">
+                        <TextBlock Classes="label" Text="MOST WATCHED SERIES" />
+                        <ItemsControl ItemsSource="{Binding TopShows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TopShowViewModel">
+                                    <Button Theme="{StaticResource RailRow}" Padding="6" Margin="0,0,0,2" Command="{Binding OpenCommand}"
+                                            IsEnabled="{Binding CanOpen}" ui:Tip.Text="{Binding OpenTip}">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <Border Width="34" Height="51" CornerRadius="3" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
+                                                <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="34" DecodeHeight="51" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Detail}" FontSize="12" Classes="faint" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

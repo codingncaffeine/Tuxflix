@@ -39,6 +39,7 @@ public sealed partial class PlexServerClient
 
     public async Task<MediaContainer> GetAsync(string pathAndQuery, CancellationToken cancellation, int? start = null, int? size = null)
     {
+        var began = System.Diagnostics.Stopwatch.GetTimestamp();
         using var request = new HttpRequestMessage(HttpMethod.Get, Resolve(pathAndQuery));
         if (Token is not null) request.Headers.TryAddWithoutValidation("X-Plex-Token", Token);
         if (start is not null) request.Headers.TryAddWithoutValidation("X-Plex-Container-Start", start.Value.ToString(CultureInfo.InvariantCulture));
@@ -55,7 +56,9 @@ public sealed partial class PlexServerClient
         await using (stream.ConfigureAwait(false))
         {
             var envelope = await JsonSerializer.DeserializeAsync(stream, PlexJsonContext.Default.PlexEnvelope, cancellation).ConfigureAwait(false);
-            return envelope?.MediaContainer ?? new MediaContainer();
+            var container = envelope?.MediaContainer ?? new MediaContainer();
+            container.Stamp(began);
+            return container;
         }
     }
 

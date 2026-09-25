@@ -17,7 +17,18 @@
             </Panel>
             <StackPanel VerticalAlignment="Center" Spacing="6">
                 <TextBlock Classes="label" Text="{Binding Kicker}" Foreground="{DynamicResource Brush.Accent}" />
-                <TextBlock Text="{Binding Heading}" FontSize="32" FontWeight="Bold" TextTrimming="CharacterEllipsis" MaxWidth="760" />
+                <TextBlock Text="{Binding Heading}" FontSize="32" FontWeight="Bold" TextTrimming="CharacterEllipsis" MaxWidth="760" IsVisible="{Binding !IsRenaming}" />
+                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRenaming}">
+                    <TextBox Text="{Binding NewTitle}" FontSize="22" FontWeight="Bold" MinWidth="420" MaxWidth="700"
+                             ui:FocusWhen.On="{Binding IsRenaming}" AutomationProperties.Name="Playlist name">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding SaveRenameCommand}" />
+                            <KeyBinding Gesture="Escape" Command="{Binding CancelRenameCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <Button Theme="{StaticResource GhostButton}" Content="SAVE" Command="{Binding SaveRenameCommand}" ui:Tip.Text="Keep the new name" ui:Tip.Keys="Enter" />
+                    <Button Theme="{StaticResource GhostButton}" Content="CANCEL" Command="{Binding CancelRenameCommand}" ui:Tip.Text="Keep the old name" ui:Tip.Keys="Esc" />
+                </StackPanel>
                 <TextBlock Text="{Binding Meta}" Classes="faint" FontSize="13" />
                 <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
                     <Button Theme="{StaticResource PlayButton}" Command="{Binding PlayCommand}" ui:Tip.Text="Play the playlist">
@@ -33,46 +44,116 @@
                             <TextBlock Text="SHUFFLE" VerticalAlignment="Center" FontWeight="SemiBold" />
                         </StackPanel>
                     </Button>
+                    <Button Theme="{StaticResource IconButton}" Padding="8" VerticalAlignment="Center"
+                            ui:Tip.Text="Rename or delete the playlist" AutomationProperties.Name="Playlist menu">
+                        <PathIcon Data="{StaticResource Icon.DotsThree}" Width="22" Height="22" />
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem Header="Rename…" Command="{Binding StartRenameCommand}" />
+                                <MenuItem Header="Delete the playlist…" Command="{Binding AskDeleteCommand}" />
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
                 </StackPanel>
+                <Border IsVisible="{Binding IsConfirmingDelete}" Margin="0,8,0,0" Padding="16,10" CornerRadius="8" HorizontalAlignment="Left"
+                        Background="{DynamicResource Brush.Accent.Softer}" BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <PathIcon Data="{StaticResource Icon.Warning}" Width="16" Height="16" Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center" />
+                        <TextBlock Text="Delete this playlist? What is in it stays in your libraries." FontSize="13.5" VerticalAlignment="Center" />
+                        <Button Theme="{StaticResource GhostButton}" Content="DELETE" Command="{Binding DeleteCommand}" Foreground="{DynamicResource Brush.Danger}" />
+                        <Button Theme="{StaticResource GhostButton}" Content="KEEP IT" Command="{Binding CancelDeleteCommand}" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </StackPanel>
 
         <Panel Grid.Row="1">
             <!-- Its own scroller, so the list virtualises: a playlist can hold thousands -->
             <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding IsMusic}">
-                <ItemsControl Margin="24,0,36,40" MaxWidth="1100" HorizontalAlignment="Left" ItemsSource="{Binding Tracks}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:TrackRowViewModel"><views:TrackRow /></DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <!-- One column up to 1100 wide, from the left: the rows fill it, so their tools line up. -->
+                <Grid Margin="24,0,36,40">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="1100" /></Grid.ColumnDefinitions>
+                    <ItemsControl ItemsSource="{Binding Tracks}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TrackRowViewModel">
+                                <Grid ColumnDefinitions="*,Auto" Classes="hover-reveal">
+                                    <views:TrackRow />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" Margin="12,0,0,0" VerticalAlignment="Center" Classes="reveal"
+                                                    IsVisible="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).CanEditEntries}">
+                                            <Button Theme="{StaticResource IconButton}" Padding="7" CommandParameter="{Binding}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).MoveUpCommand}" ui:Tip.Text="Move it up">
+                                                <PathIcon Data="{StaticResource Icon.CaretUp.Bold}" Width="12" Height="12" />
+                                            </Button>
+                                            <Button Theme="{StaticResource IconButton}" Padding="7" CommandParameter="{Binding}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).MoveDownCommand}" ui:Tip.Text="Move it down">
+                                                <PathIcon Data="{StaticResource Icon.CaretDown.Bold}" Width="12" Height="12" />
+                                            </Button>
+                                            <Button Theme="{StaticResource IconButton}" Padding="7" CommandParameter="{Binding}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).RemoveCommand}" ui:Tip.Text="Take it out of the playlist">
+                                                <PathIcon Data="{StaticResource Icon.X.Bold}" Width="12" Height="12" />
+                                            </Button>
+                                        </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
             </ScrollViewer>
             <!-- Its own scroller, so the list virtualises: a playlist can hold thousands -->
             <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsMusic}">
-                <ItemsControl Margin="24,0,36,40" MaxWidth="1100" HorizontalAlignment="Left" ItemsSource="{Binding Videos}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:PlaylistVideoRowViewModel">
-                            <Button Theme="{StaticResource RailRow}" Padding="12,8" Margin="0,0,0,2" Command="{Binding OpenCommand}">
-                                <Grid ColumnDefinitions="40,Auto,*,Auto">
-                                    <TextBlock Text="{Binding Number}" FontSize="13.5" Classes="faint" VerticalAlignment="Center" />
-                                    <Border Grid.Column="1" Width="112" Height="63" CornerRadius="4" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
-                                        <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="112" DecodeHeight="63" />
-                                    </Border>
-                                    <StackPanel Grid.Column="2" Margin="16,0,8,0" VerticalAlignment="Center" Spacing="2">
-                                        <TextBlock Text="{Binding Heading}" FontSize="14.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Text="{Binding Detail}" FontSize="12.5" Classes="faint" TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
-                                    <TextBlock Grid.Column="3" Text="{Binding Runtime}" FontSize="13" Classes="faint" VerticalAlignment="Center" />
-                                </Grid>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <!-- One column up to 1100 wide, from the left: the rows fill it, so their tools line up. -->
+                <Grid Margin="24,0,36,40">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="1100" /></Grid.ColumnDefinitions>
+                    <ItemsControl ItemsSource="{Binding Videos}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PlaylistVideoRowViewModel">
+                                <Button Theme="{StaticResource RailRow}" Padding="12,8" Margin="0,0,0,2" Command="{Binding OpenCommand}">
+                                    <Button.ContextFlyout>
+                                        <MenuFlyout>
+                                            <MenuItem Header="Move to the top" CommandParameter="{Binding}" Command="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).MoveToTopCommand}" />
+                                            <MenuItem Header="Move up" CommandParameter="{Binding}" Command="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).MoveUpCommand}" />
+                                            <MenuItem Header="Move down" CommandParameter="{Binding}" Command="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).MoveDownCommand}" />
+                                            <Separator />
+                                            <MenuItem Header="Take out of the playlist" CommandParameter="{Binding}" Command="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).RemoveCommand}" />
+                                        </MenuFlyout>
+                                    </Button.ContextFlyout>
+                                    <Grid ColumnDefinitions="40,Auto,*,Auto,Auto" Classes="hover-reveal">
+                                        <TextBlock Text="{Binding Number}" FontSize="13.5" Classes="faint" VerticalAlignment="Center" />
+                                        <Border Grid.Column="1" Width="112" Height="63" CornerRadius="4" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
+                                            <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="112" DecodeHeight="63" />
+                                        </Border>
+                                        <StackPanel Grid.Column="2" Margin="16,0,8,0" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="{Binding Heading}" FontSize="14.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Detail}" FontSize="12.5" Classes="faint" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="3" Text="{Binding Runtime}" FontSize="13" Classes="faint" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2" Margin="12,0,0,0" VerticalAlignment="Center" Classes="reveal"
+                                                    IsVisible="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).CanEditEntries}">
+                                            <Button Theme="{StaticResource IconButton}" Padding="7" CommandParameter="{Binding}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).MoveUpCommand}" ui:Tip.Text="Move it up">
+                                                <PathIcon Data="{StaticResource Icon.CaretUp.Bold}" Width="12" Height="12" />
+                                            </Button>
+                                            <Button Theme="{StaticResource IconButton}" Padding="7" CommandParameter="{Binding}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).MoveDownCommand}" ui:Tip.Text="Move it down">
+                                                <PathIcon Data="{StaticResource Icon.CaretDown.Bold}" Width="12" Height="12" />
+                                            </Button>
+                                            <Button Theme="{StaticResource IconButton}" Padding="7" CommandParameter="{Binding}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:PlaylistPageViewModel)DataContext).RemoveCommand}" ui:Tip.Text="Take it out of the playlist">
+                                                <PathIcon Data="{StaticResource Icon.X.Bold}" Width="12" Height="12" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
             </ScrollViewer>
             <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingMore}" VerticalAlignment="Top"
                          Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />

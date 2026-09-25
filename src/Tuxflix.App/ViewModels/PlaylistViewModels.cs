@@ -66,7 +66,7 @@ public sealed partial class PlaylistPageViewModel(ShellViewModel shell, ServerSe
 
     public MetadataItem Playlist { get; } = playlist;
 
-    public string Heading => Playlist.Title;
+    public string Heading => Renamed ?? Playlist.Title;
 
     public string Kicker => (Playlist.Smart ? "SMART " : string.Empty) + (Playlist.PlaylistType == "audio" ? "MUSIC PLAYLIST" : "PLAYLIST");
 

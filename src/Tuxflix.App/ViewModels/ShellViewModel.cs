@@ -376,14 +376,7 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void ShowActivity()
     {
-        if (Router.Current?.Tab != TopTab.Activity)
-        {
-            Router.Navigate(new ComingSoonPageViewModel(
-                TopTab.Activity,
-                "Activity",
-                "What is playing on your servers, your watch history and your viewing statistics will live here.",
-                "Icon.Pulse"));
-        }
+        if (Router.Current?.Tab != TopTab.Activity && Session is { } session) Router.Navigate(new ActivityPageViewModel(this, session));
     }
 
     [RelayCommand]

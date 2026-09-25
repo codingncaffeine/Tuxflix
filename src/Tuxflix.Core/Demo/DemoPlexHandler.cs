@@ -85,11 +85,10 @@ public sealed partial class DemoPlexHandler(DemoCatalog catalog, IDemoArtRendere
             ["library", "sections", var section, var filter] => Json(new MediaContainer { Directory = [.. catalog.FilterValues(section, filter)] }),
             ["library", "collections", var key, "children"] => Json(new MediaContainer { Size = catalog.ChildrenOf(key).Count, Metadata = [.. catalog.ChildrenOf(key)] }),
             ["hubs", "search"] => Json(new MediaContainer { Hub = [.. catalog.Search(query["query"] ?? string.Empty, ParseInt(query["limit"], 10))] }),
-            ["playlists"] => Json(new MediaContainer { Size = 0, Metadata = [] }),
             ["hubs"] => Json(new MediaContainer { Size = catalog.HomeHubs().Count, Hub = [.. catalog.HomeHubs()] }),
             ["hubs", "continueWatching"] => Json(new MediaContainer { Hub = [catalog.HomeHubs()[0]] }),
-            ["library", "metadata", var key] => catalog.Find(key) is { } item
-                ? Json(new MediaContainer { Size = 1, Metadata = [item] })
+            ["library", "metadata", var key] => catalog.FindMany(key) is { Count: > 0 } items
+                ? Json(new MediaContainer { Size = items.Count, Metadata = [.. items] })
                 : NotFound(),
             ["library", "metadata", var key, "children"] => Json(new MediaContainer { Size = catalog.ChildrenOf(key).Count, Metadata = [.. catalog.ChildrenOf(key)] }),
             ["photo", ":", "transcode"] => Image(query["url"], ParseInt(query["width"]), ParseInt(query["height"])),

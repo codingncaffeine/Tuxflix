@@ -8,7 +8,7 @@
     <!-- Continue Watching: a wide card with the title over the art, how far along, and what is left;
          hover brings up a play glyph. -->
     <Button Classes="tile" Theme="{StaticResource TileButton}"
-            Command="{Binding OpenCommand}"
+            Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}"
             AutomationProperties.Name="{Binding AccessibleName}">
         <Panel Width="344" Height="194">
             <Border Name="Lift" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Panel}" />

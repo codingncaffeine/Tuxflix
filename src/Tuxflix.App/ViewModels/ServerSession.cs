@@ -36,10 +36,16 @@ public sealed class ServerSession : IDisposable
     /// <summary>Reached over the internet (a public address or Plex's relay) rather than the home network.</summary>
     public bool IsRemote { get; }
 
-    /// <summary>The signed-in account owns this server (the demo counts as the viewer's own).</summary>
+    /// <summary>
+    /// The signed-in account owns this server (the demo counts as the viewer's own): it sees
+    /// everyone's playbacks and history, its own as account 1, and may add subtitles found online.
+    /// </summary>
     public bool IsOwner { get; }
 
     public bool IsDemo => Client.IsDemo;
+
+    /// <summary>The demo library behind a demo session, whose changes its stand-in notifications report.</summary>
+    public DemoCatalog? Demo { get; private init; }
 
     public static ServerSession CreateDemo(PlexClientIdentity identity)
     {
@@ -54,6 +60,7 @@ public sealed class ServerSession : IDisposable
         {
             _discoverHttp = discover,
             Discover = new PlexDiscoverClient(discover, "demo", DemoDiscoverHandler.BaseUri),
+            Demo = catalog,
         };
     }
 

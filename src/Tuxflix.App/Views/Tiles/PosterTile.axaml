@@ -8,7 +8,7 @@
     <!-- The capsule: art only at rest; on hover it lifts, its shadow deepens, a hairline ring
          appears and the title rises out of a scrim. -->
     <Button Classes="tile" Theme="{StaticResource TileButton}"
-            Command="{Binding OpenCommand}"
+            Command="{Binding OpenCommand}" ui:ViewerMenu.For="{Binding}"
             AutomationProperties.Name="{Binding AccessibleName}">
         <Panel Width="164" Height="246">
             <Border Name="Lift" CornerRadius="{StaticResource Radius.Tile}" Background="{DynamicResource Brush.Panel}" />
