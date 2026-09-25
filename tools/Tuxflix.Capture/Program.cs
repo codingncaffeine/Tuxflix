@@ -58,6 +58,9 @@ AppBuilder.Configure<App>()
     .With(new FontManagerOptions { DefaultFamilyName = "fonts:Inter#Inter" })
     .SetupWithoutStarting();
 
+// "census": every page of the demo walked for icon-only controls without a tooltip (decision 18); fails on any.
+if (poses is ["census"]) return Census();
+
 var failures = 0;
 foreach (var pose in poses)
 {
@@ -358,6 +361,119 @@ void Capture(string pose)
     frame.Save(file, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
     Console.WriteLine($"{pose}: {file} ({frame.PixelSize.Width}x{frame.PixelSize.Height})");
     window.Close();
+}
+
+// The tooltip census: on each page of the demo, every button of our own views (not one inside a
+// control's template) that shows only an icon must say what it does. Prints each control that does
+// not, and how many were looked at, so a census that saw nothing cannot pass.
+int Census()
+{
+    var paths = AppPaths.Resolve(Path.Combine(output, ".profile-census"), Environment.GetEnvironmentVariable);
+    paths.EnsureCreated();
+    var settings = SettingsStore.Load(paths.SettingsFile);
+    var shell = new ShellViewModel(settings, paths) { Keyring = new ReadOnlySecretStore(new Keyring()), ReportsPlayback = false, Silent = true };
+    var window = new MainWindow(shell, settings) { Width = width, Height = height };
+    window.Show();
+    shell.Start(demo: true);
+    Settle(shell);
+
+    var demo = Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now);
+    var session = shell.Session ?? throw new InvalidOperationException("The demo did not open.");
+    var offenders = new List<string>();
+    var looked = 0;
+    var pages = 0;
+
+    void Look(string page)
+    {
+        Settle(shell);
+        pages++;
+        foreach (var button in window.GetVisualDescendants().OfType<Button>())
+        {
+            if (button.TemplatedParent is not null || !button.IsEffectivelyVisible) continue;
+            var words = button.GetVisualDescendants().OfType<TextBlock>().Any(t => t.IsEffectivelyVisible && !string.IsNullOrWhiteSpace(t.Text));
+            if (words) continue;
+            looked++;
+            if (!string.IsNullOrWhiteSpace(Tuxflix.App.Controls.Tip.GetText(button)) || ToolTip.GetTip(button) is not null) continue;
+            var within = button.GetVisualAncestors().OfType<StyledElement>().Select(a => a.Name).FirstOrDefault(n => !string.IsNullOrEmpty(n)) ?? "?";
+            var at = button.TranslatePoint(default, window) ?? default;
+            offenders.Add($"{page}: {button.GetType().Name}{(button.Name is { Length: > 0 } name ? "#" + name : string.Empty)} in {within} at {at.X:0},{at.Y:0} ({button.DataContext?.GetType().Name ?? "no data"})");
+        }
+    }
+
+    Look("home");
+    var movies = Result(session.Client.GetSectionsAsync(CancellationToken.None)).First(s => s.Type == "movie");
+    shell.OpenSection(movies);
+    Idle(shell);
+    Look("library");
+    if (shell.Router.Current is LibraryPageViewModel library)
+    {
+        Wait(library.ShowViewCommand.ExecuteAsync(LibraryView.Collections));
+        Idle(shell);
+        Look("library collections");
+    }
+
+    shell.Router.Navigate(new CollectionPageViewModel(shell, session, demo.CollectionsOf(Tuxflix.Core.Demo.DemoCatalog.MoviesSectionKey)[0]));
+    Look("collection");
+    shell.OpenItem(demo.Movies[2]);
+    Look("film");
+    shell.OpenItem(demo.Shows[0]);
+    Look("series");
+    if (demo.ChildrenOf(demo.Shows[0].RatingKey).FirstOrDefault() is { } season)
+    {
+        shell.OpenItem(season);
+        Look("season");
+    }
+
+    shell.SearchText = "the";
+    shell.SearchNowCommand.Execute(null);
+    Idle(shell);
+    Look("search");
+    var cast = demo.Movies.Select(m => Result(session.Client.GetMetadataAsync(m.RatingKey, CancellationToken.None))).First(m => m?.Role is { Count: > 0 })!.Role![0];
+    shell.OpenPerson(cast.TagText, cast.Thumb, cast.Id!.Value);
+    Idle(shell);
+    Look("person");
+    shell.ShowPlaylistsCommand.Execute(null);
+    Idle(shell);
+    Look("playlists");
+
+    // The player with its controls up (the pointer over the picture), then small.
+    shell.Play(demo.Movies[0], resume: false);
+    Settle(shell);
+    window.MouseMove(new Point(window.ClientSize.Width / 2, window.ClientSize.Height / 2));
+    Pump(TimeSpan.FromMilliseconds(300));
+    Look("player");
+    if (window.GetVisualDescendants().OfType<Tuxflix.App.Views.Pages.PlayerPage>().FirstOrDefault() is { } player)
+    {
+        player.TogglePictureInPicture();
+        Pump(TimeSpan.FromMilliseconds(300));
+        window.MouseMove(new Point(window.ClientSize.Width / 2, window.ClientSize.Height / 3));
+        Pump(TimeSpan.FromMilliseconds(300));
+        Look("picture in picture");
+        player.TogglePictureInPicture();
+        Pump(TimeSpan.FromMilliseconds(300));
+    }
+
+    shell.Router.Reset(new ServersPageViewModel(shell, [FakeServer("Den", true, null), FakeServer("Robin's Library", false, "Robin")], "Den did not answer at any of its addresses."));
+    Look("servers");
+    shell.Router.Reset(new StatusPageViewModel("Connecting to Den", "Finding the fastest way to reach it…"));
+    Look("status");
+    window.Close();
+
+    // Signed out: the welcome page.
+    var outPaths = AppPaths.Resolve(Path.Combine(output, ".profile-census-welcome"), Environment.GetEnvironmentVariable);
+    outPaths.EnsureCreated();
+    var outSettings = SettingsStore.Load(outPaths.SettingsFile);
+    var outShell = new ShellViewModel(outSettings, outPaths) { Keyring = new ReadOnlySecretStore(new Keyring()), ReportsPlayback = false };
+    window = new MainWindow(outShell, outSettings) { Width = width, Height = height };
+    window.Show();
+    outShell.Start(demo: false);
+    shell = outShell;
+    Look("welcome");
+    window.Close();
+
+    Console.WriteLine($"census: {looked} icon-only controls looked at on {pages} pages; {offenders.Count} without a tooltip");
+    foreach (var offender in offenders) Console.WriteLine("  " + offender);
+    return offenders.Count == 0 && looked > 0 ? 0 : 1;
 }
 
 // Waits for the current page to finish loading (a library's later pages too), then for its artwork.
