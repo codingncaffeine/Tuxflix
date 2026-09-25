@@ -15,10 +15,10 @@
                     <TextBlock Classes="faint" FontSize="12.5" Text="What is playing, your history and how much you watch" />
                 </StackPanel>
 
-                <!-- ===== Playing on the viewer's other devices ===== -->
+                <!-- ===== Playing on the viewer's devices, this one included ===== -->
                 <StackPanel Spacing="14">
-                    <TextBlock Classes="shelf-title" Text="PLAYING ON YOUR OTHER DEVICES" />
-                    <TextBlock Text="Nothing is playing on your other devices." FontSize="13.5" Foreground="{DynamicResource Brush.Text.Secondary}"
+                    <TextBlock Classes="shelf-title" Text="PLAYING ON YOUR DEVICES" />
+                    <TextBlock Text="Nothing is playing on your devices." FontSize="13.5" Foreground="{DynamicResource Brush.Text.Secondary}"
                                IsVisible="{Binding !Live.Playing.Count}" />
                     <ItemsControl ItemsSource="{Binding Live.Playing}">
                         <ItemsControl.ItemsPanel>

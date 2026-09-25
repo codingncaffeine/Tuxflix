@@ -8,7 +8,7 @@ using Tuxflix.Core.Plex;
 namespace Tuxflix.App.ViewModels;
 
 /// <summary>
-/// Activity: what plays on the viewer's other devices and what the server is busy with (both kept
+/// Activity: what plays on the viewer's devices, this one included, and what the server is busy with (both kept
 /// current by the server's notifications), the viewer's watch history, and how much they watched.
 /// Read only: nothing here changes anything on the server.
 /// </summary>

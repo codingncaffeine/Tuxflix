@@ -215,6 +215,9 @@ public sealed partial class DemoPlexHandler(DemoCatalog catalog, IDemoArtRendere
 
     private static HttpResponseMessage NotFound() => new(HttpStatusCode.NotFound);
 
+    private static string? Header(HttpRequestMessage request, string name) =>
+        request.Headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;
+
     private static int? HeaderInt(HttpRequestMessage request, string name) =>
         request.Headers.TryGetValues(name, out var values) && int.TryParse(values.FirstOrDefault(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
             ? value

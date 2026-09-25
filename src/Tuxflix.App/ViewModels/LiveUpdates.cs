@@ -70,7 +70,7 @@ public sealed partial class LiveUpdates(ShellViewModel shell) : ObservableObject
         : Playing.Count switch
         {
             0 => "Nothing playing",
-            1 => $"Playing on {Playing[0].Device}",
+            1 => $"Playing on {Playing[0].Where}",
             var n => string.Create(CultureInfo.CurrentCulture, $"{n} playing on your devices"),
         };
 
@@ -147,8 +147,9 @@ public sealed partial class LiveUpdates(ShellViewModel shell) : ObservableObject
 
         shown.Update(state);
 
-        // The viewer's own playback elsewhere moves the item's progress here too.
-        if (state.RatingKey is not { } key || state.ViewOffset is not > 0 || shell.Viewer is not { } viewer) return;
+        // The viewer's own playback elsewhere moves the item's progress here too; this device's
+        // own player keeps its progress itself.
+        if (shown.IsHere || state.RatingKey is not { } key || state.ViewOffset is not > 0 || shell.Viewer is not { } viewer) return;
         viewer.Noted(key);
         if (viewer.Find(key) is { Pending: 0 } item) item.ViewOffset = state.ViewOffset;
     }
@@ -245,7 +246,7 @@ public sealed partial class LiveUpdates(ShellViewModel shell) : ObservableObject
     }
 
     /// <summary>
-    /// Reads what plays now, keeping the viewer's own playbacks on devices other than this one.
+    /// Reads what plays now, keeping the viewer's own playbacks, on this device and the others.
     /// Reads take turns: a connection coming up, a stopped playback and a page can all ask at once,
     /// and two reads merging into the list together would list a playback twice.
     /// </summary>
@@ -278,12 +279,12 @@ public sealed partial class LiveUpdates(ShellViewModel shell) : ObservableObject
     private readonly SemaphoreSlim _reading = new(1, 1);
 
     /// <summary>
-    /// The viewer's own playback on another device. A server shows its owner everyone's playbacks,
-    /// the owner's under account 1; anybody else sees only their own.
+    /// The viewer's own playback, here or on another device, as a server's dashboard lists it. A
+    /// server shows its owner everyone's playbacks, the owner's under account 1; anybody else sees
+    /// only their own.
     /// </summary>
-    private bool IsMine(ServerSession session, MetadataItem playback) =>
-        playback.Player?.MachineIdentifier != shell.Identity.ClientIdentifier
-        && (!session.IsOwner || playback.User?.Id == "1");
+    private static bool IsMine(ServerSession session, MetadataItem playback) =>
+        !session.IsOwner || playback.User?.Id == "1";
 
     /// <summary>Says <paramref name="words"/> in the status bar for a few seconds.</summary>
     public void Say(string words)
@@ -377,7 +378,7 @@ public sealed partial class ServerActivityViewModel : ObservableObject
     }
 }
 
-/// <summary>A playback on another of the viewer's devices.</summary>
+/// <summary>A playback on one of the viewer's devices, this one included.</summary>
 public sealed partial class NowPlayingViewModel : ObservableObject
 {
     private readonly ShellViewModel _shell;
@@ -403,15 +404,25 @@ public sealed partial class NowPlayingViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsPaused), nameof(StateText))]
     public partial string State { get; private set; } = "playing";
 
+    /// <summary>The device, as its chip names it: "This computer" for this one.</summary>
     public string Device { get; private set; } = string.Empty;
 
     public string Product { get; private set; } = string.Empty;
 
+    /// <summary>The playback is this device's own.</summary>
+    public bool IsHere { get; private set; }
+
+    /// <summary>The device, as a sentence names it.</summary>
+    public string Where => IsHere ? "this computer" : Device;
+
     public string Heading => Item.Type == "episode" ? Item.GrandparentTitle ?? Item.Title : Item.Title;
 
-    public string Detail => Item.Type == "episode"
-        ? $"{Format.EpisodeCode(Item)}  ·  {Item.Title}"
-        : Item.Year?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+    public string Detail => Item.Type switch
+    {
+        "episode" => $"{Format.EpisodeCode(Item)}  ·  {Item.Title}",
+        "track" => string.Join("  ·  ", new[] { Item.OriginalTitle ?? Item.GrandparentTitle, Item.ParentTitle }.Where(t => !string.IsNullOrEmpty(t))),
+        _ => Item.Year?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+    };
 
     public string? StillPath => Artwork.Still(Item);
 
@@ -430,15 +441,21 @@ public sealed partial class NowPlayingViewModel : ObservableObject
 
     public string DeviceLine => string.IsNullOrEmpty(Product) ? Device : $"{Device}  ·  {Product}";
 
+    // Music playing here opens as it is playing; anything else as its own page.
     [CommunityToolkit.Mvvm.Input.RelayCommand]
-    private void Open() => _shell.OpenItem(Item);
+    private void Open()
+    {
+        if (IsHere && Item.Type == "track") _shell.ShowNowPlayingCommand.Execute(null);
+        else _shell.OpenItem(Item);
+    }
 
     internal void Update(MetadataItem playback)
     {
         Item = playback;
         ViewOffset = playback.ViewOffset ?? 0;
         State = playback.Player?.State ?? "playing";
-        Device = playback.Player?.Title ?? "Another device";
+        IsHere = playback.Player?.MachineIdentifier is { } machine && machine == _shell.Identity.ClientIdentifier;
+        Device = IsHere ? "This computer" : playback.Player?.Title ?? "Another device";
         Product = playback.Player?.Product ?? string.Empty;
         OnPropertyChanged(nameof(DeviceLine));
     }

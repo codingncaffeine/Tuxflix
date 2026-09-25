@@ -26,14 +26,18 @@ public sealed partial class DemoCatalog
     private readonly Lock _viewer = new();
     private readonly List<DemoPlaylist> _playlists = [];
     private readonly List<MetadataItem> _history = [];
+    private readonly Dictionary<string, ReportedPlayback> _reported = new(StringComparer.Ordinal);
     private long _nextPlaylistItemId = 5001;
     private int _nextPlaylistKey = 8001;
+    private int _nextSessionKey = 101;
 
     /// <summary>The viewer changed something: the records a server's timeline would announce.</summary>
     public event Action<IReadOnlyList<DemoChange>>? Changed;
 
     /// <summary>The clock the other device's playback runs on; tests stop it.</summary>
     public Func<DateTimeOffset> Clock { get; set; } = () => DateTimeOffset.Now;
+
+    private sealed record ReportedPlayback(string Client, string Device, string Product, string RatingKey, string State, long Offset, string SessionKey);
 
     private sealed class DemoPlaylist(string key, string title, string type)
     {
@@ -258,17 +262,48 @@ public sealed partial class DemoCatalog
 
     /// <summary>
     /// What plays on the server now: an episode on another of the viewer's devices, moving with
-    /// <see cref="Clock"/>, and a film on another account's device.
+    /// <see cref="Clock"/>, a film on another account's device, and whatever a client reported
+    /// playing (<see cref="Reported"/>).
     /// </summary>
     public IReadOnlyList<MetadataItem> Sessions()
     {
         var episode = ChildrenOf(ChildrenOf(Shows[2].RatingKey)[0].RatingKey)[5];
         var film = Movies[6];
-        return
+        List<MetadataItem> sessions =
         [
-            Playing(episode, "1", "Living Room", "Plex for Android (TV)", "Android", "demo-living-room", ViewerAccountId, "Demo Viewer", 0.4),
-            Playing(film, "2", "Robin's iPad", "Plex for iOS", "iPadOS", "demo-robins-ipad", OtherAccountId, "Robin", 0.7),
+            Playing(episode, "1", "Living Room", "Plex for Android (TV)", "Android", "demo-living-room", ViewerAccountId, "Demo Viewer", Moving(episode, 0.4), "playing"),
+            Playing(film, "2", "Robin's iPad", "Plex for iOS", "iPadOS", "demo-robins-ipad", OtherAccountId, "Robin", Moving(film, 0.7), "playing"),
         ];
+        lock (_viewer)
+        {
+            foreach (var playback in _reported.Values)
+            {
+                if (Find(playback.RatingKey) is not { } item) continue;
+                sessions.Add(Playing(item, playback.SessionKey, playback.Device, playback.Product, "Linux", playback.Client, ViewerAccountId, "Demo Viewer", playback.Offset, playback.State));
+            }
+        }
+
+        return sessions;
+    }
+
+    /// <summary>
+    /// A client's timeline report, taken as a server takes it: the client's playback is listed among
+    /// the sessions under its own identifier and name until it reports it stopped.
+    /// </summary>
+    public void Reported(string? client, string? device, string? product, string? ratingKey, string? state, long offset)
+    {
+        if (client is null || ratingKey is null || state is null) return;
+        lock (_viewer)
+        {
+            if (state == "stopped")
+            {
+                _reported.Remove(client);
+                return;
+            }
+
+            var sessionKey = _reported.TryGetValue(client, out var was) ? was.SessionKey : (_nextSessionKey++).ToString(CultureInfo.InvariantCulture);
+            _reported[client] = new ReportedPlayback(client, device ?? "Unnamed device", product ?? string.Empty, ratingKey, state, offset, sessionKey);
+        }
     }
 
     /// <summary>The other device's playback, as a <c>playing</c> notification reports it.</summary>
@@ -290,21 +325,28 @@ public sealed partial class DemoCatalog
         }
     }
 
-    private MetadataItem Playing(MetadataItem item, string sessionKey, string device, string product, string platform, string machine, long account, string name, double startsAt)
+    // Round and round the item from where it started, at the speed of the clock.
+    private long Moving(MetadataItem item, double startsAt)
     {
-        // Round and round the item from where it started, at the speed of the clock.
         var duration = item.Duration ?? 1;
         var played = (long)(Clock() - Now).TotalMilliseconds;
-        var offset = (((long)(duration * startsAt)) + played) % duration;
+        return (((long)(duration * startsAt)) + played) % duration;
+    }
+
+    private static MetadataItem Playing(MetadataItem item, string sessionKey, string device, string product, string platform, string machine, long account, string name, long offset, string state)
+    {
+        var duration = item.Duration ?? 1;
         return new MetadataItem
         {
             RatingKey = item.RatingKey,
             Key = item.Key,
             Type = item.Type,
             Title = item.Title,
+            OriginalTitle = item.OriginalTitle,
             Index = item.Index,
             ParentIndex = item.ParentIndex,
             ParentRatingKey = item.ParentRatingKey,
+            ParentTitle = item.ParentTitle,
             GrandparentRatingKey = item.GrandparentRatingKey,
             GrandparentTitle = item.GrandparentTitle,
             GrandparentThumb = item.GrandparentThumb,
@@ -316,7 +358,7 @@ public sealed partial class DemoCatalog
             ViewOffset = offset,
             LibrarySectionId = item.LibrarySectionId,
             SessionKey = sessionKey,
-            Player = new PlaybackPlayer { Title = device, Product = product, Platform = platform, MachineIdentifier = machine, State = "playing", Local = true },
+            Player = new PlaybackPlayer { Title = device, Product = product, Platform = platform, MachineIdentifier = machine, State = state, Local = true },
             User = new PlaybackUser { Id = account.ToString(CultureInfo.InvariantCulture), Title = name },
         };
     }

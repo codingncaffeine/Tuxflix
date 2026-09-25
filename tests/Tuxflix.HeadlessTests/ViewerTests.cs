@@ -329,6 +329,44 @@ public sealed class ViewerTests : IDisposable
     }
 
     [Fact]
+    public async Task MusicPlayingOnThisComputerIsListedWithTheOtherDevicesUntilItStops()
+    {
+        await Until(() => _news?.Started == true, "the notification source to start");
+        var track = Demo.Tracks[0];
+        var duration = track.Duration ?? 200_000;
+
+        // Reported as the player reports it to a server (the demo's own client sends no reports),
+        // the server lists it under this client's identifier.
+        using var http = _shell.Identity.CreateHttpClient(new Tuxflix.Core.Demo.DemoPlexHandler(Demo, art: null));
+        var player = new PlexServerClient(http, Tuxflix.Core.Demo.DemoPlexHandler.BaseUri, null, "Demo");
+        await player.ReportTimelineAsync(track.RatingKey, "playing", 30_000, duration, CancellationToken.None);
+        await _shell.Live.RefreshPlayingAsync();
+        var here = Assert.Single(_shell.Live.Playing, p => p.IsHere);
+        Assert.Equal("This computer", here.Device);
+        Assert.Equal("this computer", here.Where);
+        Assert.Equal(track.Title, here.Heading);
+        Assert.Equal($"{track.OriginalTitle ?? track.GrandparentTitle}  ·  {track.ParentTitle}", here.Detail);
+        Assert.Equal(30_000, here.ViewOffset);
+        var elsewhere = Assert.Single(_shell.Live.Playing, p => p is { IsHere: false, Device: "Living Room" });
+        Assert.Equal("2 playing on your devices", _shell.Live.Summary);
+
+        // Alone, the status line says where; opened, music playing here shows as it plays.
+        _shell.Live.Playing.Remove(elsewhere);
+        Assert.Equal("Playing on this computer", _shell.Live.Summary);
+        here.OpenCommand.Execute(null);
+        Assert.IsType<NowPlayingPageViewModel>(_shell.Router.Current);
+
+        // Paused, it says so; stopped, it goes, and the other device is left.
+        await player.ReportTimelineAsync(track.RatingKey, "paused", 31_000, duration, CancellationToken.None);
+        await _shell.Live.RefreshPlayingAsync();
+        Assert.True(Assert.Single(_shell.Live.Playing, p => p.IsHere).IsPaused);
+        await player.ReportTimelineAsync(track.RatingKey, "stopped", 31_000, duration, CancellationToken.None);
+        await _shell.Live.RefreshPlayingAsync();
+        Assert.DoesNotContain(_shell.Live.Playing, p => p.IsHere);
+        Assert.Equal("Playing on Living Room", _shell.Live.Summary);
+    }
+
+    [Fact]
     public async Task AScanShowsAsActivityAndItsEndRefreshesTheLibraryOnScreen()
     {
         await Until(() => _news?.Started == true, "the notification source to start");

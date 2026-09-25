@@ -21,7 +21,7 @@ public sealed partial class DemoPlexHandler
     private static readonly bool DownloadRoutes = Add((handler, segments, query, request) => segments switch
     {
         ["library", "parts", var id, _, _] when query["download"] == "1" => handler.Download(id, request),
-        [":", "timeline"] => handler.Note($"timeline {query["ratingKey"]} {query["state"]} {query["time"]}"),
+        [":", "timeline"] => handler.Timeline(query, request),
         _ => null,
     });
 
@@ -104,6 +104,15 @@ public sealed partial class DemoPlexHandler
     {
         Note(write);
         return answer();
+    }
+
+    // A timeline report is noted, and, as on a server, puts the client's playback among the sessions.
+    private HttpResponseMessage Timeline(System.Collections.Specialized.NameValueCollection query, HttpRequestMessage request)
+    {
+        var answer = Note($"timeline {query["ratingKey"]} {query["state"]} {query["time"]}");
+        var time = long.TryParse(query["time"], NumberStyles.Integer, CultureInfo.InvariantCulture, out var ms) ? ms : 0;
+        Catalog.Reported(Header(request, "X-Plex-Client-Identifier"), Header(request, "X-Plex-Device-Name"), Header(request, "X-Plex-Product"), query["ratingKey"], query["state"], time);
+        return answer;
     }
 
     private HttpResponseMessage Note(string write)
