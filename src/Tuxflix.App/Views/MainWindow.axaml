@@ -59,6 +59,7 @@
                         </StackPanel>
 
                         <TextBox Grid.Column="4" Name="SearchBox" Classes="search" Width="300"
+                                 Text="{Binding SearchText}" IsEnabled="{Binding IsConnected}"
                                  PlaceholderText="Search your libraries"
                                  AutomationProperties.Name="Search your libraries">
                             <TextBox.InnerLeftContent>

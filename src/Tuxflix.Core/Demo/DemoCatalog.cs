@@ -102,6 +102,7 @@ public sealed class DemoCatalog
         Now = now;
         Movies = BuildMovies();
         Shows = BuildShows();
+        Collections = BuildCollections();
     }
 
     public DateTimeOffset Now { get; }
@@ -110,7 +111,79 @@ public sealed class DemoCatalog
 
     public IReadOnlyList<MetadataItem> Shows { get; }
 
+    /// <summary>The movie library's collections.</summary>
+    public IReadOnlyList<MetadataItem> Collections { get; }
+
     public static DemoCatalog Create(DateTimeOffset now) => new(now);
+
+    /// <summary>A tag's id: the same wherever the tag appears, as a server's are.</summary>
+    public static long TagId(string kind, string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        var hash = 2166136261u;
+        foreach (var c in kind + ":" + name)
+        {
+            hash ^= c;
+            hash *= 16777619;
+        }
+
+        return (hash & 0x7FFFFFFF) + 1;
+    }
+
+    public IReadOnlyList<MetadataItem> SectionItems(string sectionKey) => sectionKey switch
+    {
+        MoviesSectionKey => Movies,
+        ShowsSectionKey => Shows,
+        _ => [],
+    };
+
+    public IReadOnlyList<MetadataItem> CollectionsOf(string sectionKey) => sectionKey == MoviesSectionKey ? Collections : [];
+
+    /// <summary>The values a filter takes in a section, as a server lists them.</summary>
+    public IReadOnlyList<LibraryDirectory> FilterValues(string sectionKey, string filter) => filter switch
+    {
+        "genre" => [.. SectionItems(sectionKey).SelectMany(i => i.Genre ?? []).GroupBy(g => g.Id).Select(g => g.First())
+            .OrderBy(g => g.TagText, StringComparer.Ordinal)
+            .Select(g => new LibraryDirectory { Key = g.Id?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, Title = g.TagText, Type = "genre" })],
+        "decade" => [.. SectionItems(sectionKey).Where(i => i.Year is not null).Select(i => i.Year!.Value / 10 * 10).Distinct().OrderDescending()
+            .Select(d => new LibraryDirectory { Key = d.ToString(CultureInfo.InvariantCulture), Title = $"{d}s" })],
+        "contentRating" => [.. SectionItems(sectionKey).Select(i => i.ContentRating).OfType<string>().Distinct().Order(StringComparer.Ordinal)
+            .Select(r => new LibraryDirectory { Key = r, Title = r })],
+        _ => [],
+    };
+
+    /// <summary>A search across both libraries, as <c>/hubs/search</c> answers it.</summary>
+    public IReadOnlyList<Hub> Search(string query, int limit)
+    {
+        bool Match(string text) => text.Contains(query, StringComparison.OrdinalIgnoreCase);
+        var movies = Movies.Where(m => Match(m.Title)).Take(limit).ToList();
+        var shows = Shows.Where(m => Match(m.Title)).Take(limit).ToList();
+        var episodes = Shows.SelectMany(show => ChildrenOf(show.RatingKey)).SelectMany(season => ChildrenOf(season.RatingKey))
+            .Where(e => Match(e.Title)).Take(limit).ToList();
+        var people = new[] { (Section: MoviesSectionKey, Title: "Movies", Items: Movies), (Section: ShowsSectionKey, Title: "TV Shows", Items: Shows) }
+            .SelectMany(library => library.Items.SelectMany(i => i.Role ?? []).Where(r => Match(r.TagText)).GroupBy(r => r.Id)
+                .Select(g => new TagEntry
+                {
+                    Id = g.Key,
+                    Tag = g.First().TagText,
+                    TagType = 6,
+                    Thumb = g.First().Thumb,
+                    Filter = $"actor={g.Key}",
+                    LibrarySectionId = int.Parse(library.Section, CultureInfo.InvariantCulture),
+                    LibrarySectionTitle = library.Title,
+                    Count = g.Count(),
+                }))
+            .Take(limit)
+            .ToList();
+
+        return
+        [
+            new() { Title = "Movies", Type = "movie", HubIdentifier = "movie", Size = movies.Count, Metadata = movies },
+            new() { Title = "Shows", Type = "show", HubIdentifier = "show", Size = shows.Count, Metadata = shows },
+            new() { Title = "Episodes", Type = "episode", HubIdentifier = "episode", Size = episodes.Count, Metadata = episodes },
+            new() { Title = "Actors", Type = "actor", HubIdentifier = "actor", Size = people.Count, Directory = people },
+        ];
+    }
 
     public IReadOnlyList<LibraryDirectory> Sections =>
     [
@@ -203,8 +276,8 @@ public sealed class DemoCatalog
                 ViewOffset = offset,
                 LibrarySectionId = 1,
                 LibrarySectionTitle = "Movies",
-                Genre = [new() { TagText = spec.G1 }, new() { TagText = spec.G2 }],
-                Director = [new() { TagText = spec.Director }],
+                Genre = [Genre(spec.G1), Genre(spec.G2)],
+                Director = [new() { Id = TagId("person", spec.Director), TagText = spec.Director }],
                 Image = Images(key, thumb, art, spec.Title, seed),
                 UltraBlurColors = Blur(seed),
                 Role = Cast(seed),
@@ -379,7 +452,7 @@ public sealed class DemoCatalog
                 UltraBlurColors = Blur(seed),
                 LibrarySectionId = 2,
                 LibrarySectionTitle = "TV Shows",
-                Genre = [new() { TagText = spec.G1 }, new() { TagText = spec.G2 }],
+                Genre = [Genre(spec.G1), Genre(spec.G2)],
                 Role = Cast(seed),
             };
 
@@ -391,6 +464,48 @@ public sealed class DemoCatalog
         return shows;
     }
 
+    private static Tag Genre(string name) => new() { Id = TagId("genre", name), TagText = name };
+
+    /// <summary>Three collections drawn from the films, with posters of their own.</summary>
+    private List<MetadataItem> BuildCollections()
+    {
+        var picks = new (string Title, string Summary, Func<MetadataItem, bool> Member)[]
+        {
+            ("Staff Picks", "The films everybody here keeps recommending.", m => m.AudienceRating >= 8.5),
+            ("Midnight Mysteries", "Lights off, doors locked, one more chapter.", m => m.Genre?.Any(g => g.TagText == "Mystery") == true),
+            ("Family Night", "Something everyone on the sofa will enjoy.", m => m.Genre?.Any(g => g.TagText is "Family" or "Animation") == true),
+        };
+
+        var collections = new List<MetadataItem>();
+        for (var i = 0; i < picks.Length; i++)
+        {
+            var members = Movies.Where(picks[i].Member).OrderBy(m => m.Year).ToList();
+            if (members.Count == 0) continue;
+            var key = (9001 + i).ToString(CultureInfo.InvariantCulture);
+            var thumb = $"/library/collections/{key}/thumb/1700000000";
+            _art[thumb] = (picks[i].Title, null, Seed(picks[i].Title));
+            var collection = new MetadataItem
+            {
+                RatingKey = key,
+                Key = $"/library/collections/{key}/children",
+                Type = "collection",
+                Subtype = "movie",
+                Title = picks[i].Title,
+                Summary = picks[i].Summary,
+                Thumb = thumb,
+                ChildCount = members.Count,
+                LibrarySectionId = 1,
+                LibrarySectionTitle = "Movies",
+                AddedAt = Now.AddDays(-30 - i).ToUnixTimeSeconds(),
+            };
+            _byKey[key] = collection;
+            _children[key] = members;
+            collections.Add(collection);
+        }
+
+        return collections;
+    }
+
     private List<Tag> Cast(int seed)
     {
         var cast = new List<Tag>();
@@ -399,7 +514,7 @@ public sealed class DemoCatalog
             var name = $"{FirstNames[(seed + r * 5) % FirstNames.Length]} {LastNames[(seed / 3 + r * 7) % LastNames.Length]}";
             var thumb = $"/demo/person/{Uri.EscapeDataString(name)}";
             _art[thumb] = (name, null, Seed(name));
-            cast.Add(new Tag { Id = r + 1, TagText = name, Role = CharacterNames[(seed + r * 3) % CharacterNames.Length], Thumb = thumb });
+            cast.Add(new Tag { Id = TagId("person", name), TagText = name, Role = CharacterNames[(seed + r * 3) % CharacterNames.Length], Thumb = thumb });
         }
 
         return cast;

@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.TrackRow"
+             x:DataType="vm:TrackRowViewModel">
+
+    <!-- A track to play from: its number (or a waveform while it plays), title, artist and length -->
+    <Button Theme="{StaticResource RailRow}" Padding="12,9" Margin="0,0,0,2" Classes.playing="{Binding IsPlaying}"
+            Command="{Binding PlayCommand}" ui:Tip.Text="{Binding PlayTip}">
+        <Button.ContextFlyout>
+            <MenuFlyout>
+                <MenuItem Header="Play from here" Command="{Binding PlayCommand}" />
+                <MenuItem Header="Play next" Command="{Binding PlayNextCommand}" />
+                <MenuItem Header="Add to the queue" Command="{Binding AddToQueueCommand}" />
+            </MenuFlyout>
+        </Button.ContextFlyout>
+        <Grid ColumnDefinitions="44,*,Auto" Classes="hover-reveal">
+            <Panel VerticalAlignment="Center">
+                <TextBlock Text="{Binding Number}" FontSize="13.5" Classes="faint" IsVisible="{Binding !IsPlaying}" />
+                <PathIcon Data="{StaticResource Icon.Waveform.Fill}" Width="16" Height="16" HorizontalAlignment="Left"
+                          Foreground="{DynamicResource Brush.Accent}" IsVisible="{Binding IsPlaying}" />
+            </Panel>
+            <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                <TextBlock Classes="track-title" Text="{Binding Title}" FontSize="14.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Guest}" IsVisible="{Binding HasGuest}" FontSize="12.5" Classes="faint" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <TextBlock Grid.Column="2" Text="{Binding DurationText}" FontSize="13" Classes="faint" VerticalAlignment="Center" Margin="16,0,4,0" />
+        </Grid>
+    </Button>
+</UserControl>

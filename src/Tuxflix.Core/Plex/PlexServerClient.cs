@@ -207,6 +207,60 @@ public sealed class PlexServerClient
     public async Task<IReadOnlyList<MetadataItem>> GetAllLeavesAsync(string ratingKey, CancellationToken cancellation) =>
         (await GetAsync($"/library/metadata/{Uri.EscapeDataString(ratingKey)}/allLeaves", cancellation).ConfigureAwait(false)).Metadata ?? [];
 
+    /// <summary>The orders a section can be listed in, as the server offers them.</summary>
+    public async Task<IReadOnlyList<LibraryDirectory>> GetSortsAsync(string sectionKey, CancellationToken cancellation) =>
+        (await GetAsync($"/library/sections/{Uri.EscapeDataString(sectionKey)}/sorts", cancellation).ConfigureAwait(false)).Directory ?? [];
+
+    /// <summary>The ways a section can be filtered, as the server offers them.</summary>
+    public async Task<IReadOnlyList<LibraryDirectory>> GetFiltersAsync(string sectionKey, CancellationToken cancellation) =>
+        (await GetAsync($"/library/sections/{Uri.EscapeDataString(sectionKey)}/filters", cancellation).ConfigureAwait(false)).Directory ?? [];
+
+    /// <summary>The values a filter takes in a section: every genre, every decade.</summary>
+    public async Task<IReadOnlyList<LibraryDirectory>> GetFilterValuesAsync(string sectionKey, string filter, CancellationToken cancellation) =>
+        (await GetAsync($"/library/sections/{Uri.EscapeDataString(sectionKey)}/{Uri.EscapeDataString(filter)}", cancellation).ConfigureAwait(false)).Directory ?? [];
+
+    /// <summary>
+    /// One page of a section, sorted and filtered. <paramref name="query"/> is the listing's own
+    /// query, already escaped (<c>sort=addedAt:desc&amp;genre=3962</c>); the rest is trimmed to
+    /// what a grid shows.
+    /// </summary>
+    public Task<MediaContainer> BrowseAsync(string sectionKey, string query, int start, int size, CancellationToken cancellation) =>
+        GetAsync(
+            $"/library/sections/{Uri.EscapeDataString(sectionKey)}/all?{query}&excludeElements=Genre,Country,Director,Writer,Role,Media&excludeFields=summary,tagline",
+            cancellation,
+            start,
+            size);
+
+    public async Task<IReadOnlyList<MetadataItem>> GetCollectionsAsync(string sectionKey, CancellationToken cancellation) =>
+        (await GetAsync($"/library/sections/{Uri.EscapeDataString(sectionKey)}/collections", cancellation).ConfigureAwait(false)).Metadata ?? [];
+
+    /// <summary>The members of a collection, in the collection's own order.</summary>
+    public async Task<IReadOnlyList<MetadataItem>> GetCollectionItemsAsync(string ratingKey, CancellationToken cancellation) =>
+        (await GetAsync($"/library/collections/{Uri.EscapeDataString(ratingKey)}/children", cancellation).ConfigureAwait(false)).Metadata ?? [];
+
+    /// <summary>Searches every library at once: hubs of films, shows, episodes, music, and of people.</summary>
+    public async Task<IReadOnlyList<Hub>> SearchAsync(string query, int limit, CancellationToken cancellation)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(query);
+        var path = string.Create(CultureInfo.InvariantCulture, $"/hubs/search?query={Uri.EscapeDataString(query)}&limit={limit}&includeCollections=1");
+        return (await GetAsync(path, cancellation).ConfigureAwait(false)).Hub ?? [];
+    }
+
+    /// <summary>The viewer's playlists, of every kind.</summary>
+    public async Task<IReadOnlyList<MetadataItem>> GetPlaylistsAsync(CancellationToken cancellation) =>
+        (await GetAsync("/playlists", cancellation).ConfigureAwait(false)).Metadata ?? [];
+
+    /// <summary>One page of a playlist's items, in its order.</summary>
+    public Task<MediaContainer> GetPlaylistItemsAsync(string ratingKey, int start, int size, CancellationToken cancellation) =>
+        GetAsync($"/playlists/{Uri.EscapeDataString(ratingKey)}/items", cancellation, start, size);
+
+    /// <summary>What carries a tag in one library: a person's films as an actor (<c>actor</c>) or a director (<c>director</c>), newest first.</summary>
+    public async Task<IReadOnlyList<MetadataItem>> GetTaggedAsync(string sectionKey, string filter, long tagId, CancellationToken cancellation)
+    {
+        var path = string.Create(CultureInfo.InvariantCulture, $"/library/sections/{Uri.EscapeDataString(sectionKey)}/all?{Uri.EscapeDataString(filter)}={tagId}&sort=year:desc");
+        return (await GetAsync(path, cancellation).ConfigureAwait(false)).Metadata ?? [];
+    }
+
     private Uri Resolve(string pathAndQuery) => new(BaseUri, pathAndQuery);
 
     // The path only: a query string can carry things that do not belong in a message.

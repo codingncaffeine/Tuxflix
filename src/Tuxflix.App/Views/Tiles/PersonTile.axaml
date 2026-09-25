@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Tiles.PersonTile"
+             x:DataType="vm:PersonTileViewModel">
+
+    <!-- A round portrait that lifts like every tile; the initials show until a photo arrives -->
+    <Button Classes="tile" Theme="{StaticResource TileButton}" Command="{Binding OpenCommand}"
+            AutomationProperties.Name="{Binding Name}" ui:Tip.Text="{Binding Name}">
+        <StackPanel Width="128" Spacing="9">
+            <Panel Width="116" Height="116">
+                <Border Name="Lift" CornerRadius="58" Background="{DynamicResource Brush.Panel}" />
+                <TextBlock Text="{Binding Initials}" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{DynamicResource Brush.Text.Disabled}" />
+                <Border CornerRadius="58" ClipToBounds="True">
+                    <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="116" DecodeHeight="116" />
+                </Border>
+                <Border Name="Ring" CornerRadius="58" />
+            </Panel>
+            <StackPanel Spacing="1">
+                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Caption}" FontSize="11.5" TextAlignment="Center" Classes="faint" />
+            </StackPanel>
+        </StackPanel>
+    </Button>
+</UserControl>

@@ -1,0 +1,117 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:views="using:Tuxflix.App.Views"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.LibraryPage"
+             x:DataType="vm:LibraryPageViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- The library's name and size, its views, and how it is sorted and filtered -->
+        <Grid Margin="36,26,30,10" ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+            <StackPanel VerticalAlignment="Center" Spacing="3">
+                <TextBlock Classes="page-title" Text="{Binding Heading}" />
+                <TextBlock Classes="faint" FontSize="12.5" Text="{Binding CountText}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="30,0,0,0" VerticalAlignment="Center" IsVisible="{Binding HasViews}">
+                <Button Theme="{StaticResource NavTab}" Content="{Binding TitlesLabel}" Classes.selected="{Binding ShowsTitles}"
+                        Command="{Binding ShowViewCommand}" CommandParameter="{x:Static vm:LibraryView.Titles}"
+                        ui:Tip.Text="Every title in this library" />
+                <Button Theme="{StaticResource NavTab}" Content="ALBUMS" Classes.selected="{Binding ShowsAlbums}" IsVisible="{Binding IsMusic}"
+                        Command="{Binding ShowViewCommand}" CommandParameter="{x:Static vm:LibraryView.Albums}"
+                        ui:Tip.Text="Every album in this library" />
+                <Button Theme="{StaticResource NavTab}" Content="COLLECTIONS" Classes.selected="{Binding ShowsCollections}" IsVisible="{Binding HasCollections}"
+                        Command="{Binding ShowViewCommand}" CommandParameter="{x:Static vm:LibraryView.Collections}"
+                        ui:Tip.Text="The collections in this library" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" IsVisible="{Binding HasSorts}">
+                <Button Name="SortButton" Theme="{StaticResource IconButton}" Padding="10,6" Click="OnSortClick"
+                        ui:Tip.Text="Choose the order">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <TextBlock Classes="label" Text="SORT" VerticalAlignment="Center" />
+                        <TextBlock Classes="label" Text="{Binding SortLabel}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.Text.Primary}" />
+                        <PathIcon Data="{StaticResource Icon.CaretDown.Bold}" Width="8" Height="8" />
+                    </StackPanel>
+                </Button>
+                <Button Theme="{StaticResource IconButton}" Padding="7" Command="{Binding ToggleDirectionCommand}"
+                        ui:Tip.Text="{Binding DirectionTip}">
+                    <PathIcon Data="{StaticResource Icon.SortAscending}" Width="16" Height="16" RenderTransformOrigin="50%,50%">
+                        <PathIcon.RenderTransform>
+                            <ScaleTransform ScaleY="{Binding Descending, Converter={x:Static views:Flip.Converter}}" />
+                        </PathIcon.RenderTransform>
+                    </PathIcon>
+                </Button>
+            </StackPanel>
+
+            <Button Grid.Column="3" Name="FilterButton" Theme="{StaticResource IconButton}" Padding="10,6" Margin="8,0,0,0"
+                    VerticalAlignment="Center" Click="OnFilterClick" IsVisible="{Binding HasFilters}"
+                    ui:Tip.Text="Filter what is listed">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <PathIcon Data="{StaticResource Icon.FunnelSimple}" Width="14" Height="14" />
+                    <TextBlock Classes="label" Text="FILTER" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- The filters in force, each a chip that takes itself off -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="36,0,36,12" IsVisible="{Binding HasActiveFilters}">
+            <ItemsControl ItemsSource="{Binding ActiveFilters}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ActiveFilterViewModel">
+                        <Button Theme="{StaticResource GhostButton}" Padding="12,5,9,5" Margin="0,0,8,6" CornerRadius="14"
+                                Command="{Binding RemoveCommand}" ui:Tip.Text="{Binding RemoveTip}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <PathIcon Data="{StaticResource Icon.X.Bold}" Width="9" Height="9" />
+                            </StackPanel>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Grid.Column="1" Theme="{StaticResource IconButton}" Padding="10,5" VerticalAlignment="Top"
+                    Command="{Binding ClearFiltersCommand}" ui:Tip.Text="Take every filter off">
+                <TextBlock Classes="label" Text="CLEAR ALL" />
+            </Button>
+        </Grid>
+
+        <Panel Grid.Row="2">
+            <views:RowsGrid />
+
+            <!-- A letter for each initial the titles start with -->
+            <ScrollViewer HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0" MaxHeight="{Binding $parent[Panel].Bounds.Height}"
+                          IsVisible="{Binding ShowsLetters}" VerticalScrollBarVisibility="Hidden">
+                <ItemsControl ItemsSource="{Binding Letters}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LetterViewModel">
+                            <Button Theme="{StaticResource IconButton}" Padding="0" Width="20" Height="18"
+                                    HorizontalContentAlignment="Center" Command="{Binding JumpCommand}" ui:Tip.Text="{Binding Tip}">
+                                <TextBlock Text="{Binding Letter}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingMore}" VerticalAlignment="Top"
+                         Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+
+            <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                <PathIcon Data="{StaticResource Icon.FunnelSimple}" Width="34" Height="34" Foreground="{DynamicResource Brush.Text.Disabled}" />
+                <TextBlock Text="{Binding EmptyText}" FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <StackPanel IsVisible="{Binding HasError}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="420">
+                <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="40" Height="40" Foreground="{DynamicResource Brush.Accent}" />
+                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" TextAlignment="Center" FontSize="14"
+                           Foreground="{DynamicResource Brush.Text.Secondary}" />
+            </StackPanel>
+        </Panel>
+    </Grid>
+</UserControl>

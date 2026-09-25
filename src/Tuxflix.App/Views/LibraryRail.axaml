@@ -20,12 +20,16 @@
                         <TextBlock Text="LIBRARY HOME" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-                <Button Grid.Column="1" Theme="{StaticResource RailHomeButton}" Padding="12,0" Margin="8,0,0,0"
-                        HorizontalContentAlignment="Center"
-                        Command="{Binding Shell.ShowDownloadsCommand}"
-                        ui:Tip.Text="Downloads">
-                    <PathIcon Data="{StaticResource Icon.DownloadSimple}" Width="16" Height="16" />
-                </Button>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="8,0,0,0">
+                    <Button Theme="{StaticResource RailHomeButton}" Padding="12,0" HorizontalContentAlignment="Center"
+                            Command="{Binding Shell.ShowPlaylistsCommand}" ui:Tip.Text="Playlists">
+                        <PathIcon Data="{StaticResource Icon.Playlist}" Width="16" Height="16" />
+                    </Button>
+                    <Button Theme="{StaticResource RailHomeButton}" Padding="12,0" HorizontalContentAlignment="Center"
+                            Command="{Binding Shell.ShowDownloadsCommand}" ui:Tip.Text="Downloads">
+                        <PathIcon Data="{StaticResource Icon.DownloadSimple}" Width="16" Height="16" />
+                    </Button>
+                </StackPanel>
             </Grid>
 
             <!-- Which titles are listed -->
@@ -65,17 +69,23 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.DataTemplates>
                         <DataTemplate DataType="vm:RailSectionRow">
-                            <Button Theme="{StaticResource RailRow}" Margin="0,8,0,2" Padding="8,5"
-                                    Command="{Binding ToggleCommand}" ui:Tip.Text="{Binding TipText}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <PathIcon Classes="caret" Classes.collapsed="{Binding !IsExpanded}"
-                                              Data="{StaticResource Icon.CaretDown.Bold}" Width="9" Height="9"
-                                              Foreground="{DynamicResource Brush.Text.Tertiary}" />
-                                    <PathIcon Data="{Binding Icon}" Width="13" Height="13" Foreground="{DynamicResource Brush.Text.Tertiary}" />
-                                    <TextBlock Classes="rail-header" Text="{Binding Title}" />
-                                    <TextBlock Classes="rail-header" Text="{Binding CountText}" Foreground="{DynamicResource Brush.Text.Disabled}" />
-                                </StackPanel>
-                            </Button>
+                            <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,2" Classes="hover-reveal">
+                                <Button Theme="{StaticResource RailRow}" Padding="8,5"
+                                        Command="{Binding ToggleCommand}" ui:Tip.Text="{Binding TipText}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Classes="caret" Classes.collapsed="{Binding !IsExpanded}"
+                                                  Data="{StaticResource Icon.CaretDown.Bold}" Width="9" Height="9"
+                                                  Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                                        <PathIcon Data="{Binding Icon}" Width="13" Height="13" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                                        <TextBlock Classes="rail-header" Text="{Binding Title}" />
+                                        <TextBlock Classes="rail-header" Text="{Binding CountText}" Foreground="{DynamicResource Brush.Text.Disabled}" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="1" Classes="reveal" Theme="{StaticResource IconButton}" Padding="6" Margin="4,0,2,0"
+                                        Command="{Binding OpenCommand}" ui:Tip.Text="{Binding OpenTip}">
+                                    <PathIcon Data="{StaticResource Icon.SquaresFour}" Width="13" Height="13" />
+                                </Button>
+                            </Grid>
                         </DataTemplate>
                         <DataTemplate DataType="vm:RailItemRow">
                             <Button Theme="{StaticResource RailRow}" Height="36"

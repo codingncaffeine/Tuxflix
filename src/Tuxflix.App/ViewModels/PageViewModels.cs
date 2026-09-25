@@ -18,6 +18,8 @@ public sealed class HomePageViewModel(ShellViewModel shell, ServerSession sessio
 
     public bool IsEmpty => !IsLoading && Shelves.Count == 0 && !HasError;
 
+    protected override IEnumerable<string> LoadingDependents => [nameof(IsEmpty)];
+
     protected override async Task LoadAsync(CancellationToken cancellation)
     {
         var hubs = await Task.Run(() => session.Client.GetHomeHubsAsync(cancellation), cancellation);
@@ -204,7 +206,7 @@ public sealed partial class ItemPageViewModel(ShellViewModel shell, ServerSessio
 
     public bool HasStudio => !string.IsNullOrEmpty(Item.Studio);
 
-    public IReadOnlyList<CastMemberViewModel> Cast => Item.Role?.Take(12).Select(r => new CastMemberViewModel(r.TagText, r.Role, r.Thumb)).ToList() ?? [];
+    public IReadOnlyList<CastMemberViewModel> Cast => Item.Role?.Take(12).Select(r => new CastMemberViewModel(shell, r.TagText, r.Role, r.Thumb, r.Id)).ToList() ?? [];
 
     public bool HasCast => Cast.Count > 0;
 
@@ -310,7 +312,25 @@ public sealed partial class EpisodeRowViewModel(ShellViewModel shell, MetadataIt
     private void Open() => shell.OpenItem(Episode);
 }
 
-public sealed record CastMemberViewModel(string Name, string? Role, string? ThumbPath);
+/// <summary>A cast member on an item page; opening one lists everything they are in.</summary>
+public sealed partial class CastMemberViewModel(ShellViewModel shell, string name, string? role, string? thumbPath, long? id)
+{
+    public string Name { get; } = name;
+
+    public string? Role { get; } = role;
+
+    public string? ThumbPath { get; } = thumbPath;
+
+    public bool CanOpen => id is not null;
+
+    public string OpenTip => $"Everything {Name} is in";
+
+    [RelayCommand]
+    private void Open()
+    {
+        if (id is { } tag) shell.OpenPerson(Name, ThumbPath, tag);
+    }
+}
 
 /// <summary>First run with no server: sign in, or look around the demo library.</summary>
 public sealed partial class WelcomePageViewModel(ShellViewModel shell) : PageViewModel

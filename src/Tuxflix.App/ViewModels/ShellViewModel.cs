@@ -380,10 +380,67 @@ public sealed partial class ShellViewModel : ObservableObject
 
             // A track opens as its album, where it can be played in its place.
             "track" when item.ParentRatingKey is { } album => new AlbumPageViewModel(this, session, new MetadataItem { RatingKey = album, Type = "album", Title = item.ParentTitle ?? string.Empty }),
+            "collection" => new CollectionPageViewModel(this, session, item),
+            "playlist" => new PlaylistPageViewModel(this, session, item),
             _ => new ItemPageViewModel(this, session, item),
         };
         Router.Navigate(page);
         Rail.Highlight(item);
+    }
+
+    /// <summary>A library as a grid of its titles.</summary>
+    public void OpenSection(LibraryDirectory section)
+    {
+        ArgumentNullException.ThrowIfNull(section);
+        if (Session is not { } session) return;
+        if (Router.Current is LibraryPageViewModel open && open.Section.Key == section.Key) return;
+        Router.Navigate(new LibraryPageViewModel(this, session, section));
+        Rail.ClearHighlight();
+    }
+
+    /// <summary>Everything one person is in.</summary>
+    public void OpenPerson(string name, string? thumb, long tagId)
+    {
+        if (Session is not { } session) return;
+        Router.Navigate(new PersonPageViewModel(this, session, name, thumb, tagId));
+    }
+
+    [RelayCommand]
+    private void ShowPlaylists()
+    {
+        if (Session is { } session && Router.Current is not PlaylistsPageViewModel) Router.Navigate(new PlaylistsPageViewModel(this, session));
+    }
+
+    /// <summary>What the title bar's search box holds; a pause in typing searches.</summary>
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
+
+    private Avalonia.Threading.DispatcherTimer? _searchPause;
+
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchPause?.Stop();
+        _searchPause ??= new Avalonia.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(250), Avalonia.Threading.DispatcherPriority.Normal, (_, _) => SearchNow());
+        _searchPause.Start();
+    }
+
+    /// <summary>Searches for what the box holds now: Enter, or a pause in typing.</summary>
+    [RelayCommand]
+    private void SearchNow()
+    {
+        _searchPause?.Stop();
+        if (Session is not { } session) return;
+        var query = SearchText.Trim();
+        if (Router.Current is SearchPageViewModel page)
+        {
+            _ = page.SearchAsync(query);
+            return;
+        }
+
+        if (query.Length == 0) return;
+        page = new SearchPageViewModel(this, session);
+        Router.Navigate(page);
+        _ = page.SearchAsync(query);
     }
 
     /// <summary>Plays a film or an episode, from where it was left when <paramref name="resume"/>.</summary>

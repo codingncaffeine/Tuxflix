@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:views="using:Tuxflix.App.Views"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.PlaylistPage"
+             x:DataType="vm:PlaylistPageViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+        <StackPanel Orientation="Horizontal" Spacing="26" Margin="36,28,36,18">
+            <Panel Width="176" Height="176">
+                <Border CornerRadius="{StaticResource Radius.Tile}" Background="{DynamicResource Brush.Panel}" BoxShadow="{StaticResource Shadow.Tile}" />
+                <PathIcon Data="{StaticResource Icon.Playlist}" Width="44" Height="44" Foreground="{DynamicResource Brush.Text.Disabled}" />
+                <Border CornerRadius="{StaticResource Radius.Tile}" ClipToBounds="True">
+                    <ui:RemoteImage Path="{Binding CoverPath}" DecodeWidth="176" DecodeHeight="176" />
+                </Border>
+            </Panel>
+            <StackPanel VerticalAlignment="Center" Spacing="6">
+                <TextBlock Classes="label" Text="{Binding Kicker}" Foreground="{DynamicResource Brush.Accent}" />
+                <TextBlock Text="{Binding Heading}" FontSize="32" FontWeight="Bold" TextTrimming="CharacterEllipsis" MaxWidth="760" />
+                <TextBlock Text="{Binding Meta}" Classes="faint" FontSize="13" />
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                    <Button Theme="{StaticResource PlayButton}" Command="{Binding PlayCommand}" ui:Tip.Text="Play the playlist">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" Foreground="White" />
+                            <TextBlock Text="PLAY" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Theme="{StaticResource GhostButton}" Padding="18,10" Command="{Binding ShuffleCommand}" IsVisible="{Binding IsMusic}"
+                            ui:Tip.Text="Play the playlist in a random order">
+                        <StackPanel Orientation="Horizontal" Spacing="9">
+                            <PathIcon Data="{StaticResource Icon.Shuffle}" Width="15" Height="15" />
+                            <TextBlock Text="SHUFFLE" VerticalAlignment="Center" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+
+        <Panel Grid.Row="1">
+            <!-- Its own scroller, so the list virtualises: a playlist can hold thousands -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding IsMusic}">
+                <ItemsControl Margin="24,0,36,40" MaxWidth="1100" HorizontalAlignment="Left" ItemsSource="{Binding Tracks}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TrackRowViewModel"><views:TrackRow /></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <!-- Its own scroller, so the list virtualises: a playlist can hold thousands -->
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsMusic}">
+                <ItemsControl Margin="24,0,36,40" MaxWidth="1100" HorizontalAlignment="Left" ItemsSource="{Binding Videos}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PlaylistVideoRowViewModel">
+                            <Button Theme="{StaticResource RailRow}" Padding="12,8" Margin="0,0,0,2" Command="{Binding OpenCommand}">
+                                <Grid ColumnDefinitions="40,Auto,*,Auto">
+                                    <TextBlock Text="{Binding Number}" FontSize="13.5" Classes="faint" VerticalAlignment="Center" />
+                                    <Border Grid.Column="1" Width="112" Height="63" CornerRadius="4" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
+                                        <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="112" DecodeHeight="63" />
+                                    </Border>
+                                    <StackPanel Grid.Column="2" Margin="16,0,8,0" VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock Text="{Binding Heading}" FontSize="14.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Detail}" FontSize="12.5" Classes="faint" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="3" Text="{Binding Runtime}" FontSize="13" Classes="faint" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingMore}" VerticalAlignment="Top"
+                         Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+            <TextBlock IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+        </Panel>
+    </Grid>
+</UserControl>

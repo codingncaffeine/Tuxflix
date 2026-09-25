@@ -61,7 +61,14 @@ public sealed class DemoPlexHandler(DemoCatalog catalog, IDemoArtRenderer? art) 
         {
             [] or ["identity"] => Json(new MediaContainer { FriendlyName = "Demo Library", MachineIdentifier = DemoCatalog.MachineIdentifier, Version = "1.43.0" }),
             ["library", "sections"] => Json(new MediaContainer { Size = catalog.Sections.Count, Directory = [.. catalog.Sections] }),
-            ["library", "sections", var section, "all"] => SectionItems(section, query["sort"], start, size),
+            ["library", "sections", var section, "all"] => SectionItems(section, query, start, size),
+            ["library", "sections", _, "sorts"] => Json(new MediaContainer { Directory = [.. Sorts] }),
+            ["library", "sections", var section, "filters"] => Json(new MediaContainer { Directory = [.. Filters(section)] }),
+            ["library", "sections", var section, "collections"] => Json(new MediaContainer { Size = catalog.CollectionsOf(section).Count, Metadata = [.. catalog.CollectionsOf(section)] }),
+            ["library", "sections", var section, var filter] => Json(new MediaContainer { Directory = [.. catalog.FilterValues(section, filter)] }),
+            ["library", "collections", var key, "children"] => Json(new MediaContainer { Size = catalog.ChildrenOf(key).Count, Metadata = [.. catalog.ChildrenOf(key)] }),
+            ["hubs", "search"] => Json(new MediaContainer { Hub = [.. catalog.Search(query["query"] ?? string.Empty, ParseInt(query["limit"], 10))] }),
+            ["playlists"] => Json(new MediaContainer { Size = 0, Metadata = [] }),
             ["hubs"] => Json(new MediaContainer { Size = catalog.HomeHubs().Count, Hub = [.. catalog.HomeHubs()] }),
             ["hubs", "continueWatching"] => Json(new MediaContainer { Hub = [catalog.HomeHubs()[0]] }),
             ["library", "metadata", var key] => catalog.Find(key) is { } item
@@ -78,28 +85,56 @@ public sealed class DemoPlexHandler(DemoCatalog catalog, IDemoArtRenderer? art) 
         return response;
     }
 
-    private HttpResponseMessage SectionItems(string section, string? sort, int? start, int? size)
-    {
-        IEnumerable<MetadataItem> items = section switch
-        {
-            DemoCatalog.MoviesSectionKey => catalog.Movies,
-            DemoCatalog.ShowsSectionKey => catalog.Shows,
-            _ => [],
-        };
+    private static readonly LibraryDirectory[] Sorts =
+    [
+        new() { Key = "titleSort", Title = "Title", DefaultDirection = "asc", DescKey = "titleSort:desc" },
+        new() { Key = "year", Title = "Year", DefaultDirection = "desc", DescKey = "year:desc" },
+        new() { Key = "addedAt", Title = "Date Added", DefaultDirection = "desc", DescKey = "addedAt:desc" },
+        new() { Key = "audienceRating", Title = "Audience Rating", DefaultDirection = "desc", DescKey = "audienceRating:desc" },
+        new() { Key = "lastViewedAt", Title = "Date Viewed", DefaultDirection = "desc", DescKey = "lastViewedAt:desc" },
+    ];
 
-        items = (sort ?? "titleSort") switch
+    private static IEnumerable<LibraryDirectory> Filters(string section)
+    {
+        var path = $"/library/sections/{section}";
+        yield return new() { Filter = "genre", FilterType = "string", Key = path + "/genre", Title = "Genre", Type = "filter" };
+        yield return new() { Filter = "decade", FilterType = "integer", Key = path + "/decade", Title = "Decade", Type = "filter" };
+        yield return new() { Filter = "contentRating", FilterType = "string", Key = path + "/contentRating", Title = "Content Rating", Type = "filter" };
+        yield return new() { Filter = "unwatched", FilterType = "boolean", Key = path + "/unwatched", Title = "Unwatched", Type = "filter" };
+        yield return new() { Filter = "inProgress", FilterType = "boolean", Key = path + "/inProgress", Title = "In Progress", Type = "filter" };
+    }
+
+    /// <summary>A section listing with the server's sort and filter parameters, as far as the demo has the data.</summary>
+    private HttpResponseMessage SectionItems(string section, System.Collections.Specialized.NameValueCollection query, int? start, int? size)
+    {
+        IEnumerable<MetadataItem> items = catalog.SectionItems(section);
+        if (query["genre"] is { } genre) items = items.Where(i => i.Genre?.Any(g => Same(g.Id, genre)) == true);
+        if (query["decade"] is { } decade) items = items.Where(i => i.Year is { } year && (year / 10 * 10).ToString(CultureInfo.InvariantCulture) == decade);
+        if (query["contentRating"] is { } rating) items = items.Where(i => i.ContentRating == rating);
+        if (query["unwatched"] == "1") items = items.Where(i => !i.IsWatched && i.Progress is null);
+        if (query["inProgress"] == "1") items = items.Where(i => i.Progress is > 0 and < 1 || (i.ViewedLeafCount is > 0 && !i.IsWatched));
+        if (query["actor"] is { } actor) items = items.Where(i => i.Role?.Any(r => Same(r.Id, actor)) == true);
+        if (query["director"] is { } director) items = items.Where(i => i.Director?.Any(d => Same(d.Id, director)) == true);
+
+        var sort = (query["sort"] ?? "titleSort").Split(':');
+        var descending = sort.Length > 1 && sort[1] == "desc";
+        Func<MetadataItem, IComparable?> key = sort[0] switch
         {
-            "addedAt:desc" => items.OrderByDescending(i => i.AddedAt),
-            "year:desc" => items.OrderByDescending(i => i.Year).ThenBy(i => i.TitleSort, StringComparer.OrdinalIgnoreCase),
-            "rating:desc" => items.OrderByDescending(i => i.Rating),
-            "lastViewedAt:desc" => items.OrderByDescending(i => i.LastViewedAt ?? 0),
-            _ => items.OrderBy(i => i.TitleSort ?? i.Title, StringComparer.OrdinalIgnoreCase),
+            "year" or "originallyAvailableAt" => i => i.Year,
+            "addedAt" => i => i.AddedAt,
+            "audienceRating" or "rating" => i => i.AudienceRating,
+            "lastViewedAt" => i => i.LastViewedAt ?? 0,
+            "duration" => i => i.Duration,
+            _ => i => (i.TitleSort ?? i.Title).ToUpperInvariant(),
         };
+        items = descending ? items.OrderByDescending(key).ThenBy(i => i.TitleSort, StringComparer.OrdinalIgnoreCase) : items.OrderBy(key).ThenBy(i => i.TitleSort, StringComparer.OrdinalIgnoreCase);
 
         var all = items.ToList();
         var offset = Math.Clamp(start ?? 0, 0, all.Count);
         var page = all.Skip(offset).Take(size ?? all.Count).ToList();
         return Json(new MediaContainer { Size = page.Count, TotalSize = all.Count, Offset = offset, Metadata = page });
+
+        static bool Same(long? id, string value) => id?.ToString(CultureInfo.InvariantCulture) == value;
     }
 
     private HttpResponseMessage Image(string? path, int width, int height)
@@ -134,6 +169,6 @@ public sealed class DemoPlexHandler(DemoCatalog catalog, IDemoArtRenderer? art) 
             ? value
             : null;
 
-    private static int ParseInt(string? text) =>
-        int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : 320;
+    private static int ParseInt(string? text, int fallback = 320) =>
+        int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : fallback;
 }

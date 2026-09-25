@@ -128,7 +128,9 @@ public sealed partial class AlbumTileViewModel(ShellViewModel shell, MetadataIte
     private void Open() => shell.OpenItem(Album);
 
     [RelayCommand]
-    private Task PlayAsync() => shell.Music is { } music ? music.PlayAlbumAsync(Album) : Task.CompletedTask;
+    private Task PlayAsync() => shell.Music is not { } music ? Task.CompletedTask
+        : Album.Type == "artist" ? music.PlayArtistAsync(Album, shuffle: false)
+        : music.PlayAlbumAsync(Album);
 }
 
 /// <summary>An album: its cover large, then every track, by disc.</summary>

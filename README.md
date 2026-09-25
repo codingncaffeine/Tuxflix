@@ -11,11 +11,13 @@ library: a rail of every title, shelves of artwork, and a page for each film and
 
 In early development. Tuxflix signs in with Plex, opens your server, and plays films and episodes
 straight from it, inside the window: hardware decoding, resume where you left off, progress kept
-on the server, and the audio and subtitles the server chose for you. Music plays too: artists,
+on the server, and the audio and subtitles the server chose for you. Every library opens as a grid you can sort
+and filter the ways your server offers, with collections, playlists, a page for each actor and
+director, and a search across everything from the title bar. Music plays too: artists,
 albums and a gapless, loudness-levelled queue, and a compact player that wears classic Winamp skins
 (`.wsz`), with its equalizer, balance, playlist and spectrum analyser working, at any size from the
-original to double (drag its bottom right corner). Transcoding, library
-grids, filters and search are still to come. A built-in demo library of invented titles, with artwork
+original to double (drag its bottom right corner). Transcoding and the
+rest of the plan are still to come. A built-in demo library of invented titles, with artwork
 drawn in code, shows the interface without a server.
 
 ## Building

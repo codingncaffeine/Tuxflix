@@ -40,6 +40,14 @@ public abstract partial class PageViewModel : ObservableObject
 
     partial void OnErrorMessageChanged(string? value) => OnPropertyChanged(nameof(HasError));
 
+    /// <summary>Properties worked out from <see cref="IsLoading"/> (an empty state, say), told again when it changes.</summary>
+    protected virtual IEnumerable<string> LoadingDependents => [];
+
+    partial void OnIsLoadingChanged(bool value)
+    {
+        foreach (var name in LoadingDependents) OnPropertyChanged(name);
+    }
+
     public async Task ActivateAsync()
     {
         _loading?.Cancel();

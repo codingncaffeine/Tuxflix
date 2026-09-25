@@ -49,7 +49,7 @@ internal static class PlayerProbe
             }
 
             var item = (shell.Router.Current as HomePageViewModel)?.Shelves
-                .SelectMany(s => s.Tiles).Select(t => t.Item).FirstOrDefault(i => i.Type is "movie" or "episode");
+                .SelectMany(s => s.Tiles.OfType<MediaTileViewModel>()).Select(t => t.Item).FirstOrDefault(i => i.Type is "movie" or "episode");
             if (item is null || shell.Session is not { } session)
             {
                 Log.Error($"Probe: no film or episode on the home page; the page says \"{shell.Router.Current?.Title}\".");

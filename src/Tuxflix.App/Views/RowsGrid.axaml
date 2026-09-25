@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:views="using:Tuxflix.App.Views"
+             x:Class="Tuxflix.App.Views.RowsGrid"
+             x:DataType="vm:IGridPage">
+
+    <!-- The grid: rows of tiles in a virtualising panel, so only the rows on screen exist. -->
+    <ScrollViewer Name="Scroller" HorizontalScrollBarVisibility="Disabled">
+        <views:TileRows Name="Items" ItemsSource="{Binding Rows}" Margin="36,6,36,40">
+            <views:TileRows.ItemsPanel>
+                <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+            </views:TileRows.ItemsPanel>
+        </views:TileRows>
+    </ScrollViewer>
+</UserControl>

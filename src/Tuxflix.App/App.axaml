@@ -31,10 +31,19 @@
         <DataTemplate DataType="vm:ArtistPageViewModel"><pages:ArtistPage /></DataTemplate>
         <DataTemplate DataType="vm:AlbumPageViewModel"><pages:AlbumPage /></DataTemplate>
         <DataTemplate DataType="vm:NowPlayingPageViewModel"><pages:NowPlayingPage /></DataTemplate>
+        <DataTemplate DataType="vm:LibraryPageViewModel"><pages:LibraryPage /></DataTemplate>
+        <DataTemplate DataType="vm:SearchPageViewModel"><pages:SearchPage /></DataTemplate>
+        <DataTemplate DataType="vm:PersonPageViewModel"><pages:PersonPage /></DataTemplate>
+        <DataTemplate DataType="vm:CollectionPageViewModel"><pages:CollectionPage /></DataTemplate>
+        <DataTemplate DataType="vm:PlaylistsPageViewModel"><pages:PlaylistsPage /></DataTemplate>
+        <DataTemplate DataType="vm:PlaylistPageViewModel"><pages:PlaylistPage /></DataTemplate>
 
         <!-- Artwork tiles -->
         <DataTemplate DataType="vm:PosterTileViewModel"><tiles:PosterTile /></DataTemplate>
         <DataTemplate DataType="vm:LandscapeTileViewModel"><tiles:LandscapeTile /></DataTemplate>
+        <DataTemplate DataType="vm:AlbumTileViewModel"><tiles:AlbumTile /></DataTemplate>
+        <DataTemplate DataType="vm:PersonTileViewModel"><tiles:PersonTile /></DataTemplate>
+        <DataTemplate DataType="vm:PlaylistTileViewModel"><tiles:PlaylistTile /></DataTemplate>
 
         <!-- A tooltip's text, with its shortcut drawn as keycaps -->
         <DataTemplate DataType="ui:TipContent">

@@ -210,11 +210,52 @@ void Capture(string pose)
         return;
     }
 
+    if (pose is "library" or "library-filter" or "collections" or "search" or "person" or "playlists")
+    {
+        var session = shell.Session ?? throw new InvalidOperationException("No server is open.");
+        var sections = Result(session.Client.GetSectionsAsync(CancellationToken.None));
+        var wanted = Environment.GetEnvironmentVariable("CAPTURE_SECTION");
+        var movies = sections.FirstOrDefault(s => wanted is { Length: > 0 } && s.Title.Contains(wanted, StringComparison.OrdinalIgnoreCase))
+                     ?? sections.First(s => s.Type == "movie");
+        switch (pose)
+        {
+            case "library" or "library-filter" or "collections":
+                shell.OpenSection(movies);
+                Idle(shell);
+                var library = (LibraryPageViewModel)shell.Router.Current!;
+                if (pose == "library-filter")
+                {
+                    var genre = library.Filters.First(f => f.Filter == "genre");
+                    Wait(genre.Values[Math.Min(1, genre.Values.Count - 1)].ChooseCommand.ExecuteAsync(null));
+                    if (library.Filters.FirstOrDefault(f => f.Filter == "unwatched") is { } unwatched) Wait(unwatched.ToggleCommand.ExecuteAsync(null));
+                }
+
+                if (pose == "collections") Wait(library.ShowViewCommand.ExecuteAsync(LibraryView.Collections));
+                break;
+            case "search":
+                shell.SearchText = Environment.GetEnvironmentVariable("CAPTURE_QUERY") ?? "the";
+                shell.SearchNowCommand.Execute(null);
+                break;
+            case "person":
+                var first = Result(session.Client.BrowseAsync(movies.Key, "sort=titleSort", 0, 12, CancellationToken.None)).Metadata!
+                    .Select(m => Result(session.Client.GetMetadataAsync(m.RatingKey, CancellationToken.None)))
+                    .First(m => m?.Role is { Count: > 0 })!;
+                var person = first.Role![0];
+                shell.OpenPerson(person.TagText, person.Thumb, person.Id!.Value);
+                break;
+            case "playlists":
+                shell.ShowPlaylistsCommand.Execute(null);
+                break;
+        }
+
+        Idle(shell);
+    }
+
     if (pose == "player")
     {
         // The overlay over a black picture: there is no OpenGL on the headless platform.
         var item = shell.Router.Current is HomePageViewModel home
-            ? home.Shelves.SelectMany(s => s.Tiles).First().Item
+            ? home.Shelves.SelectMany(s => s.Tiles.OfType<MediaTileViewModel>()).First().Item
             : throw new InvalidOperationException("No home page to pick from.");
         shell.Play(item, resume: true);
         Settle(shell);
@@ -278,6 +319,21 @@ void Capture(string pose)
     frame.Save(file, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
     Console.WriteLine($"{pose}: {file} ({frame.PixelSize.Width}x{frame.PixelSize.Height})");
     window.Close();
+}
+
+// Waits for the current page to finish loading (a library's later pages too), then for its artwork.
+void Idle(ShellViewModel shell)
+{
+    var clock = Stopwatch.StartNew();
+    while (clock.Elapsed < TimeSpan.FromSeconds(60))
+    {
+        Pump(TimeSpan.FromMilliseconds(100));
+        var page = shell.Router.Current;
+        var busy = page?.IsLoading == true || page is LibraryPageViewModel { IsLoadingMore: true } || page is SearchPageViewModel { IsSearching: true };
+        if (!busy) break;
+    }
+
+    Settle(shell);
 }
 
 // Runs the dispatcher and the render clock until the page and its artwork have landed.
@@ -355,7 +411,7 @@ static void StreamCheck(ShellViewModel shell)
 {
     var session = shell.Session ?? throw new InvalidOperationException("No server is open.");
     var home = shell.Router.Current as HomePageViewModel ?? throw new InvalidOperationException("No home page.");
-    var item = home.Shelves.SelectMany(s => s.Tiles).Select(t => t.Item).First(i => i.Type is "movie" or "episode");
+    var item = home.Shelves.SelectMany(s => s.Tiles.OfType<MediaTileViewModel>()).Select(t => t.Item).First(i => i.Type is "movie" or "episode");
     var full = session.Client.GetMetadataAsync(item.RatingKey, CancellationToken.None).GetAwaiter().GetResult() ?? item;
     var part = full.Media?.FirstOrDefault()?.Part?.FirstOrDefault()?.Key ?? throw new InvalidOperationException("No part to play.");
     var headers = string.Join(",", session.Client.MediaHeaders(shell.Identity).Select(h => $"{h.Name}: {h.Value}"));

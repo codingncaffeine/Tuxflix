@@ -94,6 +94,53 @@ public sealed class LibraryDirectory
 
     [JsonPropertyName("hidden")]
     public int? Hidden { get; init; }
+
+    /// <summary>A sort: the key that sorts it the other way (<c>titleSort:desc</c>).</summary>
+    [JsonPropertyName("descKey")]
+    public string? DescKey { get; init; }
+
+    /// <summary>A sort: which way it runs first, <c>asc</c> or <c>desc</c>.</summary>
+    [JsonPropertyName("defaultDirection")]
+    public string? DefaultDirection { get; init; }
+
+    /// <summary>A filter: the query parameter it sets (<c>genre</c>, <c>unwatched</c>).</summary>
+    [JsonPropertyName("filter")]
+    public string? Filter { get; init; }
+
+    /// <summary>A filter: <c>boolean</c>, <c>string</c> or <c>integer</c>.</summary>
+    [JsonPropertyName("filterType")]
+    public string? FilterType { get; init; }
+}
+
+/// <summary>A tag a search or a listing returns: a person, a genre, a place.</summary>
+public sealed class TagEntry
+{
+    [JsonPropertyName("id")]
+    public long? Id { get; init; }
+
+    [JsonPropertyName("tag")]
+    public string Tag { get; init; } = string.Empty;
+
+    /// <summary>What kind of tag: 1 genre, 4 director, 6 actor, and more.</summary>
+    [JsonPropertyName("tagType")]
+    public int? TagType { get; init; }
+
+    [JsonPropertyName("thumb")]
+    public string? Thumb { get; init; }
+
+    /// <summary>The query that lists what carries it in its library: <c>actor=5090</c>.</summary>
+    [JsonPropertyName("filter")]
+    public string? Filter { get; init; }
+
+    [JsonPropertyName("librarySectionID")]
+    public int? LibrarySectionId { get; init; }
+
+    [JsonPropertyName("librarySectionTitle")]
+    public string? LibrarySectionTitle { get; init; }
+
+    /// <summary>How many items in its library carry it.</summary>
+    [JsonPropertyName("count")]
+    public int? Count { get; init; }
 }
 
 public sealed class Hub
@@ -130,6 +177,10 @@ public sealed class Hub
 
     [JsonPropertyName("Metadata")]
     public List<MetadataItem>? Metadata { get; init; }
+
+    /// <summary>Tags rather than items: the people, genres and places of a search.</summary>
+    [JsonPropertyName("Directory")]
+    public List<TagEntry>? Directory { get; init; }
 }
 
 /// <summary>A movie, show, season, episode, or any other library item.</summary>
@@ -286,6 +337,22 @@ public sealed class MetadataItem
 
     [JsonPropertyName("UltraBlurColors")]
     public UltraBlurColors? UltraBlurColors { get; init; }
+
+    /// <summary>A collection's kind of member (<c>movie</c>, <c>show</c>) or a playlist's.</summary>
+    [JsonPropertyName("subtype")]
+    public string? Subtype { get; init; }
+
+    /// <summary>A playlist: <c>video</c>, <c>audio</c> or <c>photo</c>.</summary>
+    [JsonPropertyName("playlistType")]
+    public string? PlaylistType { get; init; }
+
+    /// <summary>A playlist or collection the server fills by its own rules.</summary>
+    [JsonPropertyName("smart")]
+    public bool Smart { get; init; }
+
+    /// <summary>A playlist's mosaic of its members' artwork.</summary>
+    [JsonPropertyName("composite")]
+    public string? Composite { get; init; }
 
     [JsonIgnore]
     public bool IsWatched => LeafCount is > 0

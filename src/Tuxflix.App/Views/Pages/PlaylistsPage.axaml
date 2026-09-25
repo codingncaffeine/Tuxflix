@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:views="using:Tuxflix.App.Views"
+             x:Class="Tuxflix.App.Views.Pages.PlaylistsPage"
+             x:DataType="vm:PlaylistsPageViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+        <StackPanel Margin="36,26,36,14" Spacing="3">
+            <TextBlock Classes="page-title" Text="PLAYLISTS" />
+            <TextBlock Classes="faint" FontSize="12.5" Text="{Binding CountText}" />
+        </StackPanel>
+
+        <Panel Grid.Row="1">
+            <views:RowsGrid />
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top"
+                         Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+            <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                <PathIcon Data="{StaticResource Icon.Playlist}" Width="34" Height="34" Foreground="{DynamicResource Brush.Text.Disabled}" />
+                <TextBlock Text="No playlists yet." FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" />
+            </StackPanel>
+            <TextBlock IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+        </Panel>
+    </Grid>
+</UserControl>

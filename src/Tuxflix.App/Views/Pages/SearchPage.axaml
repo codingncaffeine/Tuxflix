@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:views="using:Tuxflix.App.Views"
+             x:Class="Tuxflix.App.Views.Pages.SearchPage"
+             x:DataType="vm:SearchPageViewModel">
+
+    <Panel>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,26,0,40" Spacing="18">
+                <TextBlock Classes="page-title" Text="{Binding Heading}" Margin="36,0,36,2" TextTrimming="CharacterEllipsis" />
+                <ItemsControl ItemsSource="{Binding Shelves}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Spacing="18" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShelfViewModel">
+                            <views:ShelfView />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel IsVisible="{Binding HasTracks}" Margin="36,0,36,0" Spacing="10" MaxWidth="980" HorizontalAlignment="Left">
+                    <TextBlock Classes="shelf-title" Text="TRACKS" />
+                    <ItemsControl ItemsSource="{Binding Tracks}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TrackRowViewModel"><views:TrackRow /></DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSearching}" VerticalAlignment="Top"
+                     Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+
+        <StackPanel IsVisible="{Binding IsNothing}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+            <PathIcon Data="{StaticResource Icon.MagnifyingGlass}" Width="34" Height="34" Foreground="{DynamicResource Brush.Text.Disabled}" />
+            <TextBlock Text="Nothing in your libraries matches that." FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding IsBlank}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+            <PathIcon Data="{StaticResource Icon.MagnifyingGlass}" Width="34" Height="34" Foreground="{DynamicResource Brush.Text.Disabled}" />
+            <TextBlock Text="Type in the search box to look through every library." FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding HasError}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="420">
+            <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="40" Height="40" Foreground="{DynamicResource Brush.Accent}" />
+            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" TextAlignment="Center" FontSize="14"
+                       Foreground="{DynamicResource Brush.Text.Secondary}" />
+        </StackPanel>
+    </Panel>
+</UserControl>

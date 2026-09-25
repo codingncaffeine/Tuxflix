@@ -57,6 +57,7 @@ public sealed class PosterTileViewModel(ShellViewModel shell, MetadataItem item)
         "show" when Item.ChildCount is { } seasons => seasons == 1 ? "1 season" : $"{seasons} seasons",
         "season" => Item.ParentTitle ?? string.Empty,
         "episode" => Format.EpisodeCode(Item),
+        "collection" => Item.ChildCount is { } count ? (count == 1 ? "1 title" : $"{count} titles") : "Collection",
         _ => Item.Year?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
     };
 }
@@ -73,12 +74,12 @@ public sealed class LandscapeTileViewModel(ShellViewModel shell, MetadataItem it
     public string RemainingText => Format.Remaining(Item);
 }
 
-/// <summary>A titled row of tiles.</summary>
-public sealed class ShelfViewModel(string title, IEnumerable<MediaTileViewModel> tiles)
+/// <summary>A titled row of tiles, of any kind.</summary>
+public sealed class ShelfViewModel(string title, IEnumerable<object> tiles)
 {
     public string Title { get; } = title.ToUpperInvariant();
 
-    public ObservableCollection<MediaTileViewModel> Tiles { get; } = new(tiles);
+    public ObservableCollection<object> Tiles { get; } = new(tiles);
 
     public string CountText => Tiles.Count.ToString(CultureInfo.InvariantCulture);
 

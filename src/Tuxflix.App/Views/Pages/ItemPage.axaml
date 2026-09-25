@@ -193,7 +193,9 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:CastMemberViewModel">
-                                    <StackPanel Width="108" Margin="0,0,14,18" Spacing="8">
+                                    <Button Theme="{StaticResource IconButton}" Padding="4,6" Margin="0,0,10,12" Command="{Binding OpenCommand}"
+                                            IsEnabled="{Binding CanOpen}" ui:Tip.Text="{Binding OpenTip}">
+                                    <StackPanel Width="108" Spacing="8">
                                         <Panel Width="84" Height="84">
                                             <Border CornerRadius="42" Background="{DynamicResource Brush.Panel}" BoxShadow="{StaticResource Shadow.Tile}" />
                                             <Border CornerRadius="42" ClipToBounds="True">
@@ -206,6 +208,7 @@
                                             <TextBlock Text="{Binding Role}" FontSize="11.5" TextAlignment="Center" TextWrapping="Wrap" Classes="faint" />
                                         </StackPanel>
                                     </StackPanel>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:views="using:Tuxflix.App.Views"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Pages.PersonPage"
+             x:DataType="vm:PersonPageViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+        <StackPanel Orientation="Horizontal" Spacing="22" Margin="36,28,36,18">
+            <Panel Width="104" Height="104">
+                <Border CornerRadius="52" Background="{DynamicResource Brush.Panel}" BoxShadow="{StaticResource Shadow.Tile}" />
+                <TextBlock Text="{Binding Initials}" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{DynamicResource Brush.Text.Disabled}" />
+                <Border CornerRadius="52" ClipToBounds="True">
+                    <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="104" DecodeHeight="104" />
+                </Border>
+                <Border CornerRadius="52" BorderThickness="1" BorderBrush="#1FFFFFFF" />
+            </Panel>
+            <StackPanel VerticalAlignment="Center" Spacing="4">
+                <TextBlock Classes="label" Text="PERSON" Foreground="{DynamicResource Brush.Accent}" />
+                <TextBlock Text="{Binding Name}" FontSize="30" FontWeight="Bold" />
+                <TextBlock Text="{Binding CountText}" Classes="faint" FontSize="13" />
+            </StackPanel>
+        </StackPanel>
+
+        <Panel Grid.Row="1">
+            <views:RowsGrid />
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" VerticalAlignment="Top"
+                         Height="2" MinHeight="2" Foreground="{DynamicResource Brush.Accent}" Background="Transparent" />
+            <TextBlock IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontSize="14" Foreground="{DynamicResource Brush.Text.Secondary}" />
+        </Panel>
+    </Grid>
+</UserControl>

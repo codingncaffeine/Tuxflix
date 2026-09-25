@@ -159,7 +159,7 @@ public sealed partial class LibraryRailViewModel(ShellViewModel shell) : Observa
         {
             Items = items;
             IsMusic = directory.Type == "artist";
-            Header = new RailSectionRow(rail, directory.Title, directory.Type switch
+            Header = new RailSectionRow(rail, directory, directory.Type switch
             {
                 "show" => "Icon.TelevisionSimple",
                 "artist" => "Icon.MusicNotes",
@@ -183,11 +183,13 @@ public sealed partial class LibraryRailViewModel(ShellViewModel shell) : Observa
 /// <summary>A row of the rail: a library heading or a title.</summary>
 public abstract class RailRow : ObservableObject;
 
-public sealed partial class RailSectionRow(LibraryRailViewModel rail, string title, string iconKey) : RailRow
+public sealed partial class RailSectionRow(LibraryRailViewModel rail, LibraryDirectory section, string iconKey) : RailRow
 {
-    public string Title { get; } = title.ToUpperInvariant();
+    public string Title { get; } = section.Title.ToUpperInvariant();
 
-    public string TipText => IsExpanded ? $"Hide {title}" : $"Show {title}";
+    public string TipText => IsExpanded ? $"Hide {section.Title}" : $"Show {section.Title}";
+
+    public string OpenTip => $"Open {section.Title} as a grid";
 
     public Geometry? Icon => Application.Current?.FindResource(iconKey) as Geometry;
 
@@ -209,6 +211,9 @@ public sealed partial class RailSectionRow(LibraryRailViewModel rail, string tit
         IsExpanded = !IsExpanded;
         rail.Rebuild();
     }
+
+    [RelayCommand]
+    private void Open() => rail.Shell.OpenSection(section);
 }
 
 public sealed partial class RailItemRow(LibraryRailViewModel rail, MetadataItem item) : RailRow

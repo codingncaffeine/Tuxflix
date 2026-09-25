@@ -54,6 +54,7 @@ public partial class MainWindow : Window
 
         AddHandler(PointerPressedEvent, OnMouseButtons, RoutingStrategies.Tunnel);
         KeyDown += OnKeyDown;
+        SearchBox.KeyDown += OnSearchKey;
         Closing += (_, _) => RememberPlacement();
         Opened += (_, _) => Platform.DesktopIdentity.Apply(this);
         shell.CompactPlayerRequested += () => _ = ShowClassicAsync();
@@ -165,6 +166,23 @@ public partial class MainWindow : Window
         else if (point.IsXButton2Pressed && _shell?.GoForwardCommand.CanExecute(null) == true)
         {
             _shell.GoForwardCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>Enter searches at once; Escape empties the box and leaves it.</summary>
+    private void OnSearchKey(object? sender, KeyEventArgs e)
+    {
+        if (_shell is null) return;
+        if (e.Key == Key.Enter)
+        {
+            _shell.SearchNowCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            _shell.SearchText = string.Empty;
+            Frame.Focus();
             e.Handled = true;
         }
     }

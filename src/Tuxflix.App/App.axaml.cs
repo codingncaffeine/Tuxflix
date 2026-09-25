@@ -31,7 +31,7 @@ public sealed class App : Application
         else if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Launch is { } launch)
         {
             var settings = launch.Settings;
-            var probing = launch.Options.ProbePlayer || launch.Options.ProbeClassic;
+            var probing = launch.Options.ProbePlayer || launch.Options.ProbeClassic || launch.Options.ProbeGrid;
             var shell = new ShellViewModel(settings, launch.Paths)
             {
                 // A probe may borrow a copied profile's sign-in: it reads the keyring and never
@@ -64,6 +64,7 @@ public sealed class App : Application
                 shell.Start(launch.Options.Demo);
                 if (launch.Options.ProbePlayer) Player.PlayerProbe.Run(shell, window);
                 if (launch.Options.ProbeClassic) Classic.ClassicProbe.Run(shell, window);
+                if (launch.Options.ProbeGrid) Probes.GridProbe.Run(shell, window);
             }
 
             window.Opened += Started;
