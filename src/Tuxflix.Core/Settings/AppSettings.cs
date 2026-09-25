@@ -34,6 +34,9 @@ public sealed class AppSettings
 
     /// <summary>How films and episodes play: skipping, what comes next, subtitles, sound.</summary>
     public PlaybackSettings Playback { get; set; } = new();
+
+    /// <summary>Where downloads go, how many at once, and how fast.</summary>
+    public DownloadSettings Downloads { get; set; } = new();
 }
 
 public sealed class PlaybackSettings
