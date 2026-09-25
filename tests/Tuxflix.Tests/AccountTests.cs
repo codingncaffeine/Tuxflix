@@ -11,9 +11,18 @@ internal sealed class FakeNetwork(Func<HttpRequestMessage, Task<HttpResponseMess
 {
     public List<string> Asked { get; } = [];
 
+    /// <summary>Every address asked, with the token its request carried (null for none).</summary>
+    public List<(string Uri, string? Token)> Sent { get; } = [];
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        lock (Asked) Asked.Add(request.RequestUri!.ToString());
+        var token = request.Headers.TryGetValues("X-Plex-Token", out var values) ? string.Join(",", values) : null;
+        lock (Asked)
+        {
+            Asked.Add(request.RequestUri!.ToString());
+            Sent.Add((request.RequestUri!.ToString(), token));
+        }
+
         return answer(request);
     }
 
@@ -58,7 +67,7 @@ public sealed class AccountTests
             [
               {"name":"Phone","provides":"client,player","clientIdentifier":"p1","owned":true,"connections":[]},
               {"name":"Friend's","provides":"server","clientIdentifier":"s2","owned":false,"sourceTitle":"Robin","accessToken":"t2","connections":[]},
-              {"name":"Den","product":"Plex Media Server","productVersion":"1.42.1.10060-4e8b05daf","platform":"Linux","provides":"server","clientIdentifier":"s1","owned":true,"accessToken":"t1",
+              {"name":"Den","product":"Plex Media Server","productVersion":"1.42.1.10060-4e8b05daf","platform":"Linux","provides":"server","clientIdentifier":"s1","owned":true,"accessToken":"t1","publicAddressMatches":true,
                "connections":[{"protocol":"https","address":"192.168.1.20","port":32400,"uri":"https://192-168-1-20.abc.plex.direct:32400","local":true,"relay":false,"IPv6":false}]}
             ]
             """;
@@ -71,6 +80,8 @@ public sealed class AccountTests
         Assert.Equal("t1", servers[0].AccessToken);
         Assert.Equal("Robin", servers[1].SourceTitle);
         Assert.Single(servers[0].Connections!);
+        Assert.True(servers[0].PublicAddressMatches);
+        Assert.False(servers[1].PublicAddressMatches);
     }
 
     [Fact]
@@ -90,6 +101,17 @@ public sealed class ConnectionPickerTests
         ClientIdentifier = "machine-1",
         Provides = "server",
         AccessToken = "server-token",
+        Connections = [.. connections],
+    };
+
+    /// <summary>A server plex.tv sees at this client's own public address.</summary>
+    private static PlexResource OnItsNetwork(params PlexConnection[] connections) => new()
+    {
+        Name = "Den",
+        ClientIdentifier = "machine-1",
+        Provides = "server",
+        AccessToken = "server-token",
+        PublicAddressMatches = true,
         Connections = [.. connections],
     };
 
@@ -137,7 +159,7 @@ public sealed class ConnectionPickerTests
     [Fact]
     public async Task APlexDirectNameTheRouterWillNotResolveFallsBackToPlainHttpLocally()
     {
-        var server = Server(new PlexConnection { Uri = "https://192-168-1-20.abc.plex.direct:32400", Protocol = "https", Address = "192.168.1.20", Port = 32400, Local = true });
+        var server = OnItsNetwork(new PlexConnection { Uri = "https://192-168-1-20.abc.plex.direct:32400", Protocol = "https", Address = "192.168.1.20", Port = 32400, Local = true });
 
         var network = new FakeNetwork(request => request.RequestUri!.Scheme == "https"
             ? throw new HttpRequestException("Name or service not known")
@@ -151,12 +173,61 @@ public sealed class ConnectionPickerTests
     }
 
     [Fact]
+    public async Task NoAddressIsHandedTheTokenBeforeItAnswersAsTheServer()
+    {
+        // A stranger holds the local address; the real server answers remotely. Neither probe,
+        // plain or secure, may carry the server's token.
+        var server = OnItsNetwork(
+            new PlexConnection { Uri = "https://192-168-1-20.abc.plex.direct:32400", Protocol = "https", Address = "192.168.1.20", Port = 32400, Local = true },
+            new PlexConnection { Uri = "https://1-2-3-4.abc.plex.direct:32400", Protocol = "https", Address = "1.2.3.4", Port = 32400 });
+
+        var network = new FakeNetwork(request => Task.FromResult(FakeNetwork.Json(FakeNetwork.Identity(
+            request.RequestUri!.Host.StartsWith("1-2-3-4", StringComparison.Ordinal) ? "machine-1" : "someone-else"))));
+
+        var picked = await ConnectionPicker.PickAsync(Client(network), server, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(picked);
+        Assert.Equal(ConnectionKind.Remote, picked.Kind);
+        Assert.Equal(3, network.Sent.Count);
+        Assert.All(network.Sent, sent => Assert.Null(sent.Token));
+    }
+
+    [Fact]
+    public void PlainHttpIsNeverTriedOffTheServersNetwork()
+    {
+        // plex.tv sees this client somewhere else (a café, a hotel): the local address may be anyone's.
+        var server = Server(
+            new PlexConnection { Uri = "https://192-168-1-20.abc.plex.direct:32400", Protocol = "https", Address = "192.168.1.20", Port = 32400, Local = true },
+            new PlexConnection { Uri = "http://192.168.1.20:32400", Protocol = "http", Address = "192.168.1.20", Port = 32400, Local = true });
+
+        var candidates = ConnectionPicker.Candidates(server).ToList();
+
+        Assert.Equal(["https://192-168-1-20.abc.plex.direct:32400/"], candidates.Select(c => c.Uri.ToString()));
+    }
+
+    [Fact]
+    public void ARemoteOrRelayAddressMustBeSecure()
+    {
+        var server = OnItsNetwork(
+            new PlexConnection { Uri = "http://1.2.3.4:32400", Protocol = "http", Address = "1.2.3.4", Port = 32400 },
+            new PlexConnection { Uri = "http://5.6.7.8:8443", Protocol = "http", Address = "5.6.7.8", Port = 8443, Relay = true },
+            new PlexConnection { Uri = "https://1-2-3-4.abc.plex.direct:32400", Protocol = "https", Address = "1.2.3.4", Port = 32400 },
+            new PlexConnection { Uri = "http://192.168.1.20:32400", Protocol = "http", Address = "192.168.1.20", Port = 32400, Local = true });
+
+        var candidates = ConnectionPicker.Candidates(server).Select(c => c.Uri.ToString()).ToList();
+
+        Assert.Equal(["https://1-2-3-4.abc.plex.direct:32400/", "http://192.168.1.20:32400/"], candidates);
+    }
+
+    [Fact]
     public void AServerThatRequiresSecureConnectionsGetsNoPlainFallback()
     {
+        // On the server's own network, where plain http would otherwise be tried.
         var server = new PlexResource
         {
             ClientIdentifier = "machine-1",
             HttpsRequired = true,
+            PublicAddressMatches = true,
             Connections = [new PlexConnection { Uri = "https://192-168-1-20.abc.plex.direct:32400", Address = "192.168.1.20", Port = 32400, Local = true }],
         };
 

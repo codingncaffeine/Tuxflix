@@ -97,6 +97,13 @@ public sealed class PlexResource
     [JsonPropertyName("dnsRebindingProtection")]
     public bool DnsRebindingProtection { get; init; }
 
+    /// <summary>
+    /// Whether plex.tv sees this client and the server at the same public address: on the server's
+    /// own network, as Plex's apps judge it before they speak plain http.
+    /// </summary>
+    [JsonPropertyName("publicAddressMatches")]
+    public bool PublicAddressMatches { get; init; }
+
     [JsonPropertyName("connections")]
     public List<PlexConnection>? Connections { get; init; }
 

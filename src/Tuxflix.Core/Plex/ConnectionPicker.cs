@@ -34,6 +34,13 @@ public sealed record ServerConnection(Uri Uri, ConnectionKind Kind, TimeSpan Lat
 /// resolve is also tried as plain <c>http://address:port</c>, unless the server requires secure
 /// connections. An answer only counts if <c>/identity</c> names the server that was asked for, so a
 /// different machine that happens to hold the address is never taken for it.
+/// <para>
+/// Plain http carries the token where anyone on the way can read it, so it is only spoken on the
+/// server's own network, as Plex's apps allow by default: to a local address, and only when plex.tv
+/// sees this client at the server's public address. A remote or relay address must be secure. The
+/// probe itself carries no token (<c>/identity</c> answers without one), so a machine that is not
+/// the server is never handed it.
+/// </para>
 /// </remarks>
 public static class ConnectionPicker
 {
@@ -47,7 +54,7 @@ public static class ConnectionPicker
         var candidates = Candidates(server).ToList();
         if (candidates.Count == 0) return null;
 
-        var probes = candidates.Select(c => ProbeAsync(http, server, c.Uri, c.Kind, cancellation)).ToList();
+        var probes = candidates.Select(c => ProbeAsync(http, server.ClientIdentifier, c.Uri, c.Kind, cancellation)).ToList();
         var answers = new List<ServerConnection>();
         while (probes.Count > 0)
         {
@@ -80,10 +87,10 @@ public static class ConnectionPicker
         {
             if (!Uri.TryCreate(connection.Uri, UriKind.Absolute, out var uri)) continue;
             var kind = connection.Relay ? ConnectionKind.Relay : connection.Local ? ConnectionKind.Local : ConnectionKind.Remote;
-            yield return (uri, kind);
+            var plainAllowed = kind == ConnectionKind.Local && server.PublicAddressMatches && !server.HttpsRequired;
+            if (uri.Scheme == Uri.UriSchemeHttps || (uri.Scheme == Uri.UriSchemeHttp && plainAllowed)) yield return (uri, kind);
 
-            if (kind == ConnectionKind.Local && !server.HttpsRequired && uri.Scheme == Uri.UriSchemeHttps
-                && !string.IsNullOrEmpty(connection.Address) && connection.Port > 0)
+            if (plainAllowed && uri.Scheme == Uri.UriSchemeHttps && !string.IsNullOrEmpty(connection.Address) && connection.Port > 0)
             {
                 var host = connection.IPv6 ? $"[{connection.Address}]" : connection.Address;
                 if (Uri.TryCreate($"http://{host}:{connection.Port}/", UriKind.Absolute, out var plain)) yield return (plain, kind);
@@ -91,7 +98,7 @@ public static class ConnectionPicker
         }
     }
 
-    private static async Task<ServerConnection?> ProbeAsync(HttpClient http, PlexResource server, Uri uri, ConnectionKind kind, CancellationToken cancellation)
+    private static async Task<ServerConnection?> ProbeAsync(HttpClient http, string machineIdentifier, Uri uri, ConnectionKind kind, CancellationToken cancellation)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         timeout.CancelAfter(ProbeTimeout);
@@ -99,12 +106,11 @@ public static class ConnectionPicker
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(uri, "identity"));
-            if (server.AccessToken is { } token) request.Headers.TryAddWithoutValidation("X-Plex-Token", token);
             using var response = await http.SendAsync(request, timeout.Token).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode) return null;
 
             var identity = await response.Content.ReadFromJsonAsync(PlexJsonContext.Default.PlexEnvelope, timeout.Token).ConfigureAwait(false);
-            return identity?.MediaContainer?.MachineIdentifier == server.ClientIdentifier
+            return identity?.MediaContainer?.MachineIdentifier == machineIdentifier
                 ? new ServerConnection(uri, kind, clock.Elapsed)
                 : null;
         }
