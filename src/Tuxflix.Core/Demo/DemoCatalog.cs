@@ -330,6 +330,7 @@ public sealed partial class DemoCatalog
                                 Size = duration / 1000 * (is4K ? 4_750_000L : 1_225_000L),
                                 Container = "mkv",
                                 Indexes = "sd",
+                                Stream = [],
                             },
                         ],
                     },

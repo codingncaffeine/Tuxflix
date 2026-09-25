@@ -153,7 +153,7 @@
                                     </Flyout>
                                 </Button.Flyout>
                             </Button>
-                            <Button Theme="{StaticResource IconButton}" Foreground="White" ui:Tip.Text="Audio track" ui:Tip.Keys="A">
+                            <Button x:Name="AudioButton" Theme="{StaticResource IconButton}" Foreground="White" ui:Tip.Text="Audio track" ui:Tip.Keys="A">
                                 <PathIcon Data="{StaticResource Icon.MusicNotes}" Width="20" Height="20" />
                                 <Button.Flyout>
                                     <MenuFlyout ItemsSource="{Binding AudioTracks}" Placement="TopEdgeAlignedRight">
@@ -168,20 +168,9 @@
                                     </MenuFlyout>
                                 </Button.Flyout>
                             </Button>
-                            <Button Theme="{StaticResource IconButton}" Foreground="White" ui:Tip.Text="Subtitles" ui:Tip.Keys="S">
+                            <Button x:Name="SubtitlesButton" Theme="{StaticResource IconButton}" Foreground="White" Click="OnSubtitles"
+                                    ui:Tip.Text="Subtitles" ui:Tip.Keys="S">
                                 <PathIcon Data="{StaticResource Icon.Subtitles}" Width="20" Height="20" />
-                                <Button.Flyout>
-                                    <MenuFlyout ItemsSource="{Binding SubtitleTracks}" Placement="TopEdgeAlignedRight">
-                                        <MenuFlyout.ItemContainerTheme>
-                                            <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:TrackOption">
-                                                <Setter Property="Header" Value="{Binding Label}" />
-                                                <Setter Property="Command" Value="{Binding ChooseCommand}" />
-                                                <Setter Property="ToggleType" Value="Radio" />
-                                                <Setter Property="IsChecked" Value="{Binding IsSelected}" />
-                                            </ControlTheme>
-                                        </MenuFlyout.ItemContainerTheme>
-                                    </MenuFlyout>
-                                </Button.Flyout>
                             </Button>
                             <Button Theme="{StaticResource IconButton}" Foreground="White" Click="OnPictureInPicture"
                                     ui:Tip.Text="Picture in picture: a small window above the others" ui:Tip.Keys="I">

@@ -276,6 +276,17 @@ void Capture(string pose)
         Pump(TimeSpan.FromMilliseconds(1500));
     }
 
+    if (pose == "player-finder")
+    {
+        // Subtitles found online for a demo film, in the panel over the subtitle button.
+        shell.Play(Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now).Movies[1], resume: false);
+        Settle(shell);
+        var page = window.GetVisualDescendants().OfType<Tuxflix.App.Views.Pages.PlayerPage>().FirstOrDefault()
+                   ?? throw new InvalidOperationException("No player page.");
+        page.OpenFinder();
+        Pump(TimeSpan.FromMilliseconds(1500));
+    }
+
     if (pose == "player-pip")
     {
         // Picture in picture: the small window, the pointer over it so its bar shows.

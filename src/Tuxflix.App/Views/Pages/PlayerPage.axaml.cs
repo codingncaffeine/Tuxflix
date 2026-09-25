@@ -102,6 +102,13 @@ public partial class PlayerPage : UserControl
             case Key.I:
                 TogglePictureInPicture();
                 break;
+            case Key.A when AudioButton.Flyout is { } audio:
+                ShowControls();
+                audio.ShowAt(AudioButton);
+                break;
+            case Key.S:
+                OpenSubtitles();
+                break;
             case Key.Escape when _top is MainWindow { IsPictureInPicture: true } small:
                 small.ExitPictureInPicture();
                 break;
@@ -147,6 +154,43 @@ public partial class PlayerPage : UserControl
     private void OnFullScreen(object? sender, RoutedEventArgs e) => ToggleFullScreen();
 
     private void OnPictureInPicture(object? sender, RoutedEventArgs e) => TogglePictureInPicture();
+
+    private void OnSubtitles(object? sender, RoutedEventArgs e) => OpenSubtitles();
+
+    /// <summary>The subtitle menu: the tracks, and for the server's owner, looking for more online.</summary>
+    internal MenuFlyout? OpenSubtitles()
+    {
+        if (Model is not { } model) return null;
+        var menu = new MenuFlyout { Placement = PlacementMode.TopEdgeAlignedRight };
+        foreach (var option in model.SubtitleTracks)
+        {
+            menu.Items.Add(Radio(option.Label, option.IsSelected, () => option.ChooseCommand.Execute(null)));
+        }
+
+        if (model.CanFindSubtitles)
+        {
+            menu.Items.Add(new Separator());
+            menu.Items.Add(Item("Find subtitles online…", () => OpenFinder()));
+        }
+
+        KeepControlsWhileOpen(menu);
+        ShowControls();
+        menu.ShowAt(SubtitlesButton);
+        return menu;
+    }
+
+    /// <summary>The finder, over the subtitle button; it searches in the first language at once.</summary>
+    public Flyout? OpenFinder()
+    {
+        if (Model is not { } model) return null;
+        var finder = model.Finder;
+        var flyout = new Flyout { Placement = PlacementMode.TopEdgeAlignedRight, Content = new SubtitleFinderView { DataContext = finder } };
+        KeepControlsWhileOpen(flyout);
+        ShowControls();
+        flyout.ShowAt(SubtitlesButton);
+        if (finder.Results.Count == 0 && !finder.IsBusy) _ = finder.SearchAsync();
+        return flyout;
+    }
 
     /// <summary>The window becomes a small one showing only the picture, or comes back.</summary>
     public void TogglePictureInPicture()
