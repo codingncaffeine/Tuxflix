@@ -149,6 +149,7 @@ public sealed class ImageLoader
                     _disk?.Write(key, bytes);
                 }
 
+                ImageBounds.Check(bytes, ImageBounds.ArtworkPixels);
                 Bitmap bitmap;
                 using (var stream = new MemoryStream(bytes))
                 {

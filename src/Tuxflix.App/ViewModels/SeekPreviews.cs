@@ -118,7 +118,9 @@ public sealed partial class SeekPreviews(PlexServerClient client, MediaPart? par
         {
             bitmap = await Task.Run(() =>
             {
-                using var stream = new MemoryStream(jpeg.ToArray());
+                var bytes = jpeg.ToArray();
+                Imaging.ImageBounds.Check(bytes, Imaging.ImageBounds.SmallPixels);
+                using var stream = new MemoryStream(bytes);
                 return Bitmap.DecodeToWidth(stream, PictureWidth);
             });
         }

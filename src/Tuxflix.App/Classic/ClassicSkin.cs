@@ -84,6 +84,7 @@ public sealed class ClassicSkin : IDisposable
                 using var source = entry.Open();
                 using var buffer = new MemoryStream();
                 CopyAtMost(source, buffer, MaxSheetBytes);
+                Imaging.ImageBounds.Check(buffer.ToArray(), Imaging.ImageBounds.SmallPixels);
                 buffer.Position = 0;
                 sheets[sheet] = new Bitmap(buffer);
                 owned.Add(sheet);

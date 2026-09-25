@@ -72,6 +72,40 @@ public sealed class ClassicSkinTests : IDisposable
     }
 
     [Fact]
+    public void ASheetClaimingAHugePictureIsNotDecoded()
+    {
+        // A few kilobytes of PNG that decode to far more than any sheet: small enough to pass the
+        // entry limit, so only its header tells. A real bomb claims gigabytes the same way.
+        var huge = Png(2100, 2100);
+        Assert.True(huge.Length < 4 * 1024 * 1024);
+
+        using var skin = ClassicSkin.Load(Zip("bomb.wsz", ("main.png", huge), ("text.bmp", Bmp(155, 18))), fallback: null);
+
+        Assert.Null(skin.Sheet(ClassicSprites.Main));
+        Assert.NotNull(skin.Sheet(ClassicSprites.Text));
+    }
+
+    [Fact]
+    public void APictureIsMeasuredBeforeItIsDecoded()
+    {
+        Tuxflix.App.Imaging.ImageBounds.Check(Png(1, 1), Tuxflix.App.Imaging.ImageBounds.SmallPixels);
+        Tuxflix.App.Imaging.ImageBounds.Check(Png(2100, 2100), Tuxflix.App.Imaging.ImageBounds.ArtworkPixels);
+
+        Assert.Throws<ArgumentException>(() => Tuxflix.App.Imaging.ImageBounds.Check(Png(2100, 2100), Tuxflix.App.Imaging.ImageBounds.SmallPixels));
+        Assert.Throws<ArgumentException>(() => Tuxflix.App.Imaging.ImageBounds.Check("not a picture"u8.ToArray(), Tuxflix.App.Imaging.ImageBounds.ArtworkPixels));
+    }
+
+    /// <summary>A PNG of one colour, which compresses to almost nothing whatever its size.</summary>
+    private static byte[] Png(int width, int height)
+    {
+        using var bitmap = new SkiaSharp.SKBitmap(width, height);
+        bitmap.Erase(new SkiaSharp.SKColor(40, 40, 40));
+        using var image = SkiaSharp.SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
+    }
+
+    [Fact]
     public async Task ImportRefusesFilesThatAreNotSkins()
     {
         var library = new SkinLibrary(Path.Combine(_folder, "library"));

@@ -156,6 +156,7 @@ public sealed partial class MuseumSkinViewModel(SkinMuseumViewModel museum, Muse
             var bitmap = await Task.Run(async () =>
             {
                 var bytes = await museum.Museum.ScreenshotAsync(Skin, token).ConfigureAwait(false);
+                Imaging.ImageBounds.Check(bytes, Imaging.ImageBounds.SmallPixels);
                 using var stream = new MemoryStream(bytes);
                 return new Bitmap(stream);
             }, token);
