@@ -6,6 +6,9 @@
 // With --real also: artist, album, nowplaying, and classic (the compact player over a playing album;
 // CLASSIC_SKIN=path.wsz wears that skin, otherwise the base skin, fetched as the app fetches it;
 // CLASSIC_SCALE=1.5 sets its size).
+// Demo music: music-album, music-artist, music-queue, music-lyrics, music-visualizer (VIS_MODE, VIS_PALETTE,
+// MUSIC_WAIT under 2 also keeps music-visualizer-controls.png); photos: photos, photo-album, photo-viewer,
+// photo-info; museum (the real Winamp Skin Museum, MUSEUM_QUERY to search; nothing is added).
 // Every run uses a throwaway profile under the output directory; nothing touches the real one.
 
 using System.Diagnostics;
@@ -208,10 +211,17 @@ void Capture(string pose)
         // after MUSIC_WAIT seconds (3), with its lyrics, or its visualizer (VIS_MODE, VIS_PALETTE).
         var catalog = Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now);
         var which = int.TryParse(Environment.GetEnvironmentVariable("MUSIC_ALBUM"), out var n) ? n : 0;
+        if (pose == "music-artist")
+        {
+            shell.OpenItem(catalog.Artists[which % catalog.Artists.Count]);
+            Settle(shell);
+        }
+
         shell.OpenItem(catalog.Albums[which % catalog.Albums.Count]);
         Settle(shell);
         var album = shell.Router.Current as AlbumPageViewModel ?? throw new InvalidOperationException("No album page.");
-        if (pose != "music-album")
+        if (pose == "music-artist") shell.GoBackCommand.Execute(null);
+        else if (pose != "music-album")
         {
             album.PlayCommand.Execute(null);
             var wait = double.TryParse(Environment.GetEnvironmentVariable("MUSIC_WAIT"), System.Globalization.CultureInfo.InvariantCulture, out var seconds) ? seconds : 3;
