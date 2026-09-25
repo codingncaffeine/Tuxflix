@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.codingncaffeine.Tuxflix</id>
+  <name>Tuxflix</name>
+  <summary>Watch and listen to your Plex library</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="io.github.codingncaffeine">
+    <name>codingncaffeine</name>
+  </developer>
+  <description>
+    <p>
+      Tuxflix is a native desktop client for Plex Media Server, laid out like a game library: a rail
+      of every library, shelves of artwork, and a page for each film, series, artist and album.
+    </p>
+    <ul>
+      <li>Films and episodes play inside the window with hardware decoding, 4K HDR included, from
+        where they were left, with the audio and subtitles the server chose</li>
+      <li>Intros and credits skip with one press, the next episode is offered as the credits roll,
+        and chapters show with their pictures</li>
+      <li>The server is asked how to play everything, and a lower quality has it convert the stream</li>
+      <li>Every library opens as a grid with the server's own sorts and filters, collections,
+        playlists, people and a search across everything</li>
+      <li>Music plays gapless and loudness-levelled, with an equalizer and a compact player that
+        wears classic Winamp skins</li>
+      <li>Picture in picture, media keys and the desktop's media controls</li>
+    </ul>
+    <p>Tuxflix is a viewer: it never changes how the server is set up.</p>
+  </description>
+  <launchable type="desktop-id">io.github.codingncaffeine.Tuxflix.desktop</launchable>
+  <provides>
+    <binary>tuxflix</binary>
+  </provides>
+  <url type="homepage">https://github.com/codingncaffeine/Tuxflix</url>
+  <url type="bugtracker">https://github.com/codingncaffeine/Tuxflix/issues</url>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Video</category>
+    <category>Player</category>
+  </categories>
+  <keywords>
+    <keyword>Plex</keyword>
+    <keyword>Movies</keyword>
+    <keyword>Television</keyword>
+    <keyword>Music</keyword>
+  </keywords>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <recommends>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </recommends>
+  <supports>
+    <control>gamepad</control>
+  </supports>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.1.0" type="development" date="2026-09-25">
+      <description>
+        <p>The first preview.</p>
+      </description>
+    </release>
+  </releases>
+</component>
