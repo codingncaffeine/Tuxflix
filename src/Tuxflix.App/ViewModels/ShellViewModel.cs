@@ -28,6 +28,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly HttpClient _plexTv;
     private CancellationTokenSource? _connecting;
 
+    /// <summary>The remembered sign-in is being resumed at start: an unreachable server then opens the offline library.</summary>
+    private bool _startingUp;
+
     /// <param name="settings">The profile's settings.</param>
     /// <param name="paths">The profile's folders.</param>
     /// <param name="network">Stands in for the network under test; null for the real one.</param>
@@ -90,9 +93,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public string AccountInitials => string.Concat(AccountName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
 
-    public string ServerName => Session?.Name ?? "Not connected";
+    public string ServerName => Session?.Name ?? (IsOffline ? "Offline" : "Not connected");
 
-    public string ServerDetail => Session?.Detail ?? "Sign in to see your servers";
+    public string ServerDetail => Session?.Detail ?? (IsOffline ? "Showing what is downloaded" : "Sign in to see your servers");
 
     public bool IsConnected => Session is not null;
 
@@ -166,6 +169,7 @@ public sealed partial class ShellViewModel : ObservableObject
             }
 
             Router.Reset(new StatusPageViewModel("Signing in", "Checking your Plex sign-in…"));
+            _startingUp = true;
             await CompleteSignInAsync(token, remember: false, CancellationToken.None);
         }
         catch (PlexUnauthorizedException)
@@ -177,7 +181,12 @@ public sealed partial class ShellViewModel : ObservableObject
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             Log.Warn("Plex could not be reached at start.", ex);
+            if (await OpenOfflineAsync("plex.tv could not be reached, so your servers cannot be listed.")) return;
             Router.Reset(new WelcomePageViewModel(this) { Notice = "plex.tv could not be reached. Check the connection, then sign in again." });
+        }
+        finally
+        {
+            _startingUp = false;
         }
     }
 
@@ -232,6 +241,8 @@ public sealed partial class ShellViewModel : ObservableObject
         if (connecting.IsCancellationRequested) return;
         if (connection is null)
         {
+            // At start, what is downloaded is more use than an error.
+            if (_startingUp && await OpenOfflineAsync($"{server.Name} did not answer at any of its addresses.")) return;
             Router.Reset(new ServersPageViewModel(this, Servers, $"{server.Name} did not answer at any of its addresses. Is it running?"));
             return;
         }
@@ -404,11 +415,10 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowDownloads() => Router.Navigate(new ComingSoonPageViewModel(
-        TopTab.Library,
-        "Downloads",
-        "Download movies and episodes to watch without a connection, with a queue, pause and a speed limit.",
-        "Icon.DownloadSimple"));
+    private void ShowDownloads()
+    {
+        if (Router.Current is not DownloadsPageViewModel) Router.Navigate(new DownloadsPageViewModel(this));
+    }
 
     public void OpenItem(MetadataItem item)
     {

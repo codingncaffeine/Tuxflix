@@ -85,7 +85,7 @@
             <Border Margin="44,0" Padding="18,16" CornerRadius="{StaticResource Radius.Card}"
                     Background="#B30A1024" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
                     BoxShadow="0 12 32 0 #73020510">
-                <Grid ColumnDefinitions="Auto,*">
+                <Grid ColumnDefinitions="Auto,Auto,*">
                     <Button Theme="{StaticResource PlayButton}" Command="{Binding PlayCommand}"
                             ui:Tip.Text="Play from where you left off" ui:Tip.Keys="Space">
                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -94,7 +94,80 @@
                         </StackPanel>
                     </Button>
 
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="40" Margin="38,0,0,0" VerticalAlignment="Center">
+                    <!-- Download: a film or an episode in one press, its progress in place; a series by season or by rule. -->
+                    <Panel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <Button Theme="{StaticResource GhostButton}" Padding="16,11" Command="{Binding DownloadCommand}"
+                                IsVisible="{Binding DownloadRow.IsGone, FallbackValue=False}"
+                                ui:Tip.Text="Download it to watch without the server">
+                            <StackPanel Orientation="Horizontal" Spacing="9">
+                                <PathIcon Data="{StaticResource Icon.DownloadSimple}" Width="15" Height="15" />
+                                <TextBlock Text="DOWNLOAD" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource GhostButton}" Padding="16,8" MinWidth="148"
+                                IsVisible="{Binding DownloadRow.IsPresent, FallbackValue=False}"
+                                ui:Tip.Text="{Binding DownloadRow.Status, FallbackValue=''}">
+                            <StackPanel Spacing="5">
+                                <StackPanel Orientation="Horizontal" Spacing="9" HorizontalAlignment="Center">
+                                    <PathIcon Data="{StaticResource Icon.CheckCircle.Fill}" Width="15" Height="15" Foreground="{DynamicResource Brush.Success}"
+                                              IsVisible="{Binding DownloadRow.IsDone, FallbackValue=False}" />
+                                    <PathIcon Data="{StaticResource Icon.DownloadSimple}" Width="15" Height="15"
+                                              IsVisible="{Binding DownloadRow.ShowsProgress, FallbackValue=False}" />
+                                    <TextBlock Text="{Binding DownloadRow.ButtonLabel, FallbackValue=''}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <Border CornerRadius="2" ClipToBounds="True" IsVisible="{Binding DownloadRow.ShowsProgress, FallbackValue=False}">
+                                    <ProgressBar Theme="{StaticResource ThinProgress}" Value="{Binding DownloadRow.Fraction, FallbackValue=0}" Background="#26FFFFFF" />
+                                </Border>
+                            </StackPanel>
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                    <MenuItem Header="Play the downloaded copy" Command="{Binding DownloadRow.PlayCommand, FallbackValue={x:Null}}"
+                                              IsVisible="{Binding DownloadRow.IsDone, FallbackValue=False}" />
+                                    <MenuItem Header="Pause the download" Command="{Binding DownloadRow.PauseCommand, FallbackValue={x:Null}}"
+                                              IsVisible="{Binding DownloadRow.CanPause, FallbackValue=False}" />
+                                    <MenuItem Header="Resume the download" Command="{Binding DownloadRow.ResumeCommand, FallbackValue={x:Null}}"
+                                              IsVisible="{Binding DownloadRow.CanResume, FallbackValue=False}" />
+                                    <MenuItem Header="Delete the download" Command="{Binding DownloadRow.RemoveCommand, FallbackValue={x:Null}}" />
+                                    <Separator />
+                                    <MenuItem Header="Open downloads" Command="{Binding OpenDownloadsCommand}" />
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Theme="{StaticResource GhostButton}" Padding="16,11" IsVisible="{Binding CanDownloadSeries}"
+                                ui:Tip.Text="Download a season, or keep the next episodes downloaded">
+                            <StackPanel Orientation="Horizontal" Spacing="9">
+                                <PathIcon Data="{StaticResource Icon.DownloadSimple}" Width="15" Height="15" />
+                                <TextBlock Text="DOWNLOAD" VerticalAlignment="Center" />
+                                <PathIcon Data="{StaticResource Icon.CaretDown.Bold}" Width="8" Height="8" />
+                            </StackPanel>
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                    <MenuItem Header="{Binding DownloadSeasonLabel}" Command="{Binding DownloadSeasonCommand}" />
+                                    <MenuItem Header="{Binding KeepSeasonLabel}" Command="{Binding KeepNextOfSeasonCommand}" />
+                                    <Separator />
+                                    <MenuItem Header="Keep the next 3 unwatched episodes" Command="{Binding KeepNextCommand}" CommandParameter="3" />
+                                    <MenuItem Header="Keep the next 5 unwatched episodes" Command="{Binding KeepNextCommand}" CommandParameter="5" />
+                                    <MenuItem Header="Keep the next 10 unwatched episodes" Command="{Binding KeepNextCommand}" CommandParameter="10" />
+                                    <MenuItem Header="Stop keeping episodes of the series" Command="{Binding StopKeepingSeriesCommand}"
+                                              IsVisible="{Binding SeriesDownloads.HasRule, FallbackValue=False}" />
+                                    <MenuItem Header="{Binding StopSeasonLabel}" Command="{Binding StopKeepingSeasonCommand}"
+                                              IsVisible="{Binding SeasonDownloads.HasRule, FallbackValue=False}" />
+                                    <Separator />
+                                    <MenuItem Header="Open downloads" Command="{Binding OpenDownloadsCommand}" />
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                    </Panel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="40" Margin="38,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Spacing="4" IsVisible="{Binding SeriesDownloads.HasAny, FallbackValue=False}">
+                            <TextBlock Classes="label" Text="DOWNLOADS" />
+                            <TextBlock Text="{Binding SeriesDownloads.Label, FallbackValue=''}" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Spacing="4" IsVisible="{Binding SeriesDownloads.HasRule, FallbackValue=False}">
+                            <TextBlock Classes="label" Text="KEPT UP TO DATE" />
+                            <TextBlock Text="{Binding SeriesDownloads.RuleText, FallbackValue=''}" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="label" Text="LAST WATCHED" />
                             <TextBlock Text="{Binding LastWatched}" FontSize="14" FontWeight="SemiBold" />

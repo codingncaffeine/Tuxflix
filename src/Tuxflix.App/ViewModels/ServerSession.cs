@@ -7,7 +7,7 @@ using Tuxflix.Core.Plex;
 namespace Tuxflix.App.ViewModels;
 
 /// <summary>One server the window is showing: its client and its artwork.</summary>
-public sealed class ServerSession : IDisposable
+public sealed partial class ServerSession : IDisposable
 {
     private readonly HttpClient _http;
 

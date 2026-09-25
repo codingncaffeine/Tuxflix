@@ -156,7 +156,7 @@
                                 <PathIcon Data="{StaticResource Icon.DownloadSimple}" Width="14" Height="14" />
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="DOWNLOADS" Classes="label" Foreground="{DynamicResource Brush.Text.Secondary}" />
-                                    <TextBlock Text="Nothing queued" FontSize="10.5" Classes="faint" />
+                                    <TextBlock Text="{Binding Downloads.Summary}" FontSize="10.5" Classes="faint" />
                                 </StackPanel>
                             </StackPanel>
                         </Button>

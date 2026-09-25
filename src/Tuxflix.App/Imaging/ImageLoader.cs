@@ -131,7 +131,8 @@ public sealed class ImageLoader
             await _fetches.WaitAsync().ConfigureAwait(false);
             try
             {
-                var bytes = _disk?.Read(key);
+                // Artwork kept beside a download is read from its file, with or without a server.
+                var bytes = path.StartsWith("file://", StringComparison.Ordinal) ? await File.ReadAllBytesAsync(new Uri(path).LocalPath).ConfigureAwait(false) : _disk?.Read(key);
                 if (bytes is null)
                 {
                     bytes = await _client.GetBytesAsync(_client.ImageUri(path, width, height, format), CancellationToken.None).ConfigureAwait(false);

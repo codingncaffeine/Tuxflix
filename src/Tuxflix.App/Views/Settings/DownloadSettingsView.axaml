@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             x:Class="Tuxflix.App.Views.Settings.DownloadSettingsView"
+             x:DataType="vm:DownloadSettingsViewModel"
+             FontSize="13" FontWeight="Normal" LetterSpacing="0">
+
+    <!-- The download options, for the Downloads page and a settings page alike: where they go, how
+         many at once, how fast, and the rules keeping episodes coming. -->
+    <StackPanel Spacing="20" MinWidth="440" MaxWidth="560">
+        <StackPanel Spacing="8">
+            <TextBlock Classes="label" Text="WHERE NEW DOWNLOADS GO" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Data="{StaticResource Icon.FolderSimple}" Width="14" Height="14" VerticalAlignment="Center"
+                          Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                <TextBlock Text="{Binding Folder}" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="500" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Theme="{StaticResource GhostButton}" Padding="12,6" FontSize="11" Click="OnChooseFolder"
+                        ui:Tip.Text="Choose another folder; what is already downloaded stays where it is">
+                    <TextBlock Text="CHOOSE A FOLDER" />
+                </Button>
+                <Button Theme="{StaticResource GhostButton}" Padding="12,6" FontSize="11" Command="{Binding UseDefaultFolderCommand}"
+                        IsVisible="{Binding HasChosenFolder}" ui:Tip.Text="New downloads go to Tuxflix's own folder again">
+                    <TextBlock Text="USE THE DEFAULT" />
+                </Button>
+            </StackPanel>
+            <TextBlock Text="{Binding FolderProblem}" IsVisible="{Binding HasFolderProblem}" FontSize="12.5" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Brush.Danger}" />
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <TextBlock Classes="label" Text="AT ONCE" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Theme="{StaticResource GhostButton}" Classes="season" Classes.selected="{Binding OneAtOnce}"
+                        Padding="12,6" FontSize="11" Command="{Binding OneAtATimeCommand}"
+                        ui:Tip.Text="One download at a time: the first one finishes soonest">
+                    <TextBlock Text="ONE AT A TIME" />
+                </Button>
+                <Button Theme="{StaticResource GhostButton}" Classes="season" Classes.selected="{Binding TwoAtOnce}"
+                        Padding="12,6" FontSize="11" Command="{Binding TwoAtATimeCommand}"
+                        ui:Tip.Text="Two downloads side by side">
+                    <TextBlock Text="TWO AT ONCE" />
+                </Button>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <TextBlock Classes="label" Text="SPEED" />
+            <Button Theme="{StaticResource GhostButton}" Padding="12,6" FontSize="11" HorizontalAlignment="Left"
+                    ui:Tip.Text="How fast downloads may go, all of them together">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <TextBlock Text="{Binding SpeedLimitText}" />
+                    <PathIcon Data="{StaticResource Icon.CaretDown.Bold}" Width="8" Height="8" />
+                </StackPanel>
+                <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                        <MenuItem Header="No speed limit" Command="{Binding SetSpeedLimitCommand}" CommandParameter="0" />
+                        <MenuItem Header="1 MB/s" Command="{Binding SetSpeedLimitCommand}" CommandParameter="1" />
+                        <MenuItem Header="2 MB/s" Command="{Binding SetSpeedLimitCommand}" CommandParameter="2" />
+                        <MenuItem Header="5 MB/s" Command="{Binding SetSpeedLimitCommand}" CommandParameter="5" />
+                        <MenuItem Header="10 MB/s" Command="{Binding SetSpeedLimitCommand}" CommandParameter="10" />
+                        <MenuItem Header="25 MB/s" Command="{Binding SetSpeedLimitCommand}" CommandParameter="25" />
+                        <MenuItem Header="50 MB/s" Command="{Binding SetSpeedLimitCommand}" CommandParameter="50" />
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </StackPanel>
+
+        <StackPanel Spacing="8" IsVisible="{Binding Centre.HasRules}">
+            <TextBlock Classes="label" Text="KEPT UP TO DATE" />
+            <ItemsControl ItemsSource="{Binding Centre.Rules}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DownloadRuleViewModel">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+                            <StackPanel Spacing="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Description}" FontSize="12" Classes="faint" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Theme="{StaticResource IconButton}" Command="{Binding RemoveCommand}" VerticalAlignment="Center"
+                                    ui:Tip.Text="Stop keeping episodes; the ones downloaded stay">
+                                <PathIcon Data="{StaticResource Icon.X}" Width="13" Height="13" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

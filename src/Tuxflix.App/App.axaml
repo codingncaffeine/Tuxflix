@@ -37,6 +37,7 @@
         <DataTemplate DataType="vm:CollectionPageViewModel"><pages:CollectionPage /></DataTemplate>
         <DataTemplate DataType="vm:PlaylistsPageViewModel"><pages:PlaylistsPage /></DataTemplate>
         <DataTemplate DataType="vm:PlaylistPageViewModel"><pages:PlaylistPage /></DataTemplate>
+        <DataTemplate DataType="vm:DownloadsPageViewModel"><pages:DownloadsPage /></DataTemplate>
 
         <!-- Artwork tiles -->
         <DataTemplate DataType="vm:PosterTileViewModel"><tiles:PosterTile /></DataTemplate>
