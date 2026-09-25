@@ -104,6 +104,7 @@ public sealed partial class DemoCatalog
         Movies = BuildMovies();
         Shows = BuildShows();
         Collections = BuildCollections();
+        BuildDiscover();
     }
 
     public DateTimeOffset Now { get; }
@@ -275,7 +276,7 @@ public sealed partial class DemoCatalog
             {
                 RatingKey = key,
                 Key = $"/library/metadata/{key}",
-                Guid = $"tuxflix-demo://movie/{key}",
+                Guid = CatalogGuid("movie", key),
                 Type = "movie",
                 Title = spec.Title,
                 TitleSort = SortTitle(spec.Title),
@@ -303,6 +304,9 @@ public sealed partial class DemoCatalog
                 UltraBlurColors = Blur(seed),
                 Role = Cast(seed),
                 Chapter = Chapters(key, spec.Title, seed, duration),
+                Theme = ThemeOf(key, "movie", seed),
+                Extras = Extras(key, spec.Title, spec.Year, seed),
+                Review = Reviews(seed),
                 Media =
                 [
                     new()
@@ -455,7 +459,7 @@ public sealed partial class DemoCatalog
             {
                 RatingKey = key,
                 Key = $"/library/metadata/{key}/children",
-                Guid = $"tuxflix-demo://show/{key}",
+                Guid = CatalogGuid("show", key),
                 Type = "show",
                 Title = spec.Title,
                 TitleSort = SortTitle(spec.Title),
@@ -478,6 +482,9 @@ public sealed partial class DemoCatalog
                 LibrarySectionTitle = "TV Shows",
                 Genre = [Genre(spec.G1), Genre(spec.G2)],
                 Role = Cast(seed),
+                Theme = ThemeOf(key, "show", seed),
+                Extras = Extras(key, spec.Title, spec.Year, seed),
+                Review = Reviews(seed),
             };
 
             _byKey[key] = show;
