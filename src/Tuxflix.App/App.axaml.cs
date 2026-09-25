@@ -31,7 +31,7 @@ public sealed class App : Application
         else if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && Launch is { } launch)
         {
             var settings = launch.Settings;
-            var probing = launch.Options.ProbePlayer || launch.Options.ProbeClassic || launch.Options.ProbeGrid;
+            var probing = launch.Options.ProbePlayer || launch.Options.ProbeClassic || launch.Options.ProbeGrid || launch.Options.ProbeMusic;
             var shell = new ShellViewModel(settings, launch.Paths)
             {
                 // A probe may borrow a copied profile's sign-in: it reads the keyring and never
@@ -42,6 +42,10 @@ public sealed class App : Application
             };
             var window = new MainWindow(shell, settings);
             desktop.MainWindow = window;
+
+            // The desktop's media controls and media keys; a probe run stays off the desktop's bus,
+            // except the music probe, which is there to test them.
+            if (!probing || launch.Options.ProbeMusic) shell.UseMediaControls(new Platform.MprisService(null, window.BringForward, window.Close));
             desktop.ShutdownRequested += (_, _) =>
             {
                 // A player open at exit tells the server where it stopped, as leaving it would.
@@ -65,6 +69,7 @@ public sealed class App : Application
                 if (launch.Options.ProbePlayer) Player.PlayerProbe.Run(shell, window);
                 if (launch.Options.ProbeClassic) Classic.ClassicProbe.Run(shell, window);
                 if (launch.Options.ProbeGrid) Probes.GridProbe.Run(shell, window);
+                if (launch.Options.ProbeMusic) Probes.MusicProbe.Run(shell, window);
             }
 
             window.Opened += Started;

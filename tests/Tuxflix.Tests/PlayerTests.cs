@@ -84,6 +84,42 @@ public sealed class PlayerTests
     }
 
     [Fact]
+    public async Task ASubtitleFileBesideTheVideoLoadsAndIsTheOneShown()
+    {
+        if (!MpvPlayer.IsAvailable) Assert.Skip("libmpv is not installed here.");
+
+        var folder = Path.Combine(Path.GetTempPath(), "tuxflix-tests", "sidecar-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var srt = Path.Combine(folder, "film.en.srt");
+            await File.WriteAllTextAsync(srt, "1\n00:00:00,000 --> 00:00:30,000\nA line from beside the file\n", TestContext.Current.CancellationToken);
+            using var player = Silent();
+            var loaded = new TaskCompletionSource();
+            player.FileLoaded += () => loaded.TrySetResult();
+            player.Load("av://lavfi:testsrc2=duration=30:size=320x180:rate=30");
+            await loaded.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+            // As the player adds a server's sidecar: by address, selected, titled.
+            player.PostCommand("sub-add", srt, "select", "English (SRT)");
+            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+            string? sid = null;
+            while (DateTime.UtcNow < deadline && (sid = player.GetString("sid")) is null or "no")
+            {
+                await Task.Delay(50, TestContext.Current.CancellationToken);
+            }
+
+            Assert.Equal("1", sid);
+            Assert.Equal("yes", player.GetString("current-tracks/sub/external"));
+            Assert.Equal("English (SRT)", player.GetString("current-tracks/sub/title"));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task ASourceThatCannotOpenEndsAsAFailure()
     {
         if (!MpvPlayer.IsAvailable) Assert.Skip("libmpv is not installed here.");

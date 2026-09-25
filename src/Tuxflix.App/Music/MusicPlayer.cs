@@ -428,6 +428,29 @@ public sealed partial class MusicPlayer : ObservableObject, IDisposable
 
     partial void OnVolumeChanged(double value) => _player?.Player.PostNumber("volume", value);
 
+    /// <summary>Playing music keeps the computer awake (the screen may still blank); a probe run leaves the desktop alone.</summary>
+    partial void OnIsPausedChanged(bool value)
+    {
+        if (_shell.Silent) return;
+        _ = Task.Run(() => value
+            ? Platform.SuspendInhibitor.Shared.ReleaseAsync("music")
+            : Platform.SuspendInhibitor.Shared.HoldAsync("music", "Playing music"));
+    }
+
+    /// <summary>Sets the repeat outright (the desktop's media controls ask for one), as the button cycles it.</summary>
+    public void SetRepeat(RepeatMode mode)
+    {
+        if (Repeat == mode) return;
+        Repeat = mode;
+        ApplyRepeat();
+    }
+
+    /// <summary>Turns shuffle on or off outright.</summary>
+    public void SetShuffle(bool shuffle)
+    {
+        if (IsShuffled != shuffle) ToggleShuffle();
+    }
+
     [RelayCommand]
     private void CycleRepeat()
     {

@@ -256,6 +256,41 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     });
 
+    private Platform.MprisService? _mediaControls;
+    private Platform.CoverCache? _covers;
+    private Platform.MusicSession? _musicSession;
+    private Platform.VideoSession? _videoSession;
+
+    /// <summary>The desktop's media controls follow what plays; a probe run gets none.</summary>
+    internal void UseMediaControls(Platform.MprisService controls)
+    {
+        _mediaControls = controls;
+        _covers = new Platform.CoverCache(Path.Combine(Paths.Cache, "covers"));
+        AttachMedia();
+    }
+
+    /// <summary>A film playing is what the media controls drive; otherwise the music queue.</summary>
+    private void AttachMedia()
+    {
+        if (_mediaControls is null || _covers is null) return;
+        if (Router.Current is PlayerPageViewModel page && Session is { } session)
+        {
+            if (_videoSession?.Page != page)
+            {
+                _videoSession?.Dispose();
+                _videoSession = new Platform.VideoSession(page, session, _covers);
+            }
+
+            _mediaControls.Attach(_videoSession);
+            return;
+        }
+
+        _videoSession?.Dispose();
+        _videoSession = null;
+        if (_musicSession is null && Music is { } music && Session is { } open) _musicSession = new Platform.MusicSession(music, open, _covers);
+        _mediaControls.Attach(_musicSession);
+    }
+
     private void Open(ServerSession session)
     {
         Close();
@@ -264,10 +299,16 @@ public sealed partial class ShellViewModel : ObservableObject
         Music = new MusicPlayer(this, session);
         Router.Reset(new HomePageViewModel(this, session));
         _ = Rail.LoadAsync(session);
+        AttachMedia();
     }
 
     private void Close()
     {
+        _mediaControls?.Attach(null);
+        _musicSession?.Dispose();
+        _musicSession = null;
+        _videoSession?.Dispose();
+        _videoSession = null;
         Rail.Clear();
         Music?.Dispose();
         Music = null;
@@ -478,6 +519,7 @@ public sealed partial class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(IsHome));
         OnPropertyChanged(nameof(IsImmersive));
         OnPropertyChanged(nameof(ShowNowPlayingBar));
+        AttachMedia();
         GoBackCommand.NotifyCanExecuteChanged();
         GoForwardCommand.NotifyCanExecuteChanged();
     }

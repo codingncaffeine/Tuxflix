@@ -50,6 +50,13 @@ internal static class PlayerProbe
 
             var item = (shell.Router.Current as HomePageViewModel)?.Shelves
                 .SelectMany(s => s.Tiles.OfType<MediaTileViewModel>()).Select(t => t.Item).FirstOrDefault(i => i.Type is "movie" or "episode");
+
+            // TUXFLIX_PROBE_ITEM plays a chosen title instead (a 4K HEVC film, a file with sidecar subtitles).
+            if (Environment.GetEnvironmentVariable("TUXFLIX_PROBE_ITEM") is { Length: > 0 } chosen && shell.Session is { } open)
+            {
+                item = await Task.Run(() => open.Client.GetMetadataAsync(chosen, CancellationToken.None));
+            }
+
             if (item is null || shell.Session is not { } session)
             {
                 Log.Error($"Probe: no film or episode on the home page; the page says \"{shell.Router.Current?.Title}\".");
@@ -72,6 +79,16 @@ internal static class PlayerProbe
             var (audio, output, subtitles) = shared is null
                 ? (null, null, null)
                 : await Task.Run(() => (shared.Player.GetString("aid"), shared.Player.GetString("current-ao"), shared.Player.GetString("sid")));
+
+            // What the picture took: the decoder, its pixel format and transfer, and every frame lost on the way.
+            var (hwdec, format, gamma, size, dropped, decoderDropped) = shared is null
+                ? (null, null, null, null, null, null)
+                : await Task.Run(() => (shared.Player.GetString("hwdec-current"), shared.Player.GetString("video-params/hw-pixelformat") ?? shared.Player.GetString("video-params/pixelformat"),
+                    shared.Player.GetString("video-params/gamma"), $"{shared.Player.GetString("video-params/w")}x{shared.Player.GetString("video-params/h")}",
+                    shared.Player.GetString("frame-drop-count"), shared.Player.GetString("decoder-frame-drop-count")));
+            var noDrops = dropped is null or "0" && decoderDropped is null or "0";
+            Log.Info($"Probe: {item.Title}: {size} {format ?? "?"} ({gamma ?? "?"}) decoded by {(string.IsNullOrEmpty(hwdec) || hwdec == "no" ? "SOFTWARE" : hwdec)}; "
+                     + $"frames dropped by the output {dropped ?? "?"}, by the decoder {decoderDropped ?? "?"}.");
             var sounded = audio is null or "no" || !string.IsNullOrEmpty(output);
             Log.Info($"Probe: player page open, {frames} frames drawn, position {page?.Position:0.0} s of {page?.Duration:0.0} s, "
                      + $"audio track {audio ?? "none"} on {(string.IsNullOrEmpty(output) ? "no sound device" : output)}, "
@@ -99,7 +116,7 @@ internal static class PlayerProbe
             var kept = after == before;
             Log.Info($"Probe: the server's resume point is {after / 1000.0:0.0} s, {(kept ? "unchanged" : "MOVED")}.");
 
-            ExitCode = frames > 10 && sounded && answered && destroyed && kept && shell.Router.Current is not PlayerPageViewModel ? 0 : 1;
+            ExitCode = frames > 10 && sounded && answered && destroyed && kept && noDrops && shell.Router.Current is not PlayerPageViewModel ? 0 : 1;
             Log.Info(ExitCode == 0 ? "Probe: playback opens, draws and closes cleanly." : "Probe: FAILED.");
         }
         catch (Exception ex)

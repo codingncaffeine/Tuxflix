@@ -53,6 +53,10 @@ internal enum MpvRenderParam
     NextFrameInfo = 11,
     BlockForTargetTime = 12,
     SkipRendering = 13,
+    SoftwareSize = 17,
+    SoftwareFormat = 18,
+    SoftwareStride = 19,
+    SoftwarePointer = 20,
 }
 
 [StructLayout(LayoutKind.Sequential)]

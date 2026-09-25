@@ -43,6 +43,9 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
     [ObservableProperty]
     public partial SharedPlayer? Player { get; private set; }
 
+    /// <summary>What is playing.</summary>
+    public MetadataItem Item => _item;
+
     public string Heading => _item.Type == "episode" ? _item.GrandparentTitle ?? _item.Title : _item.Title;
 
     public string Subheading => _item.Type == "episode"
@@ -170,11 +173,14 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         }
     }
 
-    /// <summary>The screen stays awake while the picture moves, and may sleep when it is paused or gone.</summary>
+    /// <summary>
+    /// The screen and the computer stay awake while the picture moves, and may sleep when it is
+    /// paused or gone: the screensaver's hold alone does not stop the machine suspending mid-film.
+    /// </summary>
     private static void KeepAwake(bool awake) =>
         _ = Task.Run(() => awake
-            ? Platform.ScreenSaverInhibitor.Shared.InhibitAsync("Playing video")
-            : Platform.ScreenSaverInhibitor.Shared.ReleaseAsync());
+            ? Task.WhenAll(Platform.ScreenSaverInhibitor.Shared.InhibitAsync("Playing video"), Platform.SuspendInhibitor.Shared.HoldAsync("video", "Playing video"))
+            : Task.WhenAll(Platform.ScreenSaverInhibitor.Shared.ReleaseAsync(), Platform.SuspendInhibitor.Shared.ReleaseAsync("video")));
 
     // Every control below queues its request with mpv and returns at once; mpv's answer comes back
     // as a property change.
