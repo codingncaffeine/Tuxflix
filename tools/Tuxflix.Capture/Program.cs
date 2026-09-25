@@ -6,6 +6,7 @@
 // Also: home-hidden (a shelf moved, one hidden, the page's foot), home-menu (a shelf's menu open),
 // movie-more (a film's page scrolled to its extras, critics and related shelves), library.
 // The viewer's own: movie-rated, home-tile-menu (a tile's menu), playlist-edit, playlist-rename, activity.
+// Downloads: downloads, downloads-options, movie-download (a film part-way down), series-download, offline (a start with no server in reach).
 // With --real also: artist, album, nowplaying, and classic (the compact player over a playing album;
 // CLASSIC_SKIN=path.wsz wears that skin, otherwise the base skin, fetched as the app fetches it;
 // CLASSIC_SCALE=1.5 sets its size).
@@ -262,6 +263,87 @@ void Capture(string pose)
     if ((!real && pose is "movie-rated" or "home-tile-menu" or "playlist-edit" or "playlist-rename") || pose == "activity")
     {
         ViewerPose(shell, window, pose, demoNews);
+    }
+
+    if (pose is "downloads" or "downloads-options" or "movie-download" or "series-download" or "offline")
+    {
+        // Demo downloads: a film kept, a series kept up to date, the one film the demo's "owner"
+        // withholds, and episodes arriving under a speed limit so the progress shows part-way.
+        var catalog = Tuxflix.Core.Demo.DemoCatalog.Create(DateTimeOffset.Now);
+        var session = shell.Session ?? throw new InvalidOperationException("No server is open.");
+        var downloads = shell.Downloads;
+        Wait(downloads.Loaded);
+        if (pose is not ("movie-download" or "series-download"))
+        {
+            var film = downloads.Download(session, catalog.Movies[2]) ?? throw new InvalidOperationException("The film was not queued.");
+            var episode = downloads.Download(session, catalog.ChildrenOf("200201")[0]) ?? throw new InvalidOperationException("The episode was not queued.");
+            var clock = Stopwatch.StartNew();
+            while (!(film.IsDone && episode.IsDone) && clock.Elapsed < TimeSpan.FromSeconds(30)) Pump(TimeSpan.FromMilliseconds(100));
+        }
+
+        shell.Settings.Downloads.SpeedLimit = 600_000;
+        if (pose is "downloads" or "downloads-options")
+        {
+            downloads.Download(session, catalog.Movies.Single(m => m.Title == Tuxflix.Core.Demo.DemoPlexHandler.WithheldTitle));
+            downloads.KeepNext(session, catalog.Shows[0], 3);
+            Pump(TimeSpan.FromSeconds(2.5));
+            shell.ShowDownloadsCommand.Execute(null);
+        }
+        else if (pose == "series-download")
+        {
+            // A series keeping its next three episodes: two in, the third on its way.
+            shell.Settings.Downloads.SpeedLimit = 0;
+            shell.OpenItem(catalog.Shows[0]);
+            Settle(shell);
+            var series = (ItemPageViewModel)shell.Router.Current!;
+            series.KeepNextCommand.Execute("3");
+            var clock = Stopwatch.StartNew();
+            while (series.SeriesDownloads?.KeptCount < 3 && clock.Elapsed < TimeSpan.FromSeconds(30)) Pump(TimeSpan.FromMilliseconds(100));
+        }
+        else if (pose == "movie-download")
+        {
+            shell.OpenItem(catalog.Movies[2]);
+            Settle(shell);
+            ((ItemPageViewModel)shell.Router.Current!).DownloadCommand.Execute(null);
+            Pump(TimeSpan.FromSeconds(3));
+        }
+        else
+        {
+            // The next start: a sign-in is remembered, but neither plex.tv nor any server answers.
+            shell.StopDownloads();
+            Wait(shell.DownloadsStopped);
+            window.Close();
+            var offline = new ShellViewModel(SettingsStore.Load(paths.SettingsFile), paths, new Unreachable())
+            {
+                Keyring = new StandInSecrets(),
+                ReportsPlayback = false,
+                Silent = true,
+            };
+            var second = new MainWindow(offline, SettingsStore.Load(paths.SettingsFile)) { Width = width, Height = height };
+            second.Show();
+            offline.Start(demo: false);
+            var clock = Stopwatch.StartNew();
+            while (offline.Router.Current is not DownloadsPageViewModel && clock.Elapsed < TimeSpan.FromSeconds(30)) Pump(TimeSpan.FromMilliseconds(100));
+            Settle(offline);
+            var shot = second.CaptureRenderedFrame() ?? throw new InvalidOperationException("Nothing was rendered.");
+            var path = Path.Combine(output, pose + ".png");
+            shot.Save(path, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+            Console.WriteLine($"{pose}: {path} ({shot.PixelSize.Width}x{shot.PixelSize.Height}); the page says: {offline.Router.Current?.Title}");
+            offline.StopDownloads();
+            Wait(offline.DownloadsStopped);
+            second.Close();
+            return;
+        }
+
+        Settle(shell);
+        if (pose == "downloads-options")
+        {
+            var options = window.GetVisualDescendants().OfType<Button>()
+                .FirstOrDefault(b => Tuxflix.App.Controls.Tip.GetText(b) == "Where downloads go, how many at once, and how fast")
+                ?? throw new InvalidOperationException("No options button.");
+            options.Flyout!.ShowAt(options);
+            Pump(TimeSpan.FromMilliseconds(600));
+        }
     }
 
     if (pose == "player")
@@ -744,4 +826,21 @@ static void StreamCheck(ShellViewModel shell)
     Console.WriteLine($"stream: {full.Type} loaded; video {player.GetString("video-codec")} {player.GetString("width")}x{player.GetString("height")}, "
                       + $"audio {player.GetString("audio-codec-name")}; container {player.GetString("file-format")}; "
                       + $"asked to start at {start:0.0} s, reached {(positions.IsEmpty ? 0 : positions.Max()):0.0} s after 4 s.");
+}
+
+/// <summary>A keyring that remembers one sign-in, for the offline pose; the real keyring is never touched.</summary>
+internal sealed class StandInSecrets : ISecretStore
+{
+    public Task<string?> LookupAsync(string account) => Task.FromResult<string?>("stand-in-token");
+
+    public Task<bool> StoreAsync(string account, string label, string secret) => Task.FromResult(false);
+
+    public Task ClearAsync(string account) => Task.CompletedTask;
+}
+
+/// <summary>A network with nothing on it: every request fails as an unreachable address does.</summary>
+internal sealed class Unreachable : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+        Task.FromException<HttpResponseMessage>(new HttpRequestException("No route to host."));
 }

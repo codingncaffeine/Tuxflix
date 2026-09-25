@@ -57,7 +57,7 @@ public sealed partial class PlayerPageViewModel
     /// <summary>Plays at <paramref name="quality"/> from where playback is now.</summary>
     public async void SetQuality(StreamQuality quality)
     {
-        if (quality == Quality || session.IsDemo) return;
+        if (quality == Quality || session.IsDemo || Download is not null) return;
         Log.Info($"Quality: {quality.Label}.");
         Quality = quality;
         await RestartAsync();

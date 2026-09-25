@@ -99,6 +99,14 @@
                 </Border>
             </StackPanel>
 
+            <!-- ===== Downloads ===== -->
+            <StackPanel Spacing="10">
+                <TextBlock Text="Downloads" FontSize="17" FontWeight="SemiBold" />
+                <Border Classes="section" Padding="20,16">
+                    <sections:DownloadSettingsView DataContext="{Binding Downloads}" HorizontalAlignment="Left" />
+                </Border>
+            </StackPanel>
+
             <!-- ===== How films and episodes play ===== -->
             <StackPanel Spacing="10">
                 <TextBlock Text="Films and episodes" FontSize="17" FontWeight="SemiBold" />

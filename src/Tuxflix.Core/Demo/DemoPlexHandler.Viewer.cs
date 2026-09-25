@@ -14,7 +14,7 @@ public sealed partial class DemoPlexHandler
         var method = request.Method;
         return segments switch
         {
-            [":", "scrobble"] => Done(catalog.MarkWatched(query["key"], watched: true)),
+            [":", "scrobble"] => handler.NotedThen($"scrobble {query["key"]}", () => Done(catalog.MarkWatched(query["key"], watched: true))),
             [":", "unscrobble"] => Done(catalog.MarkWatched(query["key"], watched: false)),
             [":", "rate"] => Done(double.TryParse(query["rating"], NumberStyles.Float, CultureInfo.InvariantCulture, out var rating) && catalog.Rate(query["key"], rating)),
             ["library", "parts", var part] when method == HttpMethod.Put =>

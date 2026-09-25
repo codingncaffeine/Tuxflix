@@ -40,6 +40,9 @@ public sealed class AppSettings
 
     /// <summary>How the libraries are browsed: the home shelves of each server, theme music.</summary>
     public BrowseSettings Browse { get; set; } = new();
+
+    /// <summary>Where downloads go, how many at once, and how fast.</summary>
+    public DownloadSettings Downloads { get; set; } = new();
 }
 
 public sealed class PlaybackSettings

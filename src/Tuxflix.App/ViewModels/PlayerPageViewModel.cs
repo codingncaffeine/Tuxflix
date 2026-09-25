@@ -100,7 +100,8 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
 
     protected override async Task LoadAsync(CancellationToken cancellation)
     {
-        if (await Task.Run(() => session.Client.GetMetadataAsync(_item.RatingKey, cancellation), cancellation) is { } full)
+        // A download carries its own full record; the server may not even be in reach.
+        if (Download is null && await Task.Run(() => session.Client.GetMetadataAsync(_item.RatingKey, cancellation), cancellation) is { } full)
         {
             _item = full;
             OnPropertyChanged(nameof(Heading));
@@ -110,7 +111,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         LoadSmart();
 
         var part = _item.Media?.FirstOrDefault()?.Part?.FirstOrDefault();
-        if (part?.Key is null)
+        if (part?.Key is null && Download is null)
         {
             ErrorMessage = "The server lists no playable file for this item.";
             return;
@@ -124,22 +125,32 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
 
         _part = part;
 
-        // The quality chosen in the settings for this kind of network.
-        Quality = StreamQuality.FromKbps(session.IsRemote ? shell.Settings.Playback.RemoteQualityKbps : shell.Settings.Playback.HomeQualityKbps);
+        // The quality chosen in the settings for this kind of network; a kept copy is the file itself.
+        Quality = Download is not null
+            ? StreamQuality.Original
+            : StreamQuality.FromKbps(session.IsRemote ? shell.Settings.Playback.RemoteQualityKbps : shell.Settings.Playback.HomeQualityKbps);
+
+        if (Download is { } kept)
+        {
+            _source = kept.MediaPath;
+            StreamSummary = "The downloaded file";
+        }
 
         // The demo has no files; it plays a moving test pattern instead.
-        if (session.IsDemo)
+        else if (session.IsDemo)
         {
             _source = "av://lavfi:testsrc2=size=1280x720:rate=30";
             StreamSummary = "The built-in test pattern";
         }
         else
         {
-            _source = await RouteAsync(part, cancellation);
+            _source = await RouteAsync(part!, cancellation);
         }
 
         // A generated pattern cannot seek: resuming it would decode every frame up to the offset.
-        _start = !session.IsDemo && resume && _item.ViewOffset is > 0 ? _item.ViewOffset.Value / 1000.0 : 0;
+        // The demo's downloads are a few seconds long, whatever the film's length: they start at the start.
+        _start = Download is { } copy ? (resume && copy.ViewOffset > 0 && copy.ServerId != Tuxflix.Core.Demo.DemoCatalog.MachineIdentifier ? copy.ViewOffset / 1000.0 : 0)
+            : !session.IsDemo && resume && _item.ViewOffset is > 0 ? _item.ViewOffset.Value / 1000.0 : 0;
         Duration = (_item.Duration ?? 0) / 1000.0;
 
         // Starting mpv waits for its core: a worker does it, never the UI thread.
@@ -156,7 +167,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         shared.Player.Ended += (reason, error) => Dispatcher.UIThread.Post(() => OnEnded(reason, error));
         shared.Player.FileLoaded += () => _ = Task.Run(() => ChooseTracks(shared));
         Player = shared;
-        Log.Info($"Playing {(session.IsDemo ? "the demo pattern" : IsConverting ? "the server's conversion" : "directly from the server")}{(_start > 0 ? $", resuming at {Clock(_start)}" : string.Empty)}.");
+        Log.Info($"Playing {(Download is not null ? "the downloaded file" : session.IsDemo ? "the demo pattern" : IsConverting ? "the server's conversion" : "directly from the server")}{(_start > 0 ? $", resuming at {Clock(_start)}" : string.Empty)}.");
     }
 
     /// <summary>The video surface can take frames now; start the file.</summary>
@@ -341,7 +352,11 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         // Played to the end: the server hears "stopped" at the end, and the item is marked watched.
         var ratingKey = _item.RatingKey;
         var duration = (long)(Duration * 1000);
-        if (shell.ReportsPlayback)
+        if (shell.ReportsPlayback && Download is not null)
+        {
+            RecordDownload("stopped", finished: true);
+        }
+        else if (shell.ReportsPlayback)
         {
             _ = Task.Run(async () =>
             {
@@ -365,6 +380,12 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
     {
         if (!_loaded || !shell.ReportsPlayback || (!force && state == _reported)) return;
         _reported = state;
+        if (Download is not null)
+        {
+            RecordDownload(state, finished: false);
+            return;
+        }
+
         var sessionIdentifier = _sessionIdentifier;
         var ratingKey = _item.RatingKey;
         var time = (long)(Position * 1000);

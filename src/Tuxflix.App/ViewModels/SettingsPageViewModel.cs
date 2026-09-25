@@ -53,6 +53,9 @@ public sealed partial class SettingsPageViewModel(ShellViewModel shell) : PageVi
     /// <summary>Browsing: theme music and the home screen's shelves.</summary>
     public BrowseSettingsViewModel Browse { get; } = new(shell);
 
+    /// <summary>Downloads: where they go, how many at once and how fast.</summary>
+    public DownloadSettingsViewModel Downloads { get; } = new(shell);
+
     // ===== How films and episodes play =====
 
     public IReadOnlyList<StreamQuality> QualityChoices => StreamQuality.All;

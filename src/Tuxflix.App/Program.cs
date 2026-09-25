@@ -69,6 +69,7 @@ internal static class Program
         {
             // The last saves (the window's place, the server used) reach the disk before the process ends.
             if (!settings.Flush(TimeSpan.FromSeconds(3))) Console.Error.WriteLine("Settings were still being written at exit.");
+            if (!App.DownloadsStopped.Wait(TimeSpan.FromSeconds(5))) Console.Error.WriteLine("Downloads were still stopping at exit.");
             Log.Flush(TimeSpan.FromSeconds(2));
         }
     }

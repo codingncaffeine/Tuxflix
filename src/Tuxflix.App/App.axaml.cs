@@ -19,6 +19,9 @@ public sealed class App : Application
 
     private static PosixSignalRegistration? _terminate;
 
+    /// <summary>Done once the downloads have stopped and their list is written; the process waits for it at exit.</summary>
+    internal static Task DownloadsStopped { get; private set; } = Task.CompletedTask;
+
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted()
@@ -50,6 +53,8 @@ public sealed class App : Application
             {
                 // A player open at exit tells the server where it stopped, as leaving it would.
                 shell.Router.Current?.Deactivate();
+                shell.StopDownloads();
+                DownloadsStopped = shell.DownloadsStopped;
                 settings.Save();
             };
 

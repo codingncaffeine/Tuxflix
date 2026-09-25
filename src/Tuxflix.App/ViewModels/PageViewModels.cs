@@ -22,6 +22,13 @@ public sealed partial class ItemPageViewModel(ShellViewModel shell, ServerSessio
         nameof(LogoPath), nameof(HasLogo), nameof(ShowTextTitle))]
     public partial MetadataItem Item { get; set; } = summary;
 
+    // Each feature follows the item shown from a file of its own: marks and choices, downloads.
+    partial void OnItemChanged(MetadataItem value)
+    {
+        ViewerFollowsItem(value);
+        DownloadsFollowItem(value);
+    }
+
     public ObservableCollection<SeasonTabViewModel> Seasons { get; } = [];
 
     public ObservableCollection<EpisodeRowViewModel> Episodes { get; } = [];

@@ -1,0 +1,194 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Tuxflix.App.ViewModels"
+             xmlns:ui="using:Tuxflix.App.Controls"
+             xmlns:settings="using:Tuxflix.App.Views.Settings"
+             x:Class="Tuxflix.App.Views.Pages.DownloadsPage"
+             x:DataType="vm:DownloadsPageViewModel">
+
+    <!-- Steam's downloads page, for films: what is arriving with its progress, the rules that keep
+         episodes coming, then what is kept, which plays without the server. -->
+    <UserControl.Styles>
+        <!-- The options need more room than a flyout gives by default. -->
+        <Style Selector="FlyoutPresenter.wide">
+            <Setter Property="MaxWidth" Value="640" />
+        </Style>
+        <Style Selector="TextBlock.status">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}" />
+        </Style>
+        <Style Selector="TextBlock.status.failed">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- ===== Header: the title, the space, and the options ===== -->
+        <Grid ColumnDefinitions="*,Auto" Margin="36,28,36,14">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="label" Text="OFFLINE LIBRARY" Foreground="{DynamicResource Brush.Accent}" />
+                <TextBlock Text="Downloads" FontSize="32" FontWeight="Bold" />
+                <TextBlock Text="{Binding Centre.SpaceText}" Classes="faint" FontSize="13" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                <Button Theme="{StaticResource GhostButton}" Padding="12,6" FontSize="11"
+                        ui:Tip.Text="Where downloads go, how many at once, and how fast">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <PathIcon Data="{StaticResource Icon.FolderSimple}" Width="13" Height="13" />
+                        <TextBlock Text="OPTIONS" />
+                        <PathIcon Data="{StaticResource Icon.CaretDown.Bold}" Width="8" Height="8" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedRight" FlyoutPresenterClasses="wide">
+                            <settings:DownloadSettingsView DataContext="{Binding Options}" Margin="8" />
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <Button Theme="{StaticResource IconButton}" Command="{Binding PauseAllCommand}" ui:Tip.Text="Pause every download">
+                    <PathIcon Data="{StaticResource Icon.Pause.Fill}" Width="15" Height="15" />
+                </Button>
+                <Button Theme="{StaticResource IconButton}" Command="{Binding ResumeAllCommand}" ui:Tip.Text="Resume every paused download">
+                    <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="15" Height="15" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ===== Offline: why, and a way back ===== -->
+        <Border Grid.Row="1" IsVisible="{Binding HasNotice}" Margin="36,0,36,14" Padding="16,10" CornerRadius="8" HorizontalAlignment="Left"
+                Background="{DynamicResource Brush.Accent.Softer}" BorderBrush="{DynamicResource Brush.Accent.Edge}" BorderThickness="1">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <PathIcon Data="{StaticResource Icon.WarningCircle}" Width="16" Height="16" Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Notice}" FontSize="13.5" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="820" />
+                <Button Theme="{StaticResource GhostButton}" Padding="12,5" FontSize="11" Command="{Binding TryAgainCommand}"
+                        ui:Tip.Text="Look for the server again">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <PathIcon Data="{StaticResource Icon.ArrowClockwise}" Width="12" Height="12" />
+                        <TextBlock Text="TRY AGAIN" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="24,4,36,40" Spacing="28">
+
+                <!-- Nothing yet -->
+                <StackPanel IsVisible="{Binding IsEmpty}" Spacing="12" Margin="12,40,0,0" MaxWidth="520" HorizontalAlignment="Left">
+                    <PathIcon Data="{StaticResource Icon.DownloadSimple}" Width="34" Height="34" HorizontalAlignment="Left"
+                              Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                    <TextBlock Text="Nothing is downloaded yet" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock Text="Download a film or an episode from its page, or keep the next few episodes of a series, to watch them without the server."
+                               FontSize="14" LineHeight="21" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                </StackPanel>
+
+                <!-- ===== The queue ===== -->
+                <StackPanel Spacing="10" IsVisible="{Binding Centre.HasQueue}">
+                    <TextBlock Classes="shelf-title" Text="QUEUE" Margin="12,0,0,0" />
+                    <ItemsControl ItemsSource="{Binding Centre.Queue}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DownloadRowViewModel">
+                                <Border Padding="12,10" Margin="0,0,0,4" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Fill.Subtle}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <Border Width="160" Height="90" CornerRadius="5" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
+                                            <ui:RemoteImage Path="{Binding PicturePath}" DecodeWidth="160" DecodeHeight="90" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Margin="18,2,16,0" Spacing="4" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="12.5" Classes="faint" TextTrimming="CharacterEllipsis" />
+                                            <Border CornerRadius="2" ClipToBounds="True" Margin="0,6,0,0">
+                                                <ProgressBar Theme="{StaticResource ThinProgress}" Value="{Binding Fraction}" Background="#26FFFFFF" />
+                                            </Border>
+                                            <TextBlock Text="{Binding Status}" FontSize="12.5" TextWrapping="Wrap"
+                                                       Classes="status" Classes.failed="{Binding IsFailed}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                            <Button Theme="{StaticResource IconButton}" Command="{Binding MoveToFrontCommand}" IsVisible="{Binding !IsActive}"
+                                                    ui:Tip.Text="Download this one next">
+                                                <PathIcon Data="{StaticResource Icon.CaretDown.Bold}" Width="12" Height="12" RenderTransform="rotate(180deg)" />
+                                            </Button>
+                                            <Button Theme="{StaticResource IconButton}" Command="{Binding PauseCommand}" IsVisible="{Binding CanPause}"
+                                                    ui:Tip.Text="Pause; what has arrived is kept">
+                                                <PathIcon Data="{StaticResource Icon.Pause.Fill}" Width="14" Height="14" />
+                                            </Button>
+                                            <Button Theme="{StaticResource IconButton}" Command="{Binding ResumeCommand}" IsVisible="{Binding CanResume}"
+                                                    ui:Tip.Text="Carry on from where it stopped">
+                                                <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="14" Height="14" />
+                                            </Button>
+                                            <Button Theme="{StaticResource IconButton}" Command="{Binding RemoveCommand}" ui:Tip.Text="Cancel the download">
+                                                <PathIcon Data="{StaticResource Icon.X}" Width="14" Height="14" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- ===== Rules ===== -->
+                <StackPanel Spacing="10" IsVisible="{Binding Centre.HasRules}">
+                    <TextBlock Classes="shelf-title" Text="KEPT UP TO DATE" Margin="12,0,0,0" />
+                    <ItemsControl ItemsSource="{Binding Centre.Rules}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DownloadRuleViewModel">
+                                <Border Padding="14,10" Margin="0,0,0,4" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Fill.Subtle}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <PathIcon Data="{StaticResource Icon.ArrowClockwise}" Width="16" Height="16" Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Margin="14,0" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="14.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Description}" FontSize="12.5" Classes="faint" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Theme="{StaticResource IconButton}" Command="{Binding RemoveCommand}"
+                                                ui:Tip.Text="Stop keeping episodes; the ones downloaded stay">
+                                            <PathIcon Data="{StaticResource Icon.X}" Width="14" Height="14" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- ===== Kept: plays without the server ===== -->
+                <StackPanel Spacing="10" IsVisible="{Binding Centre.HasKept}">
+                    <TextBlock Classes="shelf-title" Text="DOWNLOADED" Margin="12,0,0,0" />
+                    <ItemsControl ItemsSource="{Binding Centre.Kept}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DownloadRowViewModel">
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+                                    <Button Theme="{StaticResource RailRow}" Padding="12,10" Command="{Binding PlayCommand}"
+                                            ui:Tip.Text="Play the downloaded copy">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <Panel Width="160" Height="90">
+                                                <Border CornerRadius="5" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
+                                                    <Panel>
+                                                        <ui:RemoteImage Path="{Binding PicturePath}" DecodeWidth="160" DecodeHeight="90" />
+                                                        <ProgressBar Theme="{StaticResource ThinProgress}" VerticalAlignment="Bottom"
+                                                                     Value="{Binding WatchProgress}" IsVisible="{Binding HasWatchProgress}" />
+                                                    </Panel>
+                                                </Border>
+                                                <Border Classes="badge-watched" IsVisible="{Binding IsWatched}" Margin="0,6,6,0">
+                                                    <PathIcon Data="{StaticResource Icon.Check.Bold}" Width="10" Height="10" Foreground="White" />
+                                                </Border>
+                                            </Panel>
+                                            <StackPanel Grid.Column="1" Margin="18,2,16,0" Spacing="4" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Subtitle}" FontSize="12.5" Classes="faint" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Status}" FontSize="12.5" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                    <Button Grid.Column="1" Theme="{StaticResource IconButton}" Command="{Binding RemoveCommand}" VerticalAlignment="Center"
+                                            Margin="6,0,0,0" ui:Tip.Text="Delete the downloaded copy">
+                                        <PathIcon Data="{StaticResource Icon.X}" Width="14" Height="14" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

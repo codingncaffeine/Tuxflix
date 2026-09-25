@@ -125,7 +125,7 @@ public sealed partial class ItemPageViewModel : IViewerItem, ILiveRefresh
         if (mine) _ = ReloadAsync();
     }
 
-    partial void OnItemChanged(MetadataItem value)
+    private void ViewerFollowsItem(MetadataItem value)
     {
         // A season opens as its series: the state follows whichever item the page shows.
         if (_state is { } old && old.RatingKey != value.RatingKey)

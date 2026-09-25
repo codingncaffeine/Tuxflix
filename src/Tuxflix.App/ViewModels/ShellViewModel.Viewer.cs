@@ -20,7 +20,7 @@ public sealed partial class ShellViewModel
     /// <summary>Makes the notification source for a server; null for the default (the demo's stand-in, or the server's socket).</summary>
     public Func<ServerSession, INotificationSource?>? NotificationSources { get; init; }
 
-    partial void OnSessionChanged(ServerSession? oldValue, ServerSession? newValue)
+    private void ViewerFollowsSession(ServerSession? oldValue, ServerSession? newValue)
     {
         Viewer = newValue is null ? null : new ViewerState(newValue);
         OnPropertyChanged(nameof(Viewer));

@@ -13,7 +13,6 @@ public sealed partial class DemoPlexHandler
             ? Json(new MediaContainer { Size = item.Extras?.Size ?? 0, Metadata = [.. item.Extras?.Metadata ?? []] })
             : NotFound(),
         ["library", "all"] => Json(new MediaContainer { Size = handler.Catalog.FindByGuid(query["guid"]).Count, Metadata = [.. handler.Catalog.FindByGuid(query["guid"])] }),
-        ["library", "metadata", var key, "allLeaves"] => Json(new MediaContainer { Metadata = [.. handler.Catalog.ChildrenOf(key).SelectMany(season => handler.Catalog.ChildrenOf(season.RatingKey))] }),
         _ => null,
     });
 }
