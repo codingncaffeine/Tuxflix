@@ -241,20 +241,8 @@ public sealed partial class ShellViewModel : ObservableObject
         Open(ServerSession.CreateRemote(Identity, server, connection, Paths, _network));
     }
 
-    /// <summary>Starting a process forks and execs: a worker does it, never the UI thread.</summary>
-    private static void OpenInBrowser(string url) => _ = Task.Run(() =>
-    {
-        try
-        {
-            var start = new System.Diagnostics.ProcessStartInfo("xdg-open") { UseShellExecute = false };
-            start.ArgumentList.Add(url);
-            using var _ = System.Diagnostics.Process.Start(start);
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
-        {
-            Log.Warn("The browser could not be opened.", ex);
-        }
-    });
+    /// <summary>The desktop's browser, asked on a worker (D-Bus, or a process: never the UI thread).</summary>
+    private static void OpenInBrowser(string url) => _ = Task.Run(() => Platform.Links.OpenAsync(url));
 
     private Platform.MprisService? _mediaControls;
     private Platform.CoverCache? _covers;
