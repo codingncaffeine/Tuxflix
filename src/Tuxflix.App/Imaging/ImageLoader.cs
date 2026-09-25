@@ -131,9 +131,19 @@ public sealed class ImageLoader
             await _fetches.WaitAsync().ConfigureAwait(false);
             try
             {
-                // Artwork kept beside a download is read from its file, with or without a server.
-                var bytes = path.StartsWith("file://", StringComparison.Ordinal) ? await File.ReadAllBytesAsync(new Uri(path).LocalPath).ConfigureAwait(false) : _disk?.Read(key);
-                if (bytes is null)
+                // Artwork kept beside a download is read from its file, with or without a server;
+                // nothing else on disk is, whatever address a server's answer names.
+                byte[]? bytes;
+                if (path.StartsWith("file://", StringComparison.Ordinal))
+                {
+                    bytes = Tuxflix.Core.Downloads.DownloadManager.ReadArtwork(path);
+                    if (bytes is null)
+                    {
+                        Log.Debug($"Artwork {path} is not artwork kept beside a download; not read.");
+                        return null;
+                    }
+                }
+                else if ((bytes = _disk?.Read(key)) is null)
                 {
                     bytes = await _client.GetBytesAsync(_client.ImageUri(path, width, height, format), CancellationToken.None).ConfigureAwait(false);
                     _disk?.Write(key, bytes);

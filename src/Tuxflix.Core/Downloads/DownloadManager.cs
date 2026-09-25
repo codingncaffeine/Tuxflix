@@ -608,6 +608,39 @@ public sealed partial class DownloadManager : IAsyncDisposable
 
     private static readonly string[] ArtworkNames = ["poster.jpg", "backdrop.jpg", "still.jpg"];
 
+    /// <summary>Artwork kept beside a download is never larger than this.</summary>
+    public const long MaxArtworkBytes = 32 * 1024 * 1024;
+
+    /// <summary>
+    /// The bytes of artwork kept beside a download, from its <c>file://</c> address; null for any
+    /// other address. A server's answer can name a <c>file://</c> address too, so only the names the
+    /// downloads write are read, and only from a regular file of a sensible size: a device never
+    /// ends (<c>/dev/zero</c>), and opening a pipe waits for a writer that may never come. Touches
+    /// the disk: a worker's job.
+    /// </summary>
+    public static byte[]? ReadArtwork(string fileUri)
+    {
+        if (!Uri.TryCreate(fileUri, UriKind.Absolute, out var uri) || !uri.IsFile || uri.IsUnc) return null;
+        var path = uri.LocalPath;
+        if (!ArtworkNames.Contains(Path.GetFileName(path), StringComparer.Ordinal)) return null;
+
+        // Devices, pipes and sockets report no length; a link could lead anywhere.
+        var info = new FileInfo(path);
+        if (!info.Exists || info.LinkTarget is not null || info.Length is 0 or > MaxArtworkBytes) return null;
+        try
+        {
+            using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var bytes = new byte[info.Length];
+            file.ReadExactly(bytes);
+            return bytes;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Debug($"Artwork {path} could not be read: {ex.Message}");
+            return null;
+        }
+    }
+
     private enum StopReason
     {
         None,

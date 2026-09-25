@@ -189,3 +189,54 @@ public sealed class RedirectTests
         }
     }
 }
+
+/// <summary>A <c>file://</c> address is read only as artwork a download kept, never as whatever a server names.</summary>
+public sealed class LocalArtworkTests : IDisposable
+{
+    private readonly string _folder = Path.Combine(Path.GetTempPath(), "tuxflix-tests", "artwork-" + Guid.NewGuid().ToString("N")[..8]);
+
+    public LocalArtworkTests() => Directory.CreateDirectory(_folder);
+
+    public void Dispose() => Directory.Delete(_folder, recursive: true);
+
+    private string Address(string name) => new Uri(Path.Combine(_folder, name)).AbsoluteUri;
+
+    [Fact]
+    public void ArtworkKeptBesideADownloadIsRead()
+    {
+        File.WriteAllBytes(Path.Combine(_folder, "poster.jpg"), [1, 2, 3]);
+
+        Assert.Equal([1, 2, 3], Tuxflix.Core.Downloads.DownloadManager.ReadArtwork(Address("poster.jpg")));
+    }
+
+    [Fact]
+    public void NothingElseOnDiskIsRead()
+    {
+        // The link's target path and the file it names are both nine bytes long, so the link reads
+        // as a sensible size whichever of the two a length reports: only the link check refuses it.
+        File.WriteAllBytes(Path.Combine(_folder, "notes.txt"), "123456789"u8.ToArray());
+        File.CreateSymbolicLink(Path.Combine(_folder, "still.jpg"), "notes.txt");
+        Assert.Equal(9, new FileInfo(Path.Combine(_folder, "still.jpg")).Length);
+        using (var large = File.Create(Path.Combine(_folder, "backdrop.jpg"))) large.SetLength(Tuxflix.Core.Downloads.DownloadManager.MaxArtworkBytes + 1);
+
+        Assert.Null(Tuxflix.Core.Downloads.DownloadManager.ReadArtwork(Address("notes.txt")));
+        Assert.Null(Tuxflix.Core.Downloads.DownloadManager.ReadArtwork("file:///dev/zero"));
+        Assert.Null(Tuxflix.Core.Downloads.DownloadManager.ReadArtwork(Address("still.jpg")));
+        Assert.Null(Tuxflix.Core.Downloads.DownloadManager.ReadArtwork(Address("backdrop.jpg")));
+        Assert.Null(Tuxflix.Core.Downloads.DownloadManager.ReadArtwork("https://example.com/poster.jpg"));
+    }
+
+    [Fact]
+    public async Task APipeNamedLikeArtworkIsRefusedWithoutWaiting()
+    {
+        var cancellation = TestContext.Current.CancellationToken;
+        var pipe = Path.Combine(_folder, "poster.jpg");
+        using (var mkfifo = System.Diagnostics.Process.Start("mkfifo", [pipe])) await mkfifo.WaitForExitAsync(cancellation);
+        Assert.True(File.Exists(pipe));
+
+        var read = Task.Run(() => Tuxflix.Core.Downloads.DownloadManager.ReadArtwork(Address("poster.jpg")), cancellation);
+
+        Assert.Same(read, await Task.WhenAny(read, Task.Delay(TimeSpan.FromSeconds(5), cancellation)));
+        Assert.Null(await read);
+    }
+}
