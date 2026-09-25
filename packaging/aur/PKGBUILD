@@ -22,7 +22,7 @@ optdepends=('sdl3: game controllers in the TV mode'
 options=('!strip')   # self-contained .NET bundle — stripping breaks it
 source_x86_64=("$url/releases/download/v$pkgver/Tuxflix-$pkgver-linux-x64.tar.gz")
 # The release's own tarball, hashed when it was built (packaging/build-release.sh prints it).
-sha256sums_x86_64=('SKIP')
+sha256sums_x86_64=('be68e86306a2e9fbac2d15e93bd57d0e63e15d6d5b8cd37104bb3b17311f0d18')
 
 package() {
     install -dm755 "$pkgdir/usr/lib/tuxflix" "$pkgdir/usr/bin" "$pkgdir/usr/share/doc/tuxflix"
