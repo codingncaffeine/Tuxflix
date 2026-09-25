@@ -143,7 +143,8 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         }
 
         // A generated pattern cannot seek: resuming it would decode every frame up to the offset.
-        _start = Download is { } copy ? (resume && copy.ViewOffset > 0 ? copy.ViewOffset / 1000.0 : 0)
+        // The demo's downloads are a few seconds long, whatever the film's length: they start at the start.
+        _start = Download is { } copy ? (resume && copy.ViewOffset > 0 && copy.ServerId != Tuxflix.Core.Demo.DemoCatalog.MachineIdentifier ? copy.ViewOffset / 1000.0 : 0)
             : !session.IsDemo && resume && _item.ViewOffset is > 0 ? _item.ViewOffset.Value / 1000.0 : 0;
         Duration = (_item.Duration ?? 0) / 1000.0;
 

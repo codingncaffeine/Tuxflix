@@ -67,7 +67,27 @@ internal static class PlayerProbe
             var before = await ResumePointAsync(session, item);
             Log.Info($"Probe: home filled after {startup.Elapsed.TotalSeconds:0.0} s; playing {(item.Type == "episode" ? "an episode" : "a film")} "
                      + $"left at {before / 1000.0:0.0} s.");
-            shell.Play(item, resume: true);
+            // TUXFLIX_PROBE_DOWNLOAD=1 downloads the item first and plays the kept copy from disk.
+            if (Environment.GetEnvironmentVariable("TUXFLIX_PROBE_DOWNLOAD") == "1")
+            {
+                var full = await Task.Run(() => session.Client.GetMetadataAsync(item.RatingKey, CancellationToken.None)) ?? item;
+                var row = shell.Downloads.Download(session, full);
+                var waiting = Stopwatch.StartNew();
+                while (row is { IsDone: false } && waiting.Elapsed < TimeSpan.FromSeconds(60)) await Task.Delay(100);
+                if (row is not { IsDone: true })
+                {
+                    Log.Error($"Probe: the download did not finish: {row?.Status}.");
+                    return;
+                }
+
+                Log.Info($"Probe: downloaded {row.Record.TotalBytes} bytes in {waiting.Elapsed.TotalSeconds:0.0} s; playing the kept copy.");
+                await shell.PlayDownloadAsync(row.Record);
+            }
+            else
+            {
+                shell.Play(item, resume: true);
+            }
+
             var seconds = int.TryParse(Environment.GetEnvironmentVariable("TUXFLIX_PROBE_SECONDS"), out var s) && s > 0 ? s : 6;
             await Task.Delay(TimeSpan.FromSeconds(seconds));
 
