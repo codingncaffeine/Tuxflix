@@ -33,6 +33,15 @@ public sealed partial class Router : ObservableObject
         Show(page);
     }
 
+    /// <summary>Puts <paramref name="page"/> in the current one's place: back still returns to where the viewer came from (the next episode takes over the player).</summary>
+    public void Replace(PageViewModel page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        Current?.Deactivate();
+        _forward.Clear();
+        Show(page);
+    }
+
     /// <summary>Starts over at <paramref name="page"/>, forgetting the history: a new server, a new sign-in.</summary>
     public void Reset(PageViewModel page)
     {

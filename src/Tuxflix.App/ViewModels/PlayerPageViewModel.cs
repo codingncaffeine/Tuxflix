@@ -46,6 +46,10 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
     /// <summary>What is playing.</summary>
     public MetadataItem Item => _item;
 
+    private ShellViewModel Owner => shell;
+
+    private ServerSession Server => session;
+
     public string Heading => _item.Type == "episode" ? _item.GrandparentTitle ?? _item.Title : _item.Title;
 
     public string Subheading => _item.Type == "episode"
@@ -103,6 +107,8 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
             OnPropertyChanged(nameof(Subheading));
         }
 
+        LoadSmart();
+
         var part = _item.Media?.FirstOrDefault()?.Part?.FirstOrDefault();
         if (part?.Key is null)
         {
@@ -159,6 +165,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
     public override void Deactivate()
     {
         base.Deactivate();
+        StopSmart();
         _reporter?.Stop();
         KeepAwake(false);
         if (Player is { } shared)
@@ -243,6 +250,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
         // The server's subtitle selection is applied once the file is open; until then none shows,
         // so a subtitle the file marks as its default cannot flash up first.
         if (_part is { } part && StreamChoice.IsKnown(part)) options["sid"] = "no";
+        AddPlaybackOptions(options);
         return options;
     }
 
@@ -258,6 +266,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
             case "time-pos" when change.Number is { } seconds:
                 Position = seconds;
                 if (!IsScrubbing) SeekValue = seconds;
+                OnPosition(seconds);
                 break;
             case "duration" when change.Number is { } seconds && seconds > 0:
                 Duration = seconds;
@@ -326,6 +335,7 @@ public sealed partial class PlayerPageViewModel(ShellViewModel shell, ServerSess
             });
         }
 
+        if (TryPlayNextAtEnd()) return;
         shell.GoBackCommand.Execute(null);
     }
 

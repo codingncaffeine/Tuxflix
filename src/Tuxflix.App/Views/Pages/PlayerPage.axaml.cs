@@ -1,7 +1,10 @@
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using Tuxflix.App.ViewModels;
 
@@ -13,12 +16,17 @@ public partial class PlayerPage : UserControl
 
     private readonly DispatcherTimer _idle;
     private TopLevel? _top;
+    private int _menusOpen;
 
     public PlayerPage()
     {
         InitializeComponent();
         _idle = new DispatcherTimer { Interval = IdleBeforeHiding };
         _idle.Tick += (_, _) => HideControls();
+        foreach (var button in BottomBar.GetLogicalDescendants().OfType<Button>())
+        {
+            if (button.Flyout is { } flyout) KeepControlsWhileOpen(flyout);
+        }
 
         Video.Ready += () => Model?.SurfaceReady();
         Stage.PointerMoved += (_, _) => ShowControls();
@@ -86,6 +94,12 @@ public partial class PlayerPage : UserControl
             case Key.F or Key.F11:
                 ToggleFullScreen();
                 break;
+            case Key.Enter when model.ShowsUpNext:
+                model.PlayNextCommand.Execute(null);
+                break;
+            case Key.Enter when model.ShowsSkip:
+                model.SkipCommand.Execute(null);
+                break;
             case Key.Escape when _top is Window { WindowState: WindowState.FullScreen } window:
                 window.WindowState = WindowState.Normal;
                 break;
@@ -109,6 +123,118 @@ public partial class PlayerPage : UserControl
     }
 
     private void OnFullScreen(object? sender, RoutedEventArgs e) => ToggleFullScreen();
+
+    /// <summary>The playback menu, built from the player's state each time it opens.</summary>
+    private void OnSettings(object? sender, RoutedEventArgs e) => OpenSettings();
+
+    /// <summary>Opens the playback settings menu over its button; returns it (the player probe pictures it).</summary>
+    internal MenuFlyout? OpenSettings()
+    {
+        if (Model is not { } model) return null;
+        var menu = SettingsMenu(model);
+        KeepControlsWhileOpen(menu);
+        ShowControls();
+        menu.ShowAt(SettingsButton);
+        return menu;
+    }
+
+    /// <summary>The controls stay up while one of their menus is open, as every player keeps them.</summary>
+    private void KeepControlsWhileOpen(FlyoutBase flyout)
+    {
+        flyout.Opened += (_, _) => _menusOpen++;
+        flyout.Closed += (_, _) =>
+        {
+            _menusOpen = Math.Max(0, _menusOpen - 1);
+            ShowControls();
+        };
+    }
+
+    private static MenuFlyout SettingsMenu(PlayerPageViewModel model)
+    {
+        var menu = new MenuFlyout { Placement = PlacementMode.TopEdgeAlignedRight };
+
+        menu.Items.Add(Submenu("Speed", [.. new[] { 0.5, 0.75, 1, 1.25, 1.5, 2 }.Select(v =>
+            Radio(v == 1 ? "Normal" : string.Create(CultureInfo.InvariantCulture, $"{v:0.##}×"), Math.Abs(model.Speed - v) < 0.01, () => model.Speed = v))]));
+
+        menu.Items.Add(Submenu("Picture",
+        [
+            Radio("Fit the window", model.Fit == PictureFit.Fit, () => model.Fit = PictureFit.Fit),
+            Radio("Fill the window", model.Fit == PictureFit.Fill, () => model.Fit = PictureFit.Fill),
+            Radio("Stretch to the window", model.Fit == PictureFit.Stretch, () => model.Fit = PictureFit.Stretch),
+            new Separator(),
+            Radio("The file's own shape", model.Aspect is null, () => model.Aspect = null),
+            .. new[] { "16:9", "4:3", "2.39:1", "1.85:1" }.Select(a => Radio(a, model.Aspect == a, () => model.Aspect = a)),
+        ]));
+
+        menu.Items.Add(Submenu("Subtitles",
+        [
+            .. new (string Name, double Scale)[] { ("Small", 0.8), ("Normal", 1), ("Large", 1.3), ("Larger", 1.6) }
+                .Select(size => Radio(size.Name, Math.Abs(model.SubtitleScale - size.Scale) < 0.01, () => model.SubtitleScale = size.Scale)),
+            new Separator(),
+            Check("Raised above the bottom", model.SubtitlesRaised, () => model.SubtitlesRaised = !model.SubtitlesRaised),
+            new Separator(),
+            Label(PlayerPageViewModel.DelayText(model.SubtitleDelay)),
+            Item("Show 0.1 s earlier", () => model.SubtitleDelay = Math.Round(model.SubtitleDelay - 0.1, 2)),
+            Item("Show 0.1 s later", () => model.SubtitleDelay = Math.Round(model.SubtitleDelay + 0.1, 2)),
+            Item("Back in step", () => model.SubtitleDelay = 0, enabled: model.SubtitleDelay != 0),
+        ]));
+
+        menu.Items.Add(Submenu("Sound",
+        [
+            Check("Night mode: quiet dialogue up, loud moments down", model.NightMode, () => model.NightMode = !model.NightMode),
+            new Separator(),
+            Label(PlayerPageViewModel.DelayText(model.AudioDelay)),
+            Item("Play 0.1 s earlier", () => model.AudioDelay = Math.Round(model.AudioDelay - 0.1, 2)),
+            Item("Play 0.1 s later", () => model.AudioDelay = Math.Round(model.AudioDelay + 0.1, 2)),
+            Item("Back in step", () => model.AudioDelay = 0, enabled: model.AudioDelay != 0),
+        ]));
+
+        menu.Items.Add(Submenu($"Sleep timer ({model.SleepLabel})",
+        [
+            Radio("Off", model.SleepMinutes == 0, () => model.SetSleep(0)),
+            .. new[] { 15, 30, 45, 60, 90 }.Select(m => Radio($"In {m} minutes", model.SleepMinutes == m, () => model.SetSleep(m))),
+            Radio("At the end of this", model.SleepMinutes == -1, () => model.SetSleep(-1)),
+        ]));
+
+        menu.Items.Add(new Separator());
+        menu.Items.Add(Check("Skip intros by themselves", model.AutoSkipIntro, () => model.AutoSkipIntro = !model.AutoSkipIntro));
+        menu.Items.Add(Check("Skip credits by themselves", model.AutoSkipCredits, () => model.AutoSkipCredits = !model.AutoSkipCredits));
+        menu.Items.Add(Check("Play the next episode", model.AutoPlayNext, () => model.AutoPlayNext = !model.AutoPlayNext));
+        return menu;
+    }
+
+    private static MenuItem Item(string header, Action action, bool enabled = true)
+    {
+        var item = new MenuItem { Header = header, IsEnabled = enabled };
+        item.Click += (_, _) => action();
+        return item;
+    }
+
+    /// <summary>A line that says how things stand; nothing to press.</summary>
+    private static MenuItem Label(string text) => new() { Header = text, IsEnabled = false };
+
+    private static MenuItem Check(string header, bool on, Action action)
+    {
+        var item = Item(header, action);
+        item.ToggleType = MenuItemToggleType.CheckBox;
+        item.IsChecked = on;
+        return item;
+    }
+
+    private static MenuItem Radio(string header, bool on, Action action)
+    {
+        var item = Item(header, action);
+        item.ToggleType = MenuItemToggleType.Radio;
+        item.IsChecked = on;
+        return item;
+    }
+
+    private static MenuItem Submenu(string header, IEnumerable<Control> items)
+    {
+        var item = new MenuItem { Header = header };
+        foreach (var child in items) item.Items.Add(child);
+        return item;
+    }
 
     private void ToggleFullScreen()
     {
@@ -135,8 +261,8 @@ public partial class PlayerPage : UserControl
     {
         _idle.Stop();
 
-        // Paused, dragging, or resting on a control: the controls stay.
-        if (Model is null or { IsPaused: true } or { IsScrubbing: true } || BottomBar.IsPointerOver || TopBar.IsPointerOver) return;
+        // Paused, dragging, a menu open, or resting on a control: the controls stay.
+        if (Model is null or { IsPaused: true } or { IsScrubbing: true } || _menusOpen > 0 || BottomBar.IsPointerOver || TopBar.IsPointerOver) return;
         Overlay.Classes.Add("hidden");
         Cursor = new Cursor(StandardCursorType.None);
     }

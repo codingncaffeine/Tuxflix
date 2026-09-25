@@ -12,7 +12,10 @@ library: a rail of every title, shelves of artwork, and a page for each film and
 In early development. Tuxflix signs in with Plex, opens your server, and plays films and episodes
 straight from it, inside the window: hardware decoding, resume where you left off, progress kept
 on the server, and the audio and subtitles the server chose for you; 4K HDR included, and a software
-fallback where the GPU cannot share. The desktop's media controls and your keyboard's media keys
+fallback where the GPU cannot share. Intros and credits the server found can be skipped with one
+press (or on their own), the next episode is offered as the credits roll, chapters are listed with
+their pictures, and a playback menu sets speed, picture fit and shape, subtitle size and timing,
+night-time sound and a sleep timer. The desktop's media controls and your keyboard's media keys
 drive whatever plays. Every library opens as a grid you can sort
 and filter the ways your server offers, with collections, playlists, a page for each actor and
 director, and a search across everything from the title bar. Music plays too: artists,

@@ -106,17 +106,35 @@ internal static class PlayerProbe
                 await KeepFrameAsync(view, file);
             }
 
+            var markersRight = true;
+            if (Environment.GetEnvironmentVariable("TUXFLIX_PROBE_MARKERS") == "1" && page is not null)
+            {
+                markersRight = await CheckMarkersAsync(shell, page, window);
+            }
+
+            var menuRight = true;
+            if (Environment.GetEnvironmentVariable("TUXFLIX_PROBE_MENU") == "1" && page?.Player is { } menuPlayer)
+            {
+                menuRight = await CheckMenuAsync(page, menuPlayer.Player);
+                if (Environment.GetEnvironmentVariable("TUXFLIX_PROBE_UI") is { } menuFolder
+                    && window.GetVisualDescendants().OfType<Views.Pages.PlayerPage>().FirstOrDefault() is { } playerView)
+                {
+                    await PictureMenuAsync(playerView, menuFolder);
+                }
+            }
+
+            var leaving = (shell.Router.Current as PlayerPageViewModel)?.Player;
             shell.GoBackCommand.Execute(null);
             var left = Stopwatch.StartNew();
             await Task.Delay(TimeSpan.FromSeconds(2));
-            var destroyed = shared?.IsDisposed == true;
+            var destroyed = shared?.IsDisposed == true && leaving?.IsDisposed != false;
             Log.Info($"Probe: left the player; player destroyed {destroyed}; the UI thread answered after {left.Elapsed.TotalMilliseconds:0} ms.");
 
             var after = await ResumePointAsync(session, item);
             var kept = after == before;
             Log.Info($"Probe: the server's resume point is {after / 1000.0:0.0} s, {(kept ? "unchanged" : "MOVED")}.");
 
-            ExitCode = frames > 10 && sounded && answered && destroyed && kept && noDrops && shell.Router.Current is not PlayerPageViewModel ? 0 : 1;
+            ExitCode = frames > 10 && sounded && answered && destroyed && kept && noDrops && markersRight && menuRight && shell.Router.Current is not PlayerPageViewModel ? 0 : 1;
             Log.Info(ExitCode == 0 ? "Probe: playback opens, draws and closes cleanly." : "Probe: FAILED.");
         }
         catch (Exception ex)
@@ -196,6 +214,158 @@ internal static class PlayerProbe
                + $"garbage collection paused every thread {(GC.GetTotalPauseDuration() - gcBefore).TotalMilliseconds:0.0} ms in {GC.CollectionCount(0) - collectionsBefore} collections; "
                + $"{(answered ? "within" : "OUTSIDE")} the bands.";
         return (summary, answered);
+    }
+
+    /// <summary>
+    /// The server's markers at work: in the intro the skip button offers itself and skipping lands
+    /// at the intro's end; credits before the end offer a skip of their own, even after the intro
+    /// was skipped; in the final credits (or the last half-minute) the next episode is offered. The
+    /// page is kept as a picture at each step when <c>TUXFLIX_PROBE_UI</c> names a folder.
+    /// </summary>
+    private static async Task<bool> CheckMarkersAsync(ShellViewModel shell, PlayerPageViewModel page, Window window)
+    {
+        var markers = page.Item.Marker ?? [];
+        var intro = markers.FirstOrDefault(m => m.Type == "intro");
+        var final = markers.FirstOrDefault(m => m is { Type: "credits", Final: true });
+        var folder = Environment.GetEnvironmentVariable("TUXFLIX_PROBE_UI");
+        var right = true;
+        Log.Info($"Probe: {markers.Count} markers, {page.Chapters.Count} chapters; the next episode is {(page.HasNext ? page.UpNextHeading : "none")}.");
+
+        if (intro is not null)
+        {
+            page.SeekTo((intro.StartTimeOffset / 1000.0) + 1);
+            var offered = await WithinAsync(() => page.ShowsSkip && page.SkipLabel == "SKIP INTRO", TimeSpan.FromSeconds(4));
+            if (folder is not null) Snapshot(window, Path.Combine(folder, "skip-intro.png"));
+            page.SkipCommand.Execute(null);
+            var landed = await WithinAsync(() => page.Position >= (intro.EndTimeOffset / 1000.0) - 1.5, TimeSpan.FromSeconds(4));
+            Log.Info($"Probe: in the intro the skip button {(offered ? "showed" : "DID NOT SHOW")}; skipping {(landed ? "landed at its end" : "DID NOT LAND")} ({page.Position:0.0} s, the intro ends at {intro.EndTimeOffset / 1000.0:0.0} s).");
+            right &= offered && landed;
+        }
+
+        var credits = markers.FirstOrDefault(m => m is { Type: "credits", Final: false });
+        if (credits is not null)
+        {
+            page.SeekTo((credits.StartTimeOffset / 1000.0) + 1);
+            var offered = await WithinAsync(() => page.ShowsSkip && page.SkipLabel == "SKIP CREDITS", TimeSpan.FromSeconds(4));
+            if (folder is not null) Snapshot(window, Path.Combine(folder, "skip-credits.png"));
+            Log.Info($"Probe: in the credits the skip button {(offered ? "showed" : "DID NOT SHOW")}.");
+            right &= offered;
+        }
+
+        // The next episode: from the final credits, or the last half-minute when the server marked none.
+        if (page.HasNext)
+        {
+            page.SeekTo(final is not null ? (final.StartTimeOffset / 1000.0) + 1 : page.Duration - 25);
+            var offered = await WithinAsync(() => page.ShowsUpNext, TimeSpan.FromSeconds(4));
+            if (folder is not null) Snapshot(window, Path.Combine(folder, "up-next.png"));
+            page.CancelUpNextCommand.Execute(null);
+            var gone = await WithinAsync(() => !page.ShowsUpNext, TimeSpan.FromSeconds(2));
+            Log.Info($"Probe: {(final is not null ? "in the final credits" : "in the last half-minute")} the next episode {(offered ? "was offered" : "WAS NOT OFFERED")} ({page.UpNextHeading}); cancelling {(gone ? "put it away" : "DID NOT")}.");
+            right &= offered && gone;
+
+            // Play now: the next episode takes the player's place and plays; back still leads out of the player.
+            var heading = page.UpNextHeading;
+            var old = page.Player;
+            page.PlayNextCommand.Execute(null);
+            var took = await WithinAsync(() => shell.Router.Current is PlayerPageViewModel { Position: > 1 } next && !ReferenceEquals(next, page), TimeSpan.FromSeconds(15));
+            var playing = shell.Router.Current as PlayerPageViewModel;
+            var released = await WithinAsync(() => old is { IsDisposed: true }, TimeSpan.FromSeconds(5));
+            Log.Info($"Probe: playing the next episode {(took ? "took the player's place" : "DID NOT TAKE OVER")} ({heading}: {Format.EpisodeCode(playing?.Item ?? page.Item)} · {playing?.Item.Title} at {playing?.Position:0.0} s); "
+                     + $"the last one's player {(released ? "was destroyed" : "WAS KEPT")}.");
+            right &= took && released;
+        }
+
+        return right;
+    }
+
+    /// <summary>
+    /// The playback menu's choices reach mpv: each is set as the menu sets it, read back from the
+    /// player on a worker, and put back as it was.
+    /// </summary>
+    private static async Task<bool> CheckMenuAsync(PlayerPageViewModel page, MpvPlayer player)
+    {
+        var missed = new List<string>();
+        static bool Near(double? value, double wanted) => value is { } v && Math.Abs(v - wanted) < 0.01;
+
+        async Task Expect(string what, Action set, Func<MpvPlayer, bool> holds)
+        {
+            set();
+            var clock = Stopwatch.StartNew();
+            bool held;
+            while (!(held = await Task.Run(() => holds(player))) && clock.Elapsed < TimeSpan.FromSeconds(2)) await Task.Delay(50);
+            if (!held) missed.Add(what);
+        }
+
+        var scale = page.SubtitleScale;
+        var raised = page.SubtitlesRaised;
+        var night = page.NightMode;
+        await Expect("speed", () => page.Speed = 1.5, p => Near(p.GetNumber("speed"), 1.5));
+        await Expect("speed back", () => page.Speed = 1, p => Near(p.GetNumber("speed"), 1));
+        await Expect("fill", () => page.Fit = PictureFit.Fill, p => Near(p.GetNumber("panscan"), 1));
+        await Expect("stretch", () => page.Fit = PictureFit.Stretch, p => Near(p.GetNumber("panscan"), 0) && p.GetString("keepaspect") == "no");
+        await Expect("fit", () => page.Fit = PictureFit.Fit, p => Near(p.GetNumber("panscan"), 0) && p.GetString("keepaspect") == "yes");
+        await Expect("4:3", () => page.Aspect = "4:3", p => Near(p.GetNumber("video-aspect-override"), 4.0 / 3));
+        await Expect("own shape", () => page.Aspect = null, p => Near(p.GetNumber("video-aspect-override"), -1));
+        await Expect("subtitle delay", () => page.SubtitleDelay = 0.3, p => Near(p.GetNumber("sub-delay"), 0.3));
+        await Expect("subtitle delay back", () => page.SubtitleDelay = 0, p => Near(p.GetNumber("sub-delay"), 0));
+        await Expect("audio delay", () => page.AudioDelay = -0.2, p => Near(p.GetNumber("audio-delay"), -0.2));
+        await Expect("audio delay back", () => page.AudioDelay = 0, p => Near(p.GetNumber("audio-delay"), 0));
+        await Expect("subtitle size", () => page.SubtitleScale = 1.6, p => Near(p.GetNumber("sub-scale"), 1.6));
+        await Expect("subtitle size back", () => page.SubtitleScale = scale, p => Near(p.GetNumber("sub-scale"), scale));
+        await Expect("raised", () => page.SubtitlesRaised = !raised, p => Near(p.GetNumber("sub-pos"), raised ? 100 : 88));
+        await Expect("raised back", () => page.SubtitlesRaised = raised, p => Near(p.GetNumber("sub-pos"), raised ? 88 : 100));
+        await Expect("night mode", () => page.NightMode = !night, p => (p.GetString("af") ?? string.Empty).Contains("dynaudnorm", StringComparison.Ordinal) != night);
+        await Expect("night mode back", () => page.NightMode = night, p => (p.GetString("af") ?? string.Empty).Contains("dynaudnorm", StringComparison.Ordinal) == night);
+        Log.Info(missed.Count == 0
+            ? "Probe: every playback menu choice reached the player and was put back."
+            : $"Probe: the playback menu DID NOT reach the player for {string.Join(", ", missed)}.");
+        return missed.Count == 0;
+    }
+
+    private static async Task<bool> WithinAsync(Func<bool> condition, TimeSpan limit)
+    {
+        var clock = Stopwatch.StartNew();
+        while (!condition() && clock.Elapsed < limit) await Task.Delay(50);
+        return condition();
+    }
+
+    /// <summary>
+    /// The playback menu and its subtitle submenu as pictures, each from its own popup; after the
+    /// idle delay the controls must still be up under the open menu.
+    /// </summary>
+    private static async Task PictureMenuAsync(Views.Pages.PlayerPage view, string folder)
+    {
+        if (view.OpenSettings() is not { } menu) return;
+        await Task.Delay(TimeSpan.FromSeconds(3.5));
+        if (menu.Items[0] is Control first && TopLevel.GetTopLevel(first) is { } popup) Snapshot(popup, Path.Combine(folder, "menu.png"));
+        if (menu.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header is "Subtitles") is { } subtitles)
+        {
+            subtitles.IsSubMenuOpen = true;
+            await Task.Delay(400);
+            if (subtitles.Items[0] is Control inner && TopLevel.GetTopLevel(inner) is { } sub) Snapshot(sub, Path.Combine(folder, "menu-subtitles.png"));
+        }
+
+        var up = view.FindControl<Panel>("Overlay") is { } overlay && !overlay.Classes.Contains("hidden");
+        Log.Info($"Probe: with the menu open past the idle delay the controls {(up ? "stayed up" : "HID")}.");
+        menu.Hide();
+
+        if (view.FindControl<Button>("ChaptersButton") is { Flyout: { } chapters } button)
+        {
+            chapters.ShowAt(button);
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            if (TopLevel.GetTopLevel(view) is { } top) Snapshot(top, Path.Combine(folder, "chapters.png"));
+            chapters.Hide();
+        }
+    }
+
+    /// <summary>A window's controls as a picture (the video, drawn through its own surface, shows black).</summary>
+    private static void Snapshot(TopLevel window, string file)
+    {
+        var size = new PixelSize((int)window.Bounds.Width, (int)window.Bounds.Height);
+        using var bitmap = new RenderTargetBitmap(size, new Vector(96, 96));
+        bitmap.Render(window);
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(file))!);
+        bitmap.Save(file, PngBitmapEncoderOptions.Default);
     }
 
     /// <summary>Milliseconds until a job posted now at this priority runs on the UI thread; NaN after three seconds.</summary>

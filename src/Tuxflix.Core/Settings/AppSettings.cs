@@ -31,6 +31,30 @@ public sealed class AppSettings
 
     /// <summary>The music equalizer, kept between runs.</summary>
     public EqualizerSettings Equalizer { get; set; } = new();
+
+    /// <summary>How films and episodes play: skipping, what comes next, subtitles, sound.</summary>
+    public PlaybackSettings Playback { get; set; } = new();
+}
+
+public sealed class PlaybackSettings
+{
+    /// <summary>Jump past an intro the server found, without a press.</summary>
+    public bool AutoSkipIntro { get; set; }
+
+    /// <summary>Jump past credits the server found; a film's final credits end it, an episode's bring the next one.</summary>
+    public bool AutoSkipCredits { get; set; }
+
+    /// <summary>The next episode starts after a short countdown.</summary>
+    public bool AutoPlayNext { get; set; } = true;
+
+    /// <summary>Subtitle size, 1 as the file draws them.</summary>
+    public double SubtitleScale { get; set; } = 1;
+
+    /// <summary>Subtitles higher up the picture, clear of a letterbox or a burned-in line.</summary>
+    public bool SubtitlesRaised { get; set; }
+
+    /// <summary>Quiet dialogue up and loud moments down: for late at night.</summary>
+    public bool NightMode { get; set; }
 }
 
 public sealed class ClassicPlayerSettings

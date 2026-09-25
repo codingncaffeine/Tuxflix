@@ -3,6 +3,7 @@
              xmlns:vm="using:Tuxflix.App.ViewModels"
              xmlns:ui="using:Tuxflix.App.Controls"
              xmlns:player="using:Tuxflix.App.Player"
+             xmlns:views="using:Tuxflix.App.Views"
              x:Class="Tuxflix.App.Views.Pages.PlayerPage"
              x:DataType="vm:PlayerPageViewModel"
              Background="Black"
@@ -51,6 +52,7 @@
                     <Grid ColumnDefinitions="Auto,*,Auto">
                         <TextBlock Text="{Binding PositionText}" FontSize="13" FontWeight="SemiBold" Foreground="White"
                                    VerticalAlignment="Center" MinWidth="56" />
+                        <views:ChapterMarks Grid.Column="1" Margin="14,0" Marks="{Binding ChapterMarks}" />
                         <Slider Grid.Column="1" Name="Seek" Theme="{StaticResource SeekBar}" Margin="14,0"
                                 Maximum="{Binding SeekMaximum}" Value="{Binding SeekValue}"
                                 AutomationProperties.Name="Position" />
@@ -94,6 +96,32 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                            <Button x:Name="ChaptersButton" Theme="{StaticResource IconButton}" Foreground="White" ui:Tip.Text="Chapters" IsVisible="{Binding HasChapters}">
+                                <PathIcon Data="{StaticResource Icon.List}" Width="20" Height="20" />
+                                <Button.Flyout>
+                                    <Flyout Placement="TopEdgeAlignedRight">
+                                        <ScrollViewer MaxHeight="440" HorizontalScrollBarVisibility="Disabled">
+                                            <ItemsControl ItemsSource="{Binding Chapters}" Width="330">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:ChapterViewModel">
+                                                        <Button Theme="{StaticResource RailRow}" Padding="6" Margin="0,0,0,2" Command="{Binding GoCommand}" Classes.selected="{Binding IsCurrent}">
+                                                            <Grid ColumnDefinitions="Auto,*">
+                                                                <Border Width="112" Height="63" CornerRadius="4" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
+                                                                    <ui:RemoteImage Path="{Binding ThumbPath}" DecodeWidth="112" DecodeHeight="63" />
+                                                                </Border>
+                                                                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="2">
+                                                                    <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock Text="{Binding StartText}" FontSize="12" Classes="faint" />
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
                             <Button Theme="{StaticResource IconButton}" Foreground="White" ui:Tip.Text="Audio track" ui:Tip.Keys="A">
                                 <PathIcon Data="{StaticResource Icon.MusicNotes}" Width="20" Height="20" />
                                 <Button.Flyout>
@@ -124,6 +152,10 @@
                                     </MenuFlyout>
                                 </Button.Flyout>
                             </Button>
+                            <Button x:Name="SettingsButton" Theme="{StaticResource IconButton}" Foreground="White" Click="OnSettings"
+                                    ui:Tip.Text="Playback settings: speed, picture, subtitles, sound, sleep timer">
+                                <PathIcon Data="{StaticResource Icon.Gear}" Width="20" Height="20" />
+                            </Button>
                             <Button Theme="{StaticResource IconButton}" Foreground="White" Click="OnFullScreen"
                                     ui:Tip.Text="Full screen" ui:Tip.Keys="F">
                                 <PathIcon Data="{StaticResource Icon.CornersOut}" Width="20" Height="20" />
@@ -133,6 +165,43 @@
                 </StackPanel>
             </Border>
         </Panel>
+
+        <!-- ===== Skip the intro or the credits: shown whether or not the controls are ===== -->
+        <Button Classes="skip" IsVisible="{Binding ShowsSkip}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,42,168"
+                Padding="20,12" CornerRadius="8" Background="#CC0B1126" BorderBrush="#E6FFFFFF" BorderThickness="1.5"
+                Command="{Binding SkipCommand}" ui:Tip.Text="Skip it" ui:Tip.Keys="Enter">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding SkipLabel}" FontSize="14" FontWeight="Bold" Foreground="White" LetterSpacing="1" VerticalAlignment="Center" />
+                <PathIcon Data="{StaticResource Icon.SkipForward.Fill}" Width="16" Height="16" Foreground="White" />
+            </StackPanel>
+        </Button>
+
+        <!-- ===== Up next: the following episode, with a countdown ===== -->
+        <Border IsVisible="{Binding ShowsUpNext}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,42,168" Width="420"
+                Padding="14" CornerRadius="12" Background="#E60B1126" BorderBrush="{DynamicResource Brush.Line.Hairline}" BorderThickness="1"
+                BoxShadow="{StaticResource Shadow.Popup}">
+            <Grid ColumnDefinitions="Auto,*">
+                <Border Width="160" Height="90" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Brush.Panel}">
+                    <ui:RemoteImage Path="{Binding UpNextStill}" DecodeWidth="160" DecodeHeight="90" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="14,0,0,0" Spacing="4" VerticalAlignment="Center">
+                    <TextBlock Classes="label" Text="UP NEXT" Foreground="{DynamicResource Brush.Accent}" />
+                    <TextBlock Text="{Binding UpNextHeading}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Foreground="White" />
+                    <TextBlock Text="{Binding UpNextCaption}" FontSize="12" Foreground="#B3FFFFFF" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                        <Button Theme="{StaticResource PlayButton}" Padding="14,7" Command="{Binding PlayNextCommand}" ui:Tip.Text="Play it now" ui:Tip.Keys="Enter">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <PathIcon Data="{StaticResource Icon.Play.Fill}" Width="12" Height="12" Foreground="White" />
+                                <TextBlock Text="PLAY NOW" FontSize="12" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Theme="{StaticResource GhostButton}" Padding="14,7" Command="{Binding CancelUpNextCommand}" ui:Tip.Text="Stay on this one">
+                            <TextBlock Text="CANCEL" FontSize="12" FontWeight="SemiBold" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
 
         <!-- ===== When it cannot play ===== -->
         <Border IsVisible="{Binding HasError}" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560"

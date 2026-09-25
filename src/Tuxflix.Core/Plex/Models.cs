@@ -112,6 +112,48 @@ public sealed class LibraryDirectory
     public string? FilterType { get; init; }
 }
 
+/// <summary>A stretch of an item the server found: <c>intro</c>, <c>credits</c> or <c>commercial</c>.</summary>
+public sealed class Marker
+{
+    [JsonPropertyName("id")]
+    public long Id { get; init; }
+
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = string.Empty;
+
+    [JsonPropertyName("startTimeOffset")]
+    public long StartTimeOffset { get; init; }
+
+    [JsonPropertyName("endTimeOffset")]
+    public long EndTimeOffset { get; init; }
+
+    /// <summary>The credits that run to the end: after them there is nothing left to watch.</summary>
+    [JsonPropertyName("final")]
+    public bool Final { get; init; }
+}
+
+/// <summary>A chapter of a film or an episode.</summary>
+public sealed class Chapter
+{
+    [JsonPropertyName("id")]
+    public long Id { get; init; }
+
+    [JsonPropertyName("tag")]
+    public string? Tag { get; init; }
+
+    [JsonPropertyName("index")]
+    public int Index { get; init; }
+
+    [JsonPropertyName("startTimeOffset")]
+    public long StartTimeOffset { get; init; }
+
+    [JsonPropertyName("endTimeOffset")]
+    public long EndTimeOffset { get; init; }
+
+    [JsonPropertyName("thumb")]
+    public string? Thumb { get; init; }
+}
+
 /// <summary>A tag a search or a listing returns: a person, a genre, a place.</summary>
 public sealed class TagEntry
 {
@@ -337,6 +379,13 @@ public sealed class MetadataItem
 
     [JsonPropertyName("UltraBlurColors")]
     public UltraBlurColors? UltraBlurColors { get; init; }
+
+    /// <summary>Where the intro and the credits are, from the server's analysis.</summary>
+    [JsonPropertyName("Marker")]
+    public List<Marker>? Marker { get; init; }
+
+    [JsonPropertyName("Chapter")]
+    public List<Chapter>? Chapter { get; init; }
 
     /// <summary>A collection's kind of member (<c>movie</c>, <c>show</c>) or a playlist's.</summary>
     [JsonPropertyName("subtype")]
