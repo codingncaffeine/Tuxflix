@@ -3,10 +3,11 @@
 # Submit by pushing this (plus the generated .SRCINFO) to ssh://aur@aur.archlinux.org/tuxflix-bin.git
 #   makepkg --printsrcinfo > .SRCINFO
 pkgname=tuxflix-bin
-pkgver=0.1.0
+pkgver=0.0.5
 pkgrel=1
 pkgdesc="Watch and listen to your Plex library: a native desktop Plex client laid out like a game library"
-arch=('x86_64' 'aarch64')
+# aarch64 joins when its build can be tested on a clean install as the x64 one is.
+arch=('x86_64')
 url="https://github.com/codingncaffeine/Tuxflix"
 license=('GPL-3.0-or-later')
 provides=('tuxflix')
@@ -20,11 +21,8 @@ optdepends=('sdl3: game controllers in the TV mode'
             'xdg-desktop-portal: opens the sign-in page from inside the sandbox')
 options=('!strip')   # self-contained .NET bundle — stripping breaks it
 source_x86_64=("$url/releases/download/v$pkgver/Tuxflix-$pkgver-linux-x64.tar.gz")
-source_aarch64=("$url/releases/download/v$pkgver/Tuxflix-$pkgver-linux-arm64.tar.gz")
-# Filled from the release's own tarballs; until one is published there is nothing to hash, and a
-# plausible hash is worse than one makepkg refuses.
+# The release's own tarball, hashed when it was built (packaging/build-release.sh prints it).
 sha256sums_x86_64=('SKIP')
-sha256sums_aarch64=('SKIP')
 
 package() {
     install -dm755 "$pkgdir/usr/lib/tuxflix" "$pkgdir/usr/bin" "$pkgdir/usr/share/doc/tuxflix"
