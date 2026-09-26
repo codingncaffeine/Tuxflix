@@ -56,6 +56,11 @@
   </supports>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="0.0.6" type="development" date="2026-09-25">
+      <description>
+        <p>The visualizer draws the music 38 ways, the window moves from the top of the visualizer and the photo viewer, and Activity shows what plays on this computer.</p>
+      </description>
+    </release>
     <release version="0.0.5" type="development" date="2026-09-25">
       <description>
         <p>The first preview.</p>

@@ -19,7 +19,7 @@
     <Company>Tuxflix</Company>
     <Authors>codingncaffeine</Authors>
     <Copyright>Copyright (C) 2026 Tuxflix contributors</Copyright>
-    <VersionPrefix>0.0.5</VersionPrefix>
+    <VersionPrefix>0.0.6</VersionPrefix>
   </PropertyGroup>
 
   <!-- Central package versions: bump here and nowhere else. -->
